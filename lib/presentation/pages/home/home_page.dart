@@ -48,7 +48,7 @@ class _KetiHomePageState extends State<KetiHomePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                padding: _isRailExtended ? EdgeInsets.only(top: 24, bottom: 8) : EdgeInsets.fromLTRB(16, 12, 16, 8),
                 child: SizedBox(
                   width: _isRailExtended ? 120 : 48,
                   height: _isRailExtended ? 28 : 48,
@@ -63,6 +63,11 @@ class _KetiHomePageState extends State<KetiHomePage> {
               Expanded(
                 child: NavigationRail(
                   extended: _isRailExtended,
+                  leading: Column(
+                    children: [
+                      SizedBox(height: _isRailExtended ? 28 : 16),
+                    ],
+                  ),
                   selectedIndex: _selectedIndex,
                   indicatorShape: const RoundedRectangleBorder(
                     borderRadius: BorderRadius.all(Radius.circular(8)),
@@ -112,6 +117,9 @@ class _KetiHomePageState extends State<KetiHomePage> {
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
+                  ),
+                  Expanded(
+                    child: _getPage(_selectedIndex),
                   ),
                 ],
               )
