@@ -1,88 +1,146 @@
 import 'package:flutter/material.dart';
 import 'package:keti/theme/app_colors.dart';
 import 'package:keti/theme/reminder_colors.dart';
-import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
+import 'package:keti/constants/app_strings.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const KetiApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class KetiApp extends StatelessWidget {
+  const KetiApp({super.key});
 
-  // This is the start of the app
   @override
   Widget build(BuildContext context) {
-    return shadcn.ShadcnApp(
-      theme: shadcn.ThemeData(
-        colorScheme: shadcn.ColorSchemes.lightZinc,
-        radius: 0.5,
-      ),
-      home: Theme(
-        data: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: AppColors.reminderAmber,
-            surface: AppColors.background,
-            onSurface: AppColors.primaryText,
-            onSurfaceVariant: AppColors.secondaryText,
-            outline: AppColors.border,
-          ),
-          extensions: [
-            ReminderColors(
-              blue: AppColors.reminderBlue,
-              teal: AppColors.reminderTeal,
-              sage: AppColors.reminderSage,
-              darkAmber: AppColors.reminderDarkAmber,
-              hotPink: AppColors.reminderHotPink,
-              darkPink: AppColors.reminderDarkPink,
-              caribbeanBlue: AppColors.reminderCaribbeanBlue,
-            ),
-          ],
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.reminderAmber,
+          surface: AppColors.background,
+          onSurface: AppColors.primaryText,
+          onSurfaceVariant: AppColors.secondaryText,
+          outline: AppColors.border,
         ),
-        child: const ketiHomePage(title: 'Keti Home'),
+        navigationRailTheme: const NavigationRailThemeData(
+          backgroundColor: Colors.transparent,
+          indicatorColor: AppColors.reminderAmber,
+        ),
+        extensions: [
+          const ReminderColors(
+            blue: AppColors.reminderBlue,
+            teal: AppColors.reminderTeal,
+            sage: AppColors.reminderSage,
+            darkAmber: AppColors.reminderDarkAmber,
+            hotPink: AppColors.reminderHotPink,
+            darkPink: AppColors.reminderDarkPink,
+            caribbeanBlue: AppColors.reminderCaribbeanBlue,
+          ),
+        ],
       ),
+      home: const KetiHomePage(),
     );
   }
 }
 
-class ketiHomePage extends StatefulWidget {
-  const ketiHomePage({super.key, required this.title});
-
-  final String title;
+class KetiHomePage extends StatefulWidget {
+  const KetiHomePage({super.key});
 
   @override
-  State<ketiHomePage> createState() => _ketiHomePageState();
+  State<KetiHomePage> createState() => _KetiHomePageState();
 }
 
-class _ketiHomePageState extends State<ketiHomePage> {
-  int _counter = 0;
+class _KetiHomePageState extends State<KetiHomePage> {
+  bool _isRailExtended = true;
+  int _selectedIndex = 0;
 
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
+  static const _destinations = <NavigationRailDestination>[
+    NavigationRailDestination(
+      icon: Icon(Icons.dashboard_outlined),
+      selectedIcon: Icon(Icons.dashboard),
+      label: Text(AppStrings.dashboard),
+    ),
+    NavigationRailDestination(
+      icon: Icon(Icons.timer_outlined),
+      selectedIcon: Icon(Icons.timer),
+      label: Text(AppStrings.breakReminders),
+    ),
+    NavigationRailDestination(
+      icon: Icon(Icons.water_drop_outlined),
+      selectedIcon: Icon(Icons.water_drop),
+      label: Text(AppStrings.hydrationReminders),
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+      body: Row(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: SizedBox(
+                  width: _isRailExtended ? 120 : 48,
+                  height: _isRailExtended ? 28 : 48,
+                  child: Image.asset(
+                    _isRailExtended
+                        ? 'assets/images/logo.png'
+                        : 'assets/images/logomark.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: NavigationRail(
+                  extended: _isRailExtended,
+                  selectedIndex: _selectedIndex,
+                  indicatorShape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  onDestinationSelected: (index) {
+                    setState(() => _selectedIndex = index);
+                  },
+                  trailing: Expanded(
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: IconButton(
+                          icon: Icon(
+                            _isRailExtended
+                                ? Icons.chevron_left
+                                : Icons.chevron_right,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          onPressed: () {
+                            setState(
+                                () => _isRailExtended = !_isRailExtended);
+                          },
+                          tooltip: _isRailExtended
+                              ? 'Collapse sidebar'
+                              : 'Expand sidebar',
+                        ),
+                      ),
+                    ),
+                  ),
+                  destinations: _destinations,
+                ),
+              ),
+            ],
+          ),
+          const VerticalDivider(width: 1),
+          const Expanded(
+            child: Center(
+              child: Text('Main Content Area'),
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+          ),
+        ],
       ),
     );
   }
