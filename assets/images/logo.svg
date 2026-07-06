@@ -6,7 +6,7 @@
 <circle cx="102.5" cy="9.5" r="7.5" fill="url(#paint0_linear_57_140)"/>
 <defs>
 <linearGradient id="paint0_linear_57_140" x1="95" y1="9.5" x2="110" y2="9.5" gradientUnits="userSpaceOnUse">
-<stop stop-color="#D36F42"/>
+<stop stop-color="#D36F42" offset=""/>
 <stop offset="1" stop-color="#F79F55"/>
 </linearGradient>
 </defs>
