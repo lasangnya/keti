@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:keti/theme/app_colors.dart';
 import 'package:keti/theme/reminder_colors.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
 void main() {
   runApp(const MyApp());
@@ -12,30 +13,35 @@ class MyApp extends StatelessWidget {
   // This is the start of the app
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'keti',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.reminderAmber,
-          surface: AppColors.background,
-          onSurface: AppColors.primaryText,
-          onSurfaceVariant: AppColors.secondaryText,
-          outline: AppColors.border,
-        ),
-        extensions: [
-          ReminderColors(
-            blue: AppColors.reminderBlue,
-            teal: AppColors.reminderTeal,
-            sage: AppColors.reminderSage,
-            darkAmber: AppColors.reminderDarkAmber,
-            hotPink: AppColors.reminderHotPink,
-            darkPink: AppColors.reminderDarkPink,
-            caribbeanBlue: AppColors.reminderCaribbeanBlue,
-          ),
-        ],
+    return shadcn.ShadcnApp(
+      theme: shadcn.ThemeData(
+        colorScheme: shadcn.ColorSchemes.lightZinc,
+        radius: 0.5,
       ),
-      home: const ketiHomePage(title: 'Flutter Demo Home Page'),
+      home: Theme(
+        data: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: AppColors.reminderAmber,
+            surface: AppColors.background,
+            onSurface: AppColors.primaryText,
+            onSurfaceVariant: AppColors.secondaryText,
+            outline: AppColors.border,
+          ),
+          extensions: [
+            ReminderColors(
+              blue: AppColors.reminderBlue,
+              teal: AppColors.reminderTeal,
+              sage: AppColors.reminderSage,
+              darkAmber: AppColors.reminderDarkAmber,
+              hotPink: AppColors.reminderHotPink,
+              darkPink: AppColors.reminderDarkPink,
+              caribbeanBlue: AppColors.reminderCaribbeanBlue,
+            ),
+          ],
+        ),
+        child: const ketiHomePage(title: 'Keti Home'),
+      ),
     );
   }
 }
