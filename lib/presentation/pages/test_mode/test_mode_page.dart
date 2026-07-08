@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keti/application/test_mode/test_mode_provider.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/services/cursor_pill_service.dart';
 import '../../../core/services/notch_hook_service.dart';
 import '../../widgets/page_title.dart';
 import '../../widgets/keti_card.dart';
@@ -90,7 +91,9 @@ class TestModePage extends ConsumerWidget {
                         buttonText: AppStrings.test,
                         isSelected: false,
                         onSelected: (_) {},
-                        onButtonPressed: () {},
+                        onButtonPressed: () async {
+                          await CursorPillService.showPill();
+                        },
                       ),
                     ),
                     const SizedBox(width: 8),
