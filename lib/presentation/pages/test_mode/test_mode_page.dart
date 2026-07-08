@@ -16,12 +16,18 @@ class TestModePage extends ConsumerWidget {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
           const PageTitle(title: AppStrings.testMode),
-          SwitchListTile(
-            title: const Text(AppStrings.testModeActive),
-            value: testModeState.isActive,
-            onChanged: (val) => ref.read(testModeProvider.notifier).toggleActive(val),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            // Offset for ListListTile internal padding
+            child: SwitchListTile(
+              title: const Text(AppStrings.testModeActive),
+              value: testModeState.isActive,
+              onChanged: (val) =>
+                  ref.read(testModeProvider.notifier).toggleActive(val),
+            ),
           ),
           if (testModeState.isActive) ...[
             Padding(
@@ -34,27 +40,30 @@ class TestModePage extends ConsumerWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: KetiCard(
-                      title: AppStrings.ambient,
-                      subtitle: AppStrings.ambientSubtitle,
-                      isSelected: false,
-                      onSelected: (_) {},
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: KetiCard(
+                        title: AppStrings.ambient,
+                        subtitle: AppStrings.ambientSubtitle,
+                        isSelected: false,
+                        onSelected: (_) {},
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: KetiCard(
-                      title: AppStrings.character,
-                      subtitle: AppStrings.characterSubtitle,
-                      isSelected: false,
-                      onSelected: (_) {},
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: KetiCard(
+                        title: AppStrings.character,
+                        subtitle: AppStrings.characterSubtitle,
+                        isSelected: false,
+                        onSelected: (_) {},
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             Padding(
@@ -67,45 +76,48 @@ class TestModePage extends ConsumerWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: KetiCard(
-                      title: AppStrings.cursor,
-                      subtitle: AppStrings.cursorSubtitle,
-                      showButton: true,
-                      buttonText: AppStrings.test,
-                      isSelected: false,
-                      onSelected: (_) {},
-                      onButtonPressed: () {},
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: KetiCard(
+                        title: AppStrings.cursor,
+                        subtitle: AppStrings.cursorSubtitle,
+                        showButton: true,
+                        buttonText: AppStrings.test,
+                        isSelected: false,
+                        onSelected: (_) {},
+                        onButtonPressed: () {},
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: KetiCard(
-                      title: AppStrings.island,
-                      subtitle: AppStrings.islandSubtitle,
-                      showButton: true,
-                      buttonText: AppStrings.test,
-                      isSelected: false,
-                      onSelected: (_) {},
-                      onButtonPressed: () {},
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: KetiCard(
+                        title: AppStrings.island,
+                        subtitle: AppStrings.islandSubtitle,
+                        showButton: true,
+                        buttonText: AppStrings.test,
+                        isSelected: false,
+                        onSelected: (_) {},
+                        onButtonPressed: () {},
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: KetiCard(
-                      title: AppStrings.tray,
-                      subtitle: AppStrings.traySubtitle,
-                      showButton: true,
-                      buttonText: AppStrings.test,
-                      isSelected: false,
-                      onSelected: (_) {},
-                      onButtonPressed: () {},
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: KetiCard(
+                        title: AppStrings.tray,
+                        subtitle: AppStrings.traySubtitle,
+                        showButton: true,
+                        buttonText: AppStrings.test,
+                        isSelected: false,
+                        onSelected: (_) {},
+                        onButtonPressed: () {},
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],

@@ -18,22 +18,25 @@ class _KetiHomePageState extends ConsumerState<KetiHomePage> {
     final currentItem = navNotifier.currentItem;
 
     return Scaffold(
-      body: Row(
-        children: [
-          NavigationRail(
-            selectedIndex: selectedIndex,
-            destinations: navNotifier.allItems.map((item) => NavigationRailDestination(
-              icon: Icon(item.icon),
-              selectedIcon: Icon(item.selectedIcon),
-              label: Text(item.label),
-            )).toList(),
-            onDestinationSelected: (index) => navNotifier.setIndex(index),
-          ),
-          const VerticalDivider(width: 1),
-          Expanded(
-            child: currentItem.page,
-          ),
-        ],
+      body: SafeArea(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            NavigationRail(
+              selectedIndex: selectedIndex,
+              destinations: navNotifier.allItems.map((item) => NavigationRailDestination(
+                icon: Icon(item.icon),
+                selectedIcon: Icon(item.selectedIcon),
+                label: Text(item.label),
+              )).toList(),
+              onDestinationSelected: (index) => navNotifier.setIndex(index),
+            ),
+            const VerticalDivider(width: 1),
+            Expanded(
+              child: currentItem.page,
+            ),
+          ],
+        ),
       ),
     );
   }
