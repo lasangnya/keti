@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keti/application/test_mode/test_mode_provider.dart';
 import '../../../core/constants/app_strings.dart';
@@ -101,7 +102,10 @@ class TestModePage extends ConsumerWidget {
                         buttonText: AppStrings.test,
                         isSelected: false,
                         onSelected: (_) {},
-                        onButtonPressed: () {},
+                        onButtonPressed: () async {
+                          const channel = MethodChannel('app.keti/notch_hook');
+                          await channel.invokeMethod('showIsland', {'message': 'Time to drink water! 💧'});
+                        },
                       ),
                     ),
                     const SizedBox(width: 8),
