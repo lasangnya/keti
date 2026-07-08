@@ -7,7 +7,7 @@ class PageTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+      padding: const EdgeInsets.fromLTRB(16, 24, 24, 16),
       child: Text(
         title,
         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
