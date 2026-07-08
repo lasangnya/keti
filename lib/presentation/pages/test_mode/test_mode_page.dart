@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keti/application/test_mode/test_mode_provider.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/services/notch_hook_service.dart';
 import '../../widgets/page_title.dart';
 import '../../widgets/keti_card.dart';
 
@@ -103,8 +103,7 @@ class TestModePage extends ConsumerWidget {
                         isSelected: false,
                         onSelected: (_) {},
                         onButtonPressed: () async {
-                          const channel = MethodChannel('app.keti/notch_hook');
-                          await channel.invokeMethod('showIsland', {'message': 'Time to drink water! 💧'});
+                          await NotchHookService.showIsland('Time to drink water! 💧');
                         },
                       ),
                     ),

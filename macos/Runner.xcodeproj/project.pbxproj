@@ -30,6 +30,7 @@
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
 		D5E7AB7F2FFE875D002D4660 /* IslandView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB7E2FFE8753002D4660 /* IslandView.swift */; };
 		D5E7AB832FFE8C6B002D4660 /* IslandManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB822FFE8C66002D4660 /* IslandManager.swift */; };
+		D5E7AB862FFE90A2002D4660 /* PlatformChannels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB842FFE90A2002D4660 /* PlatformChannels.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -84,6 +85,7 @@
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		D5E7AB7E2FFE8753002D4660 /* IslandView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandView.swift; sourceTree = "<group>"; };
 		D5E7AB822FFE8C66002D4660 /* IslandManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandManager.swift; sourceTree = "<group>"; };
+		D5E7AB842FFE90A2002D4660 /* PlatformChannels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformChannels.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -172,6 +174,7 @@
 			children = (
 				D5E7AB822FFE8C66002D4660 /* IslandManager.swift */,
 				D5E7AB7E2FFE8753002D4660 /* IslandView.swift */,
+				D5E7AB842FFE90A2002D4660 /* PlatformChannels.swift */,
 				33CC10F02044A3C60003C045 /* AppDelegate.swift */,
 				33CC11122044BFA00003C045 /* MainFlutterWindow.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
@@ -363,6 +366,7 @@
 				33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */,
 				D5E7AB7F2FFE875D002D4660 /* IslandView.swift in Sources */,
 				D5E7AB832FFE8C6B002D4660 /* IslandManager.swift in Sources */,
+				D5E7AB862FFE90A2002D4660 /* PlatformChannels.swift in Sources */,
 				33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */,
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
 			);

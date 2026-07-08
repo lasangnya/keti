@@ -5,12 +5,12 @@ class MainFlutterWindow: NSWindow {
     override func awakeFromNib() {
         let flutterViewController = FlutterViewController()
         let windowFrame = self.frame
-        let channel = FlutterMethodChannel(name: "app.keti/notch_hook", binaryMessenger: flutterViewController.engine.binaryMessenger)
+        let channel = FlutterMethodChannel(name: PlatformChannels.notchHook, binaryMessenger: flutterViewController.engine.binaryMessenger)
 
       channel.setMethodCallHandler { (call, result) in
-        if call.method == "showIsland" {
+        if call.method == PlatformChannels.methodShowIsland {
           let args = call.arguments as? [String: Any]
-          let message = args?["message"] as? String ?? "Reminder!"
+          let message = args?[PlatformChannels.keyMessage] as? String ?? "Reminder!"
           // Call the SwiftUI Manager
           IslandManager.show(message: message)
           result(nil)
