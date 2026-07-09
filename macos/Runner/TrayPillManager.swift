@@ -8,37 +8,33 @@ class TrayPillManager {
 
     /// Initializes the tray item and hides it. Call this at app launch.
     static func setup() {
-        if statusItem == nil {
-            statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-            statusItem?.button?.isHidden = true // Keep hidden until a reminder occurs
+        print("TrayPillManager: Setting up status item...")
+        if statusItem != nil { return }
 
-            statusItem?.autosaveName = "KetiTrayPill"
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem?.button?.isHidden = true
+        statusItem?.autosaveName = "KetiTrayPill"
 
-            if #available(macOS 11.0, *) {
-                let image = NSImage(systemSymbolName: "drop.fill", accessibilityDescription: "Reminder")
-                image?.isTemplate = true
-                statusItem?.button?.image = image
-            }
-        } else {
-            print("TrayPillManager: Status item already exists.")
+        if #available(macOS 12.0, *) {
+            let color = NSColor(red: 79/255.0, green: 198/255.0, blue: 216/255.0, alpha: 1.0)
+            let config = NSImage.SymbolConfiguration(paletteColors: [color])
+            let image = NSImage(systemSymbolName: "drop.fill", accessibilityDescription: "Reminder")
+            statusItem?.button?.image = image?.withSymbolConfiguration(config)
+        } else if #available(macOS 11.0, *) {
+            let image = NSImage(systemSymbolName: "drop.fill", accessibilityDescription: "Reminder")
+            image?.isTemplate = true
+            statusItem?.button?.image = image
         }
     }
 
     /// Makes the tray item visible for a short duration.
     static func show() {
         print("TrayPillManager: Request to show...")
-        guard let button = statusItem?.button else {
-            // Fallback: if setup wasn't called or failed, try to setup now
-            setup()
-            show()
-            return
-        }
+        if statusItem?.button == nil { setup() }
 
-        // Unhide and highlight to grab attention
-        button.isHidden = false
-        button.highlight(true)
+        statusItem?.button?.isHidden = false
+        statusItem?.button?.highlight(true)
 
-        // Automatically hide after the duration
         DispatchQueue.main.asyncAfter(deadline: .now() + visibilityDuration) {
             dismiss()
         }
@@ -46,6 +42,7 @@ class TrayPillManager {
 
     /// Hides the tray item.
     static func dismiss() {
+        print("TrayPillManager: Dismissing status item...")
         statusItem?.button?.isHidden = true
     }
 }
