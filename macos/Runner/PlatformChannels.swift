@@ -4,12 +4,16 @@ enum PlatformChannels {
     // ── Channel names ────────────────────────────────────────────
     static let notchHook = "app.keti/notch_hook"
     static let cursorPill = "app.keti/cursor_pill"
+    static let trayPill = "app.keti/tray_pill"
 
     // ── Method names (notch_hook) ────────────────────────────────
     static let methodShowIsland = "showIsland"
 
     // ── Method names (cursor_pill) ───────────────────────────────
     static let methodShowCursorPill = "showPill"
+
+    // ── Method names (tray_pill) ─────────────────────────────────
+    static let methodShowTrayPill = "showPill"
 
     // ── Argument keys (notch_hook) ───────────────────────────────
     static let keyMessage = "message"

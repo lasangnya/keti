@@ -32,6 +32,7 @@
 		D5E7AB832FFE8C6B002D4660 /* IslandManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB822FFE8C66002D4660 /* IslandManager.swift */; };
 		D5E7AB862FFE90A2002D4660 /* PlatformChannels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB842FFE90A2002D4660 /* PlatformChannels.swift */; };
 		D5E7AB8A2FFE9500002D4660 /* CursorPillManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB892FFE9500002D4660 /* CursorPillManager.swift */; };
+		D5E7AB8C2FFE9800002D4660 /* TrayPillManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB8B2FFE9800002D4660 /* TrayPillManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -88,6 +89,7 @@
 		D5E7AB822FFE8C66002D4660 /* IslandManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandManager.swift; sourceTree = "<group>"; };
 		D5E7AB842FFE90A2002D4660 /* PlatformChannels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformChannels.swift; sourceTree = "<group>"; };
 		D5E7AB892FFE9500002D4660 /* CursorPillManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CursorPillManager.swift; sourceTree = "<group>"; };
+		D5E7AB8B2FFE9800002D4660 /* TrayPillManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrayPillManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -178,6 +180,7 @@
 				D5E7AB7E2FFE8753002D4660 /* IslandView.swift */,
 				D5E7AB842FFE90A2002D4660 /* PlatformChannels.swift */,
 				D5E7AB892FFE9500002D4660 /* CursorPillManager.swift */,
+				D5E7AB8B2FFE9800002D4660 /* TrayPillManager.swift */,
 				33CC10F02044A3C60003C045 /* AppDelegate.swift */,
 				33CC11122044BFA00003C045 /* MainFlutterWindow.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
@@ -371,6 +374,7 @@
 				D5E7AB832FFE8C6B002D4660 /* IslandManager.swift in Sources */,
 				D5E7AB862FFE90A2002D4660 /* PlatformChannels.swift in Sources */,
 				D5E7AB8A2FFE9500002D4660 /* CursorPillManager.swift in Sources */,
+				D5E7AB8C2FFE9800002D4660 /* TrayPillManager.swift in Sources */,
 				33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */,
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
 			);

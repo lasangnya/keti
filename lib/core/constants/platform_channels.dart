@@ -6,12 +6,16 @@ class PlatformChannels {
   // ── Channel names ──────────────────────────────────────────────
   static const String notchHook = 'app.keti/notch_hook';
   static const String cursorPill = 'app.keti/cursor_pill';
+  static const String trayPill = 'app.keti/tray_pill';
 
   // ── Method names (notch_hook) ──────────────────────────────────
   static const String methodShowIsland = 'showIsland';
 
   // ── Method names (cursor_pill) ─────────────────────────────────
   static const String methodShowCursorPill = 'showPill';
+
+  // ── Method names (tray_pill) ───────────────────────────────────
+  static const String methodShowTrayPill = 'showPill';
 
   // ── Argument keys (notch_hook) ─────────────────────────────────
   static const String keyMessage = 'message';
