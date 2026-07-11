@@ -15,13 +15,21 @@ class TrayPillManager {
         statusItem?.button?.isHidden = true
         statusItem?.autosaveName = "KetiTrayPill"
 
+        applyIcon()
+    }
+
+    private static func applyIcon() {
+        // First check for macOS 11.0 (SF Symbols support)
+        guard #available(macOS 11.0, *) else { return }
+
+        let image = NSImage(systemSymbolName: "drop.fill", accessibilityDescription: "Reminder")
+
+        // Then try for macOS 12.0 (Color support)
         if #available(macOS 12.0, *) {
-            let color = NSColor(red: 79/255.0, green: 198/255.0, blue: 216/255.0, alpha: 1.0)
-            let config = NSImage.SymbolConfiguration(paletteColors: [color])
-            let image = NSImage(systemSymbolName: "drop.fill", accessibilityDescription: "Reminder")
+            let blue = NSColor(red: 0.31, green: 0.78, blue: 0.85, alpha: 1.0)
+            let config = NSImage.SymbolConfiguration(paletteColors: [blue])
             statusItem?.button?.image = image?.withSymbolConfiguration(config)
-        } else if #available(macOS 11.0, *) {
-            let image = NSImage(systemSymbolName: "drop.fill", accessibilityDescription: "Reminder")
+        } else {
             image?.isTemplate = true
             statusItem?.button?.image = image
         }
@@ -42,7 +50,6 @@ class TrayPillManager {
 
     /// Hides the tray item.
     static func dismiss() {
-        print("TrayPillManager: Dismissing status item...")
         statusItem?.button?.isHidden = true
     }
 }

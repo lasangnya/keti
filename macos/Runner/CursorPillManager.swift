@@ -1,20 +1,21 @@
 import Cocoa
 import SwiftUI
 
-/// Shows a horizontal orange pill next to the mouse cursor.
-/// The pill follows the cursor via a high-frequency Timer and auto-hides after 3 seconds.
+/// Shows an animated PNG sequence next to the mouse cursor.
+/// The animation follows the cursor and auto-hides after 4 seconds.
 class CursorPillManager {
     private static var window: NSPanel?
     private static var trackingTimer: Timer?
 
-    private static let pillSize = NSSize(width: 200, height: 44)
-    private static let visibilityDuration: TimeInterval = 3.0
+    // 1. Adjust size to match
+    private static let pillSize = NSSize(width: 86, height: 15)
+    private static let visibilityDuration: TimeInterval = 4.0
 
     static func show() {
-        // Tear down any existing pill
         dismiss()
 
-        let contentView = CursorPillView()
+        // 2. We have 120 frames (00000 to 00119)
+        let contentView = CursorPillView(frameCount: 120)
         let hostingView = NSHostingView(rootView: contentView)
         hostingView.frame.size = pillSize
 
@@ -25,7 +26,7 @@ class CursorPillManager {
             defer: false
         )
 
-        panel.level = .mainMenu + 1  // same level as IslandManager — sits above everything
+        panel.level = .mainMenu + 1
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = false
@@ -36,16 +37,11 @@ class CursorPillManager {
         panel.makeKeyAndOrderFront(nil)
         window = panel
 
-        // Position at the current cursor immediately
         positionAtCursor()
 
-        // Track cursor at ~60fps
+        // Track cursor at 60fps
         trackingTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { _ in
-            guard window != nil else {
-                trackingTimer?.invalidate()
-                trackingTimer = nil
-                return
-            }
+            guard window != nil else { return }
             positionAtCursor()
         }
 
@@ -63,36 +59,33 @@ class CursorPillManager {
         window = nil
     }
 
-    // MARK: - Private
-
     private static func positionAtCursor() {
         guard let panel = window else { return }
         let mouse = NSEvent.mouseLocation
-        // Offset: pill appears to the right and slightly above the cursor
-        panel.setFrameOrigin(NSPoint(x: mouse.x + 16, y: mouse.y + 16))
+        // Center the animation on the tip of the cursor
+        panel.setFrameOrigin(NSPoint(x: mouse.x - 10 , y: mouse.y - 30 ))
     }
 }
 
-// MARK: - SwiftUI View
+// MARK: - Animated SwiftUI View
 
 struct CursorPillView: View {
-    var body: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(Color.orange)
-                .frame(width: 10, height: 10)
+    let frameCount: Int
+    @State private var currentFrame = 0
 
-            Text("💧 Time to drink water!")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.white)
-        }
-        .frame(width: 200, height: 44)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(
-            Capsule()
-                .fill(Color.orange.opacity(0.9))
-                .shadow(color: .orange.opacity(0.3), radius: 8, x: 0, y: 3)
-        )
+    // ~30 FPS (4 seconds for 120 frames)
+    let timer = Timer.publish(every: 0.033, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        let frameName = String(format: "ambient_cursor_pill_%05d", currentFrame)
+
+        Image(frameName)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .onReceive(timer) { _ in
+                if currentFrame < frameCount - 1 {
+                    currentFrame += 1
+                }
+            }
     }
 }
