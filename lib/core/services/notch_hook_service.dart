@@ -10,6 +10,8 @@ class NotchHookService {
       await _channel.invokeMethod(PlatformChannels.methodShowIsland, {
         PlatformChannels.keyMessage: content.message,
         PlatformChannels.keyResourceName: content.notchResource,
+        PlatformChannels.keyWidth: content.notchWidth,
+        PlatformChannels.keyHeight: content.notchHeight,
       });
     } on PlatformException catch (e) {
       print("Failed to show island: ${e.message}");

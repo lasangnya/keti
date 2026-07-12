@@ -19,4 +19,8 @@ class AppStrings {
   static const String traySubtitle = 'In your system tray';
   static const String testBreak = 'Break reminder';
   static const String testHydration = 'Hydration reminder';
+  static const String notchSize = 'Notch Size';
+  static const String small = 'Small';
+  static const String medium = 'Medium';
+  static const String large = 'Large';
 }

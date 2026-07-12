@@ -16,8 +16,11 @@ class MainFlutterWindow: NSWindow {
           let args = call.arguments as? [String: Any]
           let message = args?[PlatformChannels.keyMessage] as? String ?? "Reminder!"
           let resourceName = args?[PlatformChannels.keyResourceName] as? String ?? "ambient_break_cursor_pill"
+          let width = args?[PlatformChannels.keyWidth] as? Double ?? 350
+          let height = args?[PlatformChannels.keyHeight] as? Double ?? 60
+          
           // Call the SwiftUI Manager
-          IslandManager.show(message: message, resourceName: resourceName)
+          IslandManager.show(message: message, resourceName: resourceName, width: width, height: height)
           result(nil)
         }
       }

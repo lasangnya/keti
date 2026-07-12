@@ -26,55 +26,80 @@ class TestMode extends _$TestMode {
     state = state.copyWith(selectedType: type);
   }
 
+  /// Helper to get notch dimensions based on preset
+  (double, double) _getNotchDimensions(String preset) {
+    switch (preset) {
+      case 'wide-shallow':
+        return (500, 40);
+      case 'narrow-deep':
+        return (250, 90);
+      case 'default':
+      default:
+        return (350, 60);
+    }
+  }
+
   /// Logic to determine what content to show for Break Reminders
-  ReminderContent getBreakContent() {
+  ReminderContent getBreakContent({String notchPreset = 'default'}) {
+    final (nWidth, nHeight) = _getNotchDimensions(notchPreset);
+    
     if (state.selectedStyle == 'character') {
-      return const ReminderContent(
+      return ReminderContent(
         message: "Keti needs a stretch!",
         cursorResource: "character_break_cursor",
         notchResource: "character_break_notch",
         trayResource: "character_break_tray",
-        width: 150,
-        height: 150,
-        offsetX: -75,
-        offsetY: -75,
+        cursorWidth: 150,
+        cursorHeight: 150,
+        cursorOffsetX: -75,
+        cursorOffsetY: -75,
+        notchWidth: nWidth,
+        notchHeight: nHeight,
       );
     }
-    return const ReminderContent(
+    return ReminderContent(
       message: "Time for a break",
       cursorResource: "ambient_break_cursor_pill",
       notchResource: "ambient_break_notch",
       trayResource: "ambient_break_tray",
-      width: 86,
-      height: 15,
-      offsetX: -10,
-      offsetY: -30,
+      cursorWidth: 86,
+      cursorHeight: 15,
+      cursorOffsetX: -10,
+      cursorOffsetY: -30,
+      notchWidth: nWidth,
+      notchHeight: nHeight,
     );
   }
 
   /// Logic to determine what content to show for Hydration Reminders
-  ReminderContent getHydrationContent() {
+  ReminderContent getHydrationContent({String notchPreset = 'default'}) {
+    final (nWidth, nHeight) = _getNotchDimensions(notchPreset);
+
     if (state.selectedStyle == 'character') {
-      return const ReminderContent(
+      return ReminderContent(
         message: "Drink water with Keti!",
         cursorResource: "character_water_cursor",
         notchResource: "character_water_notch",
         trayResource: "character_water_tray",
-        width: 150,
-        height: 150,
-        offsetX: -75,
-        offsetY: -75,
+        cursorWidth: 150,
+        cursorHeight: 150,
+        cursorOffsetX: -75,
+        cursorOffsetY: -75,
+        notchWidth: nWidth,
+        notchHeight: nHeight,
       );
     }
-    return const ReminderContent(
+    return ReminderContent(
       message: "Stay hydrated",
       cursorResource: "ambient_hydration_cursor_pill",
       notchResource: "ambient_water_notch",
       trayResource: "ambient_water_tray",
-      width: 15,
-      height: 86,
-      offsetX: 20,
-      offsetY: -55,
+      cursorWidth: 15,
+      cursorHeight: 86,
+      cursorOffsetX: 20,
+      cursorOffsetY: -55,
+      notchWidth: nWidth,
+      notchHeight: nHeight,
     );
   }
 }

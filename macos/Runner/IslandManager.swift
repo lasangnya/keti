@@ -10,7 +10,7 @@ import SwiftUI
 class IslandManager {
     static var window: NSPanel?
 
-    static func show(message: String, resourceName: String) {
+    static func show(message: String, resourceName: String, width: Double, height: Double) {
         window?.close()
 
         let contentView = IslandView(message: message, resourceName: resourceName) {
@@ -19,7 +19,7 @@ class IslandManager {
         }
 
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 80),
+            contentRect: NSRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)),
             styleMask: [.borderless, .nonactivatingPanel], // Borderless & doesn't steal focus
             backing: .buffered,
             defer: false
@@ -37,8 +37,8 @@ class IslandManager {
 
         // Position at the top center of the screen
         if let screen = NSScreen.main {
-            let x = (screen.frame.width - panel.frame.width) / 2
-            let y = screen.frame.height - panel.frame.height - 50 // 50px from top
+            let x = (screen.frame.width - CGFloat(width)) / 2
+            let y = screen.frame.height - CGFloat(height) - 50 // 50px from top
             panel.setFrameOrigin(NSPoint(x: x, y: y))
         }
 

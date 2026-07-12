@@ -25,7 +25,6 @@ class TestModePage extends ConsumerWidget {
           const PageTitle(title: AppStrings.testMode),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            // Offset for ListListTile internal padding
             child: SwitchListTile(
               title: const Text(AppStrings.testModeActive),
               value: testModeState.isActive,
@@ -112,13 +111,15 @@ class TestModePage extends ConsumerWidget {
                         showRadio: false,
                         button1Text: AppStrings.testBreak,
                         onButton1Pressed: () async {
-                          final content = ref.read(testModeProvider.notifier).getBreakContent();
-                          NotchHookService.showIsland(content);
+                          // PROGRAMMING: Change notchPreset to 'wide-shallow' or 'narrow-deep' to test
+                          final content = ref.read(testModeProvider.notifier).getBreakContent(notchPreset: 'default');
+                          await NotchHookService.showIsland(content);
                         },
                         button2Text: AppStrings.testHydration,
                         onButton2Pressed: () async {
-                          final content = ref.read(testModeProvider.notifier).getHydrationContent();
-                          NotchHookService.showIsland(content);
+                          // PROGRAMMING: Change notchPreset to 'wide-shallow' or 'narrow-deep' to test
+                          final content = ref.read(testModeProvider.notifier).getHydrationContent(notchPreset: 'default');
+                          await NotchHookService.showIsland(content);
                         },
                       ),
                     ),

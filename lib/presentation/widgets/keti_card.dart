@@ -42,7 +42,6 @@ class KetiCard extends StatelessWidget {
       opacity: enabled ? 1.0 : 0.5,
       child: Card(
         elevation: isSelected ? 4 : 0,
-        // Highlight the border when selected (Material 3 style)
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
@@ -58,7 +57,6 @@ class KetiCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header: Radio (Optional) + Title/Subtitle
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -91,8 +89,6 @@ class KetiCard extends StatelessWidget {
                     ),
                   ],
                 ),
-
-                // Conditional Image
                 if (showImage && image != null) ...[
                   const SizedBox(height: 16),
                   ClipRRect(
@@ -104,8 +100,6 @@ class KetiCard extends StatelessWidget {
                     ),
                   ),
                 ],
-
-                // Conditional Buttons
                 if (showButtons) ...[
                   const SizedBox(height: 16),
                   if (button1Text != null)

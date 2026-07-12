@@ -3,19 +3,27 @@ class ReminderContent {
   final String cursorResource;
   final String notchResource;
   final String trayResource;
-  final double width;
-  final double height;
-  final double offsetX;
-  final double offsetY;
+  
+  // Dimensions for Cursor
+  final double cursorWidth;
+  final double cursorHeight;
+  final double cursorOffsetX;
+  final double cursorOffsetY;
+
+  // Dimensions for Notch (Dynamic Island)
+  final double notchWidth;
+  final double notchHeight;
 
   const ReminderContent({
     required this.message,
     required this.cursorResource,
     required this.notchResource,
     required this.trayResource,
-    required this.width,
-    required this.height,
-    required this.offsetX,
-    required this.offsetY,
+    required this.cursorWidth,
+    required this.cursorHeight,
+    required this.cursorOffsetX,
+    required this.cursorOffsetY,
+    required this.notchWidth,
+    required this.notchHeight,
   });
 }
