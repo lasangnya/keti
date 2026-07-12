@@ -93,11 +93,13 @@ class TestModePage extends ConsumerWidget {
                         showRadio: false,
                         button1Text: AppStrings.testBreak,
                         onButton1Pressed: () async {
-                          await CursorPillService.showPill();
+                          final content = ref.read(testModeProvider.notifier).getBreakContent();
+                          await CursorPillService.showPill(content);
                         },
                         button2Text: AppStrings.testHydration,
                         onButton2Pressed: () async {
-                          await CursorPillService.showPill();
+                          final content = ref.read(testModeProvider.notifier).getHydrationContent();
+                          await CursorPillService.showPill(content);
                         },
                       ),
                     ),
@@ -110,13 +112,13 @@ class TestModePage extends ConsumerWidget {
                         showRadio: false,
                         button1Text: AppStrings.testBreak,
                         onButton1Pressed: () async {
-                          await NotchHookService.showIsland(
-                              'Time for a break! ☕️');
+                          final content = ref.read(testModeProvider.notifier).getBreakContent();
+                          NotchHookService.showIsland(content);
                         },
                         button2Text: AppStrings.testHydration,
                         onButton2Pressed: () async {
-                          await NotchHookService.showIsland(
-                              'Time to drink water! 💧');
+                          final content = ref.read(testModeProvider.notifier).getHydrationContent();
+                          NotchHookService.showIsland(content);
                         },
                       ),
                     ),
@@ -129,11 +131,13 @@ class TestModePage extends ConsumerWidget {
                         showRadio: false,
                         button1Text: AppStrings.testBreak,
                         onButton1Pressed: () async {
-                          await TrayPillService.showPill();
+                          final content = ref.read(testModeProvider.notifier).getBreakContent();
+                          await TrayPillService.showPill(content);
                         },
                         button2Text: AppStrings.testHydration,
                         onButton2Pressed: () async {
-                          await TrayPillService.showPill();
+                          final content = ref.read(testModeProvider.notifier).getHydrationContent();
+                          await TrayPillService.showPill(content);
                         },
                       ),
                     ),

@@ -10,10 +10,10 @@ import SwiftUI
 class IslandManager {
     static var window: NSPanel?
 
-    static func show(message: String) {
+    static func show(message: String, resourceName: String) {
         window?.close()
 
-        let contentView = IslandView(message: message) {
+        let contentView = IslandView(message: message, resourceName: resourceName) {
             window?.close()
             window = nil
         }

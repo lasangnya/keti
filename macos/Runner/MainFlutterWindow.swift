@@ -15,24 +15,27 @@ class MainFlutterWindow: NSWindow {
         if call.method == PlatformChannels.methodShowIsland {
           let args = call.arguments as? [String: Any]
           let message = args?[PlatformChannels.keyMessage] as? String ?? "Reminder!"
+          let resourceName = args?[PlatformChannels.keyResourceName] as? String ?? "ambient_break_cursor_pill"
           // Call the SwiftUI Manager
-          IslandManager.show(message: message)
+          IslandManager.show(message: message, resourceName: resourceName)
           result(nil)
         }
       }
 
       cursorChannel.setMethodCallHandler { (call, result) in
-        print("MainFlutterWindow: cursorChannel call: \(call.method)")
         if call.method == PlatformChannels.methodShowCursorPill {
-          CursorPillManager.show()
+            let args = call.arguments as? [String : Any]
+            let resourceName = args?[PlatformChannels.keyResourceName] as? String ?? "ambient_break_cursor_pill"
+                CursorPillManager.show(resourceName: resourceName)
           result(nil)
         }
       }
 
       trayChannel.setMethodCallHandler { (call, result) in
-        print("MainFlutterWindow: trayChannel call: \(call.method)")
         if call.method == PlatformChannels.methodShowTrayPill {
-          TrayPillManager.show()
+            let args = call.arguments as? [String : Any]
+            let resourceName = args?[PlatformChannels.keyResourceName] as? String ?? "drop.fill"
+          TrayPillManager.show(resourceName: resourceName)
           result(nil)
         }
       }

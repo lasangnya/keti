@@ -2,14 +2,26 @@ import SwiftUI
 
 struct IslandView: View {
     let message: String
+    let resourceName: String
     var onDismiss: () -> Void
+
+    @State private var currentFrame = 0
+    let timer = Timer.publish(every: 0.033, on: .main, in: .common).autoconnect()
+    let totalFrames = 120
 
     var body: some View {
         HStack(spacing: 20) {
-            // The Icon
-            Image(systemName: "drop.fill")
-                .foregroundColor(.blue)
-                .font(.system(size: 20, weight: .bold))
+            // The Animation
+            let frameName = String(format: "\(resourceName)_%05d", currentFrame)
+            Image(frameName)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 40, height: 40)
+                .onReceive(timer) { _ in
+                    if currentFrame < totalFrames - 1 {
+                        currentFrame += 1
+                    }
+                }
 
             // The Message
             Text(message)

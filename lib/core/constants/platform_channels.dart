@@ -19,4 +19,7 @@ class PlatformChannels {
 
   // ── Argument keys (notch_hook) ─────────────────────────────────
   static const String keyMessage = 'message';
+
+  // ── Content resource name (notch_hook) ─────────────────────────────────
+  static const String keyResourceName = 'resourceName';
 }

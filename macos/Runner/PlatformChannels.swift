@@ -15,6 +15,7 @@ enum PlatformChannels {
     // ── Method names (tray_pill) ─────────────────────────────────
     static let methodShowTrayPill = "showPill"
 
-    // ── Argument keys (notch_hook) ───────────────────────────────
+    // ── Argument keys ─────────────────────────────────────────────
     static let keyMessage = "message"
+    static let keyResourceName = "resourceName"
 }

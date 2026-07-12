@@ -11,11 +11,11 @@ class CursorPillManager {
     private static let pillSize = NSSize(width: 86, height: 15)
     private static let visibilityDuration: TimeInterval = 4.0
 
-    static func show() {
+    static func show(resourceName: String) {
         dismiss()
 
         // 2. We have 120 frames (00000 to 00119)
-        let contentView = CursorPillView(frameCount: 120)
+        let contentView = CursorPillView(resourceName: resourceName, frameCount: 120)
         let hostingView = NSHostingView(rootView: contentView)
         hostingView.frame.size = pillSize
 
@@ -70,6 +70,7 @@ class CursorPillManager {
 // MARK: - Animated SwiftUI View
 
 struct CursorPillView: View {
+    let resourceName : String
     let frameCount: Int
     @State private var currentFrame = 0
 
@@ -77,7 +78,7 @@ struct CursorPillView: View {
     let timer = Timer.publish(every: 0.033, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        let frameName = String(format: "ambient_break_cursor_pill_%05d", currentFrame)
+        let frameName = String(format: "\(resourceName)_%05d", currentFrame)
 
         Image(frameName)
             .resizable()

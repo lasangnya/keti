@@ -1,4 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../../domain/reminders/reminder_content.dart';
 
 part 'test_mode_provider.g.dart';
 
@@ -23,6 +24,42 @@ class TestMode extends _$TestMode {
 
   void setType(String type) {
     state = state.copyWith(selectedType: type);
+  }
+
+  /// Logic to determine what content to show for Break Reminders
+  ReminderContent getBreakContent() {
+    if (state.selectedStyle == 'character') {
+      return const ReminderContent(
+        message: "Keti needs a stretch!",
+        cursorResource: "character_break_cursor",
+        notchResource: "character_break_notch",
+        trayResource: "character_break_tray",
+      );
+    }
+    return const ReminderContent(
+      message: "Time for a break",
+      cursorResource: "ambient_break_cursor_pill",
+      notchResource: "ambient_break_notch",
+      trayResource: "ambient_break_tray",
+    );
+  }
+
+  /// Logic to determine what content to show for Hydration Reminders
+  ReminderContent getHydrationContent() {
+    if (state.selectedStyle == 'character') {
+      return const ReminderContent(
+        message: "Drink water with Keti!",
+        cursorResource: "character_water_cursor",
+        notchResource: "character_water_notch",
+        trayResource: "character_water_tray",
+      );
+    }
+    return const ReminderContent(
+      message: "Stay hydrated",
+      cursorResource: "ambient_hydration_cursor_pill",
+      notchResource: "ambient_water_notch",
+      trayResource: "ambient_water_tray",
+    );
   }
 }
 
