@@ -88,13 +88,17 @@ class TestModePage extends ConsumerWidget {
                       child: KetiCard(
                         title: AppStrings.cursor,
                         subtitle: AppStrings.cursorSubtitle,
-                        showButton: true,
-                        buttonText: AppStrings.test,
-                        isSelected: false,
-                        onSelected: (_) {},
-                        onButtonPressed: () async {
+                        showButtons: true,
+                        button1Text: AppStrings.testBreak,
+                        onButton1Pressed: () async {
                           await CursorPillService.showPill();
                         },
+                        button2Text: AppStrings.testHydration,
+                        onButton2Pressed: () async {
+                          await CursorPillService.showPill();
+                        },
+                        isSelected: false,
+                        onSelected: (_) {},
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -102,13 +106,17 @@ class TestModePage extends ConsumerWidget {
                       child: KetiCard(
                         title: AppStrings.island,
                         subtitle: AppStrings.islandSubtitle,
-                        showButton: true,
-                        buttonText: AppStrings.test,
-                        isSelected: false,
-                        onSelected: (_) {},
-                        onButtonPressed: () async {
+                        showButtons: true,
+                        button1Text: AppStrings.testBreak,
+                        onButton1Pressed: () async {
+                          await NotchHookService.showIsland('Time for a break! ☕️');
+                        },
+                        button2Text: AppStrings.testHydration,
+                        onButton2Pressed: () async {
                           await NotchHookService.showIsland('Time to drink water! 💧');
                         },
+                        isSelected: false,
+                        onSelected: (_) {},
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -116,13 +124,17 @@ class TestModePage extends ConsumerWidget {
                       child: KetiCard(
                         title: AppStrings.tray,
                         subtitle: AppStrings.traySubtitle,
-                        showButton: true,
-                        buttonText: AppStrings.test,
-                        isSelected: false,
-                        onSelected: (_) {},
-                        onButtonPressed: () async {
+                        showButtons: true,
+                        button1Text: AppStrings.testBreak,
+                        onButton1Pressed: () async {
                           await TrayPillService.showPill();
                         },
+                        button2Text: AppStrings.testHydration,
+                        onButton2Pressed: () async {
+                          await TrayPillService.showPill();
+                        },
+                        isSelected: false,
+                        onSelected: (_) {},
                       ),
                     ),
                   ],

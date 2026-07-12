@@ -17,4 +17,6 @@ class AppStrings {
   static const String islandSubtitle = 'Near the notch of your screen';
   static const String tray = 'System Tray';
   static const String traySubtitle = 'In your system tray';
+  static const String testBreak = 'Break reminder';
+  static const String testHydration = 'Hydration reminder';
 }

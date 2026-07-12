@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
 class KetiCard extends StatelessWidget {
   final String title;
@@ -8,9 +9,11 @@ class KetiCard extends StatelessWidget {
 
   final Widget? image;
   final bool showImage;
-  final String? buttonText;
-  final VoidCallback? onButtonPressed;
-  final bool showButton;
+  final String? button1Text;
+  final VoidCallback? onButton1Pressed;
+  final String? button2Text;
+  final VoidCallback? onButton2Pressed;
+  final bool showButtons;
 
   const KetiCard({
     super.key,
@@ -20,9 +23,11 @@ class KetiCard extends StatelessWidget {
     this.onSelected,
     this.image,
     this.showImage = false,
-    this.buttonText,
-    this.onButtonPressed,
-    this.showButton = false,
+    this.button1Text,
+    this.onButton1Pressed,
+    this.button2Text,
+    this.onButton2Pressed,
+    this.showButtons = false,
   });
 
   @override
@@ -40,8 +45,8 @@ class KetiCard extends StatelessWidget {
           width: isSelected ? 2 : 1,
         ),
       ),
-      child: RadioGroup<bool>(
-        groupValue: isSelected,
+      child: shadcn.RadioGroup<bool>(
+        value: isSelected,
         onChanged: (value) => onSelected?.call(value),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
@@ -55,7 +60,7 @@ class KetiCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Radio<bool>(value: true, visualDensity: VisualDensity.compact),
+                  const shadcn.Radio(value: true),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -82,16 +87,27 @@ class KetiCard extends StatelessWidget {
                   ),
                 ],
 
-              // Conditional Button
-                if (showButton && buttonText != null) ...[
+              // Conditional Buttons
+                if (showButtons) ...[
                   const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.tonal(
-                      onPressed: onButtonPressed,
-                      child: Text(buttonText!),
+                  if (button1Text != null)
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.tonal(
+                        onPressed: onButton1Pressed,
+                        child: Text(button1Text!),
+                      ),
                     ),
-                  ),
+                  if (button1Text != null && button2Text != null)
+                    const SizedBox(height: 8),
+                  if (button2Text != null)
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.tonal(
+                        onPressed: onButton2Pressed,
+                        child: Text(button2Text!),
+                      ),
+                    ),
                 ],
               ],
             ),
