@@ -2,7 +2,7 @@ import Cocoa
 import SwiftUI
 
 /// Shows an animated PNG sequence next to the mouse cursor.
-/// The animation follows the cursor and auto-hides after 4 seconds.
+/// The animation follows the cursor and auto-hides after the sequence finishes.
 class CursorPillManager {
     private static var window: NSPanel?
     private static var trackingTimer: Timer?
@@ -11,8 +11,6 @@ class CursorPillManager {
     private static var currentHeight: Double = 150
     private static var currentOffsetX: Double = 0
     private static var currentOffsetY: Double = 0
-
-    private static let visibilityDuration: TimeInterval = 4.0
 
     static func show(resourceName: String, width: Double, height: Double, offsetX: Double, offsetY: Double) {
         dismiss()
@@ -23,7 +21,12 @@ class CursorPillManager {
         currentOffsetY = offsetY
 
         let pillSize = NSSize(width: width, height: height)
-        let contentView = CursorPillView(resourceName: resourceName, frameCount: 120)
+        
+        // Use a trailing closure for the dismissal callback
+        let contentView = CursorPillView(resourceName: resourceName, frameCount: 120) {
+            dismiss()
+        }
+        
         let hostingView = NSHostingView(rootView: contentView)
         hostingView.frame.size = pillSize
 
@@ -52,11 +55,6 @@ class CursorPillManager {
             guard window != nil else { return }
             positionAtCursor()
         }
-
-        // Auto-dismiss
-        DispatchQueue.main.asyncAfter(deadline: .now() + visibilityDuration) {
-            dismiss()
-        }
     }
 
     static func dismiss() {
@@ -80,7 +78,11 @@ class CursorPillManager {
 struct CursorPillView: View {
     let resourceName : String
     let frameCount: Int
+    var onDismiss: () -> Void
+    
     @State private var currentFrame = 0
+    @State private var isVisible = false
+    @State private var hasFinished = false
 
     // ~30 FPS (4 seconds for 120 frames)
     let timer = Timer.publish(every: 0.033, on: .main, in: .common).autoconnect()
@@ -94,7 +96,27 @@ struct CursorPillView: View {
             .onReceive(timer) { _ in
                 if currentFrame < frameCount - 1 {
                     currentFrame += 1
+                } else if !hasFinished {
+                    hasFinished = true
+                    dismissWithAnimation()
                 }
             }
+            .scaleEffect(isVisible ? 1.0 : 0.5)
+            .opacity(isVisible ? 1.0 : 0.0)
+            .onAppear {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                    isVisible = true
+                }
+            }
+    }
+    
+    private func dismissWithAnimation() {
+        withAnimation(.easeIn(duration: 0.3)) {
+            isVisible = false
+        }
+        // Wait for animation to finish before closing window
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            onDismiss()
+        }
     }
 }

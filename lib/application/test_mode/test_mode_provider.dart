@@ -60,7 +60,7 @@ class TestMode extends _$TestMode {
     return ReminderContent(
       message: "Time for a break",
       cursorResource: "ambient_break_cursor_pill",
-      notchResource: "ambient_break_notch",
+      notchResource: "ambient_break_notch_card",
       trayResource: "ambient_break_tray",
       cursorWidth: 86,
       cursorHeight: 15,
