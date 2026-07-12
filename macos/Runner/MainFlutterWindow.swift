@@ -26,7 +26,18 @@ class MainFlutterWindow: NSWindow {
         if call.method == PlatformChannels.methodShowCursorPill {
             let args = call.arguments as? [String : Any]
             let resourceName = args?[PlatformChannels.keyResourceName] as? String ?? "ambient_break_cursor_pill"
-                CursorPillManager.show(resourceName: resourceName)
+            let width = args?[PlatformChannels.keyWidth] as? Double ?? 150
+            let height = args?[PlatformChannels.keyHeight] as? Double ?? 150
+            let offsetX = args?[PlatformChannels.keyOffsetX] as? Double ?? 0
+            let offsetY = args?[PlatformChannels.keyOffsetY] as? Double ?? 0
+            
+            CursorPillManager.show(
+                resourceName: resourceName,
+                width: width,
+                height: height,
+                offsetX: offsetX,
+                offsetY: offsetY
+            )
           result(nil)
         }
       }

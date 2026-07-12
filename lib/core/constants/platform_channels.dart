@@ -22,4 +22,8 @@ class PlatformChannels {
 
   // ── Content resource name (notch_hook) ─────────────────────────────────
   static const String keyResourceName = 'resourceName';
+  static const String keyWidth = 'width';
+  static const String keyHeight = 'height';
+  static const String keyOffsetX = 'offsetX';
+  static const String keyOffsetY = 'offsetY';
 }

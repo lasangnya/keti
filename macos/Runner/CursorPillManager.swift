@@ -6,15 +6,23 @@ import SwiftUI
 class CursorPillManager {
     private static var window: NSPanel?
     private static var trackingTimer: Timer?
+    
+    private static var currentWidth: Double = 150
+    private static var currentHeight: Double = 150
+    private static var currentOffsetX: Double = 0
+    private static var currentOffsetY: Double = 0
 
-    // 1. Adjust size to match
-    private static let pillSize = NSSize(width: 86, height: 15)
     private static let visibilityDuration: TimeInterval = 4.0
 
-    static func show(resourceName: String) {
+    static func show(resourceName: String, width: Double, height: Double, offsetX: Double, offsetY: Double) {
         dismiss()
+        
+        currentWidth = width
+        currentHeight = height
+        currentOffsetX = offsetX
+        currentOffsetY = offsetY
 
-        // 2. We have 120 frames (00000 to 00119)
+        let pillSize = NSSize(width: width, height: height)
         let contentView = CursorPillView(resourceName: resourceName, frameCount: 120)
         let hostingView = NSHostingView(rootView: contentView)
         hostingView.frame.size = pillSize
@@ -62,8 +70,8 @@ class CursorPillManager {
     private static func positionAtCursor() {
         guard let panel = window else { return }
         let mouse = NSEvent.mouseLocation
-        // Center the animation on the tip of the cursor
-        panel.setFrameOrigin(NSPoint(x: mouse.x - 10 , y: mouse.y - 30 ))
+        // Apply dynamic offset
+        panel.setFrameOrigin(NSPoint(x: mouse.x + currentOffsetX, y: mouse.y + currentOffsetY))
     }
 }
 

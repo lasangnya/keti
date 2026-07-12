@@ -18,4 +18,8 @@ enum PlatformChannels {
     // ── Argument keys ─────────────────────────────────────────────
     static let keyMessage = "message"
     static let keyResourceName = "resourceName"
+    static let keyWidth = "width"
+    static let keyHeight = "height"
+    static let keyOffsetX = "offsetX"
+    static let keyOffsetY = "offsetY"
 }

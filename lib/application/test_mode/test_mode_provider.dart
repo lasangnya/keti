@@ -34,6 +34,10 @@ class TestMode extends _$TestMode {
         cursorResource: "character_break_cursor",
         notchResource: "character_break_notch",
         trayResource: "character_break_tray",
+        width: 150,
+        height: 150,
+        offsetX: -75,
+        offsetY: -75,
       );
     }
     return const ReminderContent(
@@ -41,6 +45,10 @@ class TestMode extends _$TestMode {
       cursorResource: "ambient_break_cursor_pill",
       notchResource: "ambient_break_notch",
       trayResource: "ambient_break_tray",
+      width: 86,
+      height: 15,
+      offsetX: -10,
+      offsetY: -30,
     );
   }
 
@@ -52,6 +60,10 @@ class TestMode extends _$TestMode {
         cursorResource: "character_water_cursor",
         notchResource: "character_water_notch",
         trayResource: "character_water_tray",
+        width: 150,
+        height: 150,
+        offsetX: -75,
+        offsetY: -75,
       );
     }
     return const ReminderContent(
@@ -59,6 +71,10 @@ class TestMode extends _$TestMode {
       cursorResource: "ambient_hydration_cursor_pill",
       notchResource: "ambient_water_notch",
       trayResource: "ambient_water_tray",
+      width: 15,
+      height: 86,
+      offsetX: 20,
+      offsetY: -55,
     );
   }
 }

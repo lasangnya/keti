@@ -10,6 +10,10 @@ class CursorPillService {
       await _channel.invokeMethod(PlatformChannels.methodShowCursorPill, {
         PlatformChannels.keyMessage: content.message,
         PlatformChannels.keyResourceName: content.cursorResource,
+        PlatformChannels.keyWidth: content.width,
+        PlatformChannels.keyHeight: content.height,
+        PlatformChannels.keyOffsetX: content.offsetX,
+        PlatformChannels.keyOffsetY: content.offsetY,
       });
     } on PlatformException catch (e) {
       print("Failed to show cursor pill: ${e.message}");
