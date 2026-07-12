@@ -61,7 +61,7 @@ class TestMode extends _$TestMode {
       message: "Time for a break",
       cursorResource: "ambient_break_cursor_pill",
       notchResource: "ambient_break_notch_card",
-      trayResource: "ambient_break_tray",
+      trayResource: "ambient_break_cursor_pill",
       cursorWidth: 86,
       cursorHeight: 15,
       cursorOffsetX: -10,
@@ -92,7 +92,7 @@ class TestMode extends _$TestMode {
     return ReminderContent(
       message: "Stay hydrated",
       cursorResource: "ambient_hydration_cursor_pill",
-      notchResource: "ambient_water_notch",
+      notchResource: "ambient_hydration_notch_card",
       trayResource: "ambient_water_tray",
       cursorWidth: 15,
       cursorHeight: 86,
