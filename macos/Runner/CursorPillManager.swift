@@ -77,7 +77,7 @@ struct CursorPillView: View {
     let timer = Timer.publish(every: 0.033, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        let frameName = String(format: "ambient_cursor_pill_%05d", currentFrame)
+        let frameName = String(format: "ambient_break_cursor_pill_%05d", currentFrame)
 
         Image(frameName)
             .resizable()
