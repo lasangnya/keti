@@ -14,6 +14,7 @@ class TestModePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final testModeState = ref.watch(testModeProvider);
+    final notifier = ref.read(testModeProvider.notifier);
     final theme = Theme.of(context);
 
     return SingleChildScrollView(
@@ -28,8 +29,7 @@ class TestModePage extends ConsumerWidget {
             child: SwitchListTile(
               title: const Text(AppStrings.testModeActive),
               value: testModeState.isActive,
-              onChanged: (val) =>
-                  ref.read(testModeProvider.notifier).toggleActive(val),
+              onChanged: (val) => notifier.toggleActive(val),
             ),
           ),
           if (testModeState.isActive) ...[
@@ -52,8 +52,8 @@ class TestModePage extends ConsumerWidget {
                       child: KetiCard(
                         title: AppStrings.ambient,
                         subtitle: AppStrings.ambientSubtitle,
-                        isSelected: false,
-                        onSelected: (_) {},
+                        isSelected: testModeState.selectedStyle == 'ambient',
+                        onSelected: (_) => notifier.setStyle('ambient'),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -61,8 +61,9 @@ class TestModePage extends ConsumerWidget {
                       child: KetiCard(
                         title: AppStrings.character,
                         subtitle: AppStrings.characterSubtitle,
-                        isSelected: false,
-                        onSelected: (_) {},
+                        isSelected: testModeState.selectedStyle == 'character',
+                        onSelected: (_) => notifier.setStyle('character'),
+                        enabled: false,
                       ),
                     ),
                   ],
@@ -89,6 +90,7 @@ class TestModePage extends ConsumerWidget {
                         title: AppStrings.cursor,
                         subtitle: AppStrings.cursorSubtitle,
                         showButtons: true,
+                        showRadio: false,
                         button1Text: AppStrings.testBreak,
                         onButton1Pressed: () async {
                           await CursorPillService.showPill();
@@ -97,8 +99,6 @@ class TestModePage extends ConsumerWidget {
                         onButton2Pressed: () async {
                           await CursorPillService.showPill();
                         },
-                        isSelected: false,
-                        onSelected: (_) {},
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -107,16 +107,17 @@ class TestModePage extends ConsumerWidget {
                         title: AppStrings.island,
                         subtitle: AppStrings.islandSubtitle,
                         showButtons: true,
+                        showRadio: false,
                         button1Text: AppStrings.testBreak,
                         onButton1Pressed: () async {
-                          await NotchHookService.showIsland('Time for a break! ☕️');
+                          await NotchHookService.showIsland(
+                              'Time for a break! ☕️');
                         },
                         button2Text: AppStrings.testHydration,
                         onButton2Pressed: () async {
-                          await NotchHookService.showIsland('Time to drink water! 💧');
+                          await NotchHookService.showIsland(
+                              'Time to drink water! 💧');
                         },
-                        isSelected: false,
-                        onSelected: (_) {},
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -125,6 +126,7 @@ class TestModePage extends ConsumerWidget {
                         title: AppStrings.tray,
                         subtitle: AppStrings.traySubtitle,
                         showButtons: true,
+                        showRadio: false,
                         button1Text: AppStrings.testBreak,
                         onButton1Pressed: () async {
                           await TrayPillService.showPill();
@@ -133,8 +135,6 @@ class TestModePage extends ConsumerWidget {
                         onButton2Pressed: () async {
                           await TrayPillService.showPill();
                         },
-                        isSelected: false,
-                        onSelected: (_) {},
                       ),
                     ),
                   ],
