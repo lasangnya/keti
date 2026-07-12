@@ -35,7 +35,7 @@ class TestMode extends _$TestMode {
         return (250, 90);
       case 'default':
       default:
-        return (350, 60);
+        return (400, 100);
     }
   }
 

@@ -27,6 +27,10 @@ struct IslandView: View {
             Text(message)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+
+            Spacer()
 
             // The Dismiss Button
             Button(action: onDismiss) {
@@ -39,12 +43,10 @@ struct IslandView: View {
             }
             .buttonStyle(PlainButtonStyle())
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
-        .background(
-            Capsule()
-                .fill(Color.black.opacity(0.9))
-                .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
-        )
+        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.black.opacity(0.9))
+        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
     }
 }

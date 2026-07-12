@@ -38,7 +38,7 @@ class IslandManager {
         // Position at the top center of the screen
         if let screen = NSScreen.main {
             let x = (screen.frame.width - CGFloat(width)) / 2
-            let y = screen.frame.height - CGFloat(height) - 50 // 50px from top
+            let y = screen.frame.height - CGFloat(height) + 5// 10px from top
             panel.setFrameOrigin(NSPoint(x: x, y: y))
         }
 
