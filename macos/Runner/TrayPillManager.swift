@@ -1,15 +1,15 @@
 import Cocoa
+import SwiftUI
 
-/// Manages a persistent item in the macOS system tray (menu bar).
-/// By initializing at app launch, it secures a position on the right side of the tray.
+/// Manages a persistent item in the macOS system tray and a "dropped" card.
 class TrayPillManager {
     private static var statusItem: NSStatusItem?
+    private static var cardWindow: NSPanel?
     private static let visibilityDuration: TimeInterval = 4.0
     private static var animationTimer: Timer?
 
     /// Initializes the tray item and hides it. Call this at app launch.
     static func setup() {
-        print("TrayPillManager: Setting up status item...")
         if statusItem != nil { return }
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -17,50 +17,81 @@ class TrayPillManager {
         statusItem?.autosaveName = "KetiTrayPill"
     }
 
-    /// Makes the tray item visible and plays an animation sequence.
-    static func show(resourceName: String) {
-        print("TrayPillManager: Request to show \(resourceName)...")
+    /// Makes the tray item visible and "drops" a small card underneath.
+    static func show(message: String, resourceName: String, width: Double, height: Double) {
         if statusItem?.button == nil { setup() }
         
-        stopAnimation()
+        dismiss() // Clear previous instance
         
-        let button = statusItem?.button
-        button?.isHidden = false
-        button?.highlight(true)
+        guard let button = statusItem?.button else { return }
+        button.isHidden = false
+        button.highlight(true)
 
-        // Start PNG sequence animation
+        // 1. Play PNG sequence animation in the tray
         var currentFrame = 0
         let totalFrames = 120
         
         animationTimer = Timer.scheduledTimer(withTimeInterval: 0.033, repeats: true) { _ in
             let frameName = String(format: "\(resourceName)_%05d", currentFrame)
             if let image = NSImage(named: frameName) {
-                // Ensure it's treated as a template or keep original colors based on design
-                // For character style, original colors might be better.
-                button?.image = image
+                // Use dynamic dimensions passed from Flutter
+                image.size = NSSize(width: CGFloat(width), height: CGFloat(height))
+                image.isTemplate = false // Keep original colors as requested
+                button.image = image
             }
-            
             if currentFrame < totalFrames - 1 {
                 currentFrame += 1
-            } else {
-                // Loop or stop is handled by the auto-dismiss timer
             }
         }
 
+        // 2. Show the "Dropped" Card with the same resource
+        showCard(message: message, resourceName: resourceName, anchoredTo: button)
+
+        // 3. Auto-dismiss after duration
         DispatchQueue.main.asyncAfter(deadline: .now() + visibilityDuration) {
             dismiss()
         }
     }
 
-    /// Hides the tray item.
-    static func dismiss() {
-        print("TrayPillManager: Dismissing status item...")
-        stopAnimation()
-        statusItem?.button?.isHidden = true
+    private static func showCard(message: String, resourceName: String, anchoredTo button: NSStatusBarButton) {
+        let contentView = TrayCardView(message: message, resourceName: resourceName)
+        let hostingView = NSHostingView(rootView: contentView)
+        
+        // Let SwiftUI calculate the ideal size for the text
+        let idealSize = hostingView.fittingSize
+        
+        let panel = NSPanel(
+            contentRect: NSRect(origin: .zero, size: idealSize),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        
+        panel.level = NSWindow.Level(Int(NSWindow.Level.mainMenu.rawValue) + 1)
+        panel.backgroundColor = NSColor.clear
+        panel.isOpaque = false
+        panel.hasShadow = false
+        panel.contentView = hostingView
+        
+        // Position exactly under the tray button
+        if let windowFrame = button.window?.frame {
+            let x = windowFrame.origin.x + (windowFrame.width / 2) - (idealSize.width / 2)
+            let y = windowFrame.origin.y - idealSize.height - 4 // 4px gap
+            panel.setFrameOrigin(NSPoint(x: x, y: y))
+        }
+        
+        panel.makeKeyAndOrderFront(nil)
+        self.cardWindow = panel
     }
-    
-    private static func stopAnimation() {
+
+    /// Hides the tray item and the card.
+    static func dismiss() {
         animationTimer?.invalidate()
         animationTimer = nil
+        
+        statusItem?.button?.isHidden = true
+        
+        cardWindow?.close()
+        cardWindow = nil
     }
 }

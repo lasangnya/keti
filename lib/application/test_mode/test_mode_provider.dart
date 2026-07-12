@@ -42,7 +42,7 @@ class TestMode extends _$TestMode {
   /// Logic to determine what content to show for Break Reminders
   ReminderContent getBreakContent({String notchPreset = 'default'}) {
     final (nWidth, nHeight) = _getNotchDimensions(notchPreset);
-    
+
     if (state.selectedStyle == 'character') {
       return ReminderContent(
         message: "Keti needs a stretch!",
@@ -55,6 +55,8 @@ class TestMode extends _$TestMode {
         cursorOffsetY: -75,
         notchWidth: nWidth,
         notchHeight: nHeight,
+        trayWidth: 22,
+        trayHeight: 22,
       );
     }
     return ReminderContent(
@@ -68,6 +70,8 @@ class TestMode extends _$TestMode {
       cursorOffsetY: -30,
       notchWidth: nWidth,
       notchHeight: nHeight,
+      trayWidth: 22,
+      trayHeight: 4, // Horizontal pill
     );
   }
 
@@ -87,19 +91,23 @@ class TestMode extends _$TestMode {
         cursorOffsetY: -75,
         notchWidth: nWidth,
         notchHeight: nHeight,
+        trayWidth: 22,
+        trayHeight: 22,
       );
     }
     return ReminderContent(
       message: "Stay hydrated",
       cursorResource: "ambient_hydration_cursor_pill",
       notchResource: "ambient_hydration_notch_card",
-      trayResource: "ambient_water_tray",
+      trayResource: "ambient_hydration_cursor_pill",
       cursorWidth: 15,
       cursorHeight: 86,
       cursorOffsetX: 20,
       cursorOffsetY: -55,
       notchWidth: nWidth,
       notchHeight: nHeight,
+      trayWidth: 12, // Vertical pill
+      trayHeight: 18,
     );
   }
 }

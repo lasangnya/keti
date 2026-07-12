@@ -10,6 +10,8 @@ class TrayPillService {
       await _channel.invokeMethod(PlatformChannels.methodShowTrayPill, {
         PlatformChannels.keyMessage: content.message,
         PlatformChannels.keyResourceName: content.trayResource,
+        PlatformChannels.keyWidth: content.trayWidth,
+        PlatformChannels.keyHeight: content.trayHeight,
       });
     } on PlatformException catch (e) {
       print("Failed to show tray pill: ${e.message}");

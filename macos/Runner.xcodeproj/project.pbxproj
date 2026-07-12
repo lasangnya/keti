@@ -28,6 +28,7 @@
 		33CC10F62044A3C60003C045 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F42044A3C60003C045 /* MainMenu.xib */; };
 		33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C045 /* MainFlutterWindow.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
+		D50A478530043A1F006FA4B2 /* TrayCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D50A478430043A18006FA4B2 /* TrayCardView.swift */; };
 		D5E7AB7F2FFE875D002D4660 /* IslandView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB7E2FFE8753002D4660 /* IslandView.swift */; };
 		D5E7AB832FFE8C6B002D4660 /* IslandManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB822FFE8C66002D4660 /* IslandManager.swift */; };
 		D5E7AB862FFE90A2002D4660 /* PlatformChannels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB842FFE90A2002D4660 /* PlatformChannels.swift */; };
@@ -85,6 +86,7 @@
 		78E0A7A72DC9AD7400C4905E /* FlutterGeneratedPluginSwiftPackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = FlutterGeneratedPluginSwiftPackage; path = ephemeral/Packages/FlutterGeneratedPluginSwiftPackage; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		D50A478430043A18006FA4B2 /* TrayCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrayCardView.swift; sourceTree = "<group>"; };
 		D5E7AB7E2FFE8753002D4660 /* IslandView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandView.swift; sourceTree = "<group>"; };
 		D5E7AB822FFE8C66002D4660 /* IslandManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandManager.swift; sourceTree = "<group>"; };
 		D5E7AB842FFE90A2002D4660 /* PlatformChannels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformChannels.swift; sourceTree = "<group>"; };
@@ -176,6 +178,7 @@
 		33FAB671232836740065AC1E /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+				D50A478430043A18006FA4B2 /* TrayCardView.swift */,
 				D5E7AB822FFE8C66002D4660 /* IslandManager.swift */,
 				D5E7AB7E2FFE8753002D4660 /* IslandView.swift */,
 				D5E7AB842FFE90A2002D4660 /* PlatformChannels.swift */,
@@ -370,6 +373,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */,
+				D50A478530043A1F006FA4B2 /* TrayCardView.swift in Sources */,
 				D5E7AB7F2FFE875D002D4660 /* IslandView.swift in Sources */,
 				D5E7AB832FFE8C6B002D4660 /* IslandManager.swift in Sources */,
 				D5E7AB862FFE90A2002D4660 /* PlatformChannels.swift in Sources */,

@@ -48,8 +48,11 @@ class MainFlutterWindow: NSWindow {
       trayChannel.setMethodCallHandler { (call, result) in
         if call.method == PlatformChannels.methodShowTrayPill {
             let args = call.arguments as? [String : Any]
+            let message = args?[PlatformChannels.keyMessage] as? String ?? "Reminder!"
             let resourceName = args?[PlatformChannels.keyResourceName] as? String ?? "drop.fill"
-          TrayPillManager.show(resourceName: resourceName)
+            let width = args?[PlatformChannels.keyWidth] as? Double ?? 22
+            let height = args?[PlatformChannels.keyHeight] as? Double ?? 22
+          TrayPillManager.show(message: message, resourceName: resourceName, width: width, height: height)
           result(nil)
         }
       }
