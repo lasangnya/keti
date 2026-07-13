@@ -94,19 +94,19 @@ class TestMode extends _$TestMode {
   /// Logic to determine what content to show for Hydration Reminders
   ReminderContent getHydrationContent({String? notchPreset}) {
     // PROGRAMMING: Define which preset is used for each style branch here
-    final preset = notchPreset ?? (state.selectedStyle == 'character' ? 'wide-shallow' : 'default');
+    final preset = notchPreset ?? (state.selectedStyle == 'character' ? 'narrow-deep' : 'default');
     final (nWidth, nHeight) = _getNotchDimensions(preset, state.selectedStyle);
 
     if (state.selectedStyle == 'character') {
       return ReminderContent(
         message: "Drink water with Keti!",
-        cursorResource: "character_water_cursor",
-        notchResource: "character_water_notch",
-        trayResource: "character_water_tray",
-        cursorWidth: 150,
-        cursorHeight: 150,
-        cursorOffsetX: -75,
-        cursorOffsetY: -75,
+        cursorResource: "character_hydration_cursor_pill",
+        notchResource: "character_hydration_cursor_pill",
+        trayResource: "character_hydration_cursor_pill",
+        cursorWidth: 80,
+        cursorHeight: 80,
+        cursorOffsetX: 0,
+        cursorOffsetY:-40,
         notchWidth: nWidth,
         notchHeight: nHeight,
         trayWidth: 22,
