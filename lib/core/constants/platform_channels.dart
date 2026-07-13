@@ -26,4 +26,5 @@ class PlatformChannels {
   static const String keyHeight = 'height';
   static const String keyOffsetX = 'offsetX';
   static const String keyOffsetY = 'offsetY';
+  static const String keyTotalFrames = 'totalFrames';
 }

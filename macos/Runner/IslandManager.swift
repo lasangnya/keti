@@ -10,10 +10,10 @@ import SwiftUI
 class IslandManager {
     static var window: NSPanel?
 
-    static func show(message: String, resourceName: String, width: Double, height: Double) {
+    static func show(message: String, resourceName: String, width: Double, height: Double, totalFrames: Int) {
         window?.close()
 
-        let contentView = IslandView(message: message, resourceName: resourceName) {
+        let contentView = IslandView(message: message, resourceName: resourceName, totalFrames: totalFrames) {
             window?.close()
             window = nil
         }
@@ -26,8 +26,8 @@ class IslandManager {
         )
 
         // Configure the Panel for "Always on Top"
-        panel.level = .mainMenu + 1 // Sits above almost everything
-        panel.backgroundColor = .clear
+        panel.level = NSWindow.Level(Int(NSWindow.Level.mainMenu.rawValue) + 1)
+        panel.backgroundColor = NSColor.clear
         panel.isOpaque = false
         panel.hasShadow = false
         panel.canHide = false // Remains visible when app is minimized
@@ -38,7 +38,7 @@ class IslandManager {
         // Position at the top center of the screen
         if let screen = NSScreen.main {
             let x = (screen.frame.width - CGFloat(width)) / 2
-            let y = screen.frame.height - CGFloat(height) + 5// 10px from top
+            let y = screen.frame.height - CGFloat(height) + 5
             panel.setFrameOrigin(NSPoint(x: x, y: y))
         }
 

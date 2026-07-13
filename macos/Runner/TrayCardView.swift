@@ -3,21 +3,21 @@ import SwiftUI
 struct TrayCardView: View {
     let message: String
     let resourceName: String
+    let totalFrames: Int
     
     @State private var currentFrame = 0
     @State private var isVisible = false
     
     let timer = Timer.publish(every: 0.033, on: .main, in: .common).autoconnect()
-    let totalFrames = 120
 
     var body: some View {
         HStack(spacing: 12) {
-            // 1. The same animation sequence as the tray
+            // The animation sequence
             let frameName = String(format: "\(resourceName)_%05d", currentFrame)
             Image(frameName)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 24, height: 24) // Slightly larger than the tray icon
+                .frame(width: 24, height: 24)
                 .onReceive(timer) { _ in
                     if currentFrame < totalFrames - 1 {
                         currentFrame += 1

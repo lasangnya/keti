@@ -18,9 +18,10 @@ class MainFlutterWindow: NSWindow {
           let resourceName = args?[PlatformChannels.keyResourceName] as? String ?? "ambient_break_cursor_pill"
           let width = args?[PlatformChannels.keyWidth] as? Double ?? 350
           let height = args?[PlatformChannels.keyHeight] as? Double ?? 60
+          let totalFrames = args?[PlatformChannels.keyTotalFrames] as? Int ?? 120
           
           // Call the SwiftUI Manager
-          IslandManager.show(message: message, resourceName: resourceName, width: width, height: height)
+          IslandManager.show(message: message, resourceName: resourceName, width: width, height: height, totalFrames: totalFrames)
           result(nil)
         }
       }
@@ -33,13 +34,15 @@ class MainFlutterWindow: NSWindow {
             let height = args?[PlatformChannels.keyHeight] as? Double ?? 150
             let offsetX = args?[PlatformChannels.keyOffsetX] as? Double ?? 0
             let offsetY = args?[PlatformChannels.keyOffsetY] as? Double ?? 0
+            let totalFrames = args?[PlatformChannels.keyTotalFrames] as? Int ?? 120
             
             CursorPillManager.show(
                 resourceName: resourceName,
                 width: width,
                 height: height,
                 offsetX: offsetX,
-                offsetY: offsetY
+                offsetY: offsetY,
+                totalFrames: totalFrames
             )
           result(nil)
         }
@@ -52,7 +55,9 @@ class MainFlutterWindow: NSWindow {
             let resourceName = args?[PlatformChannels.keyResourceName] as? String ?? "drop.fill"
             let width = args?[PlatformChannels.keyWidth] as? Double ?? 22
             let height = args?[PlatformChannels.keyHeight] as? Double ?? 22
-          TrayPillManager.show(message: message, resourceName: resourceName, width: width, height: height)
+            let totalFrames = args?[PlatformChannels.keyTotalFrames] as? Int ?? 120
+            
+          TrayPillManager.show(message: message, resourceName: resourceName, width: width, height: height, totalFrames: totalFrames)
           result(nil)
         }
       }

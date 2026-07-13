@@ -18,6 +18,9 @@ class ReminderContent {
   final double trayWidth;
   final double trayHeight;
 
+  // Animation metadata
+  final int totalFrames;
+
   const ReminderContent({
     required this.message,
     required this.cursorResource,
@@ -31,5 +34,6 @@ class ReminderContent {
     required this.notchHeight,
     required this.trayWidth,
     required this.trayHeight,
+    required this.totalFrames,
   });
 }

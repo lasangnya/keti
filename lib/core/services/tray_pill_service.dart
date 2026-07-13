@@ -12,6 +12,7 @@ class TrayPillService {
         PlatformChannels.keyResourceName: content.trayResource,
         PlatformChannels.keyWidth: content.trayWidth,
         PlatformChannels.keyHeight: content.trayHeight,
+        PlatformChannels.keyTotalFrames: content.totalFrames,
       });
     } on PlatformException catch (e) {
       print("Failed to show tray pill: ${e.message}");

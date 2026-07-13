@@ -12,6 +12,7 @@ class NotchHookService {
         PlatformChannels.keyResourceName: content.notchResource,
         PlatformChannels.keyWidth: content.notchWidth,
         PlatformChannels.keyHeight: content.notchHeight,
+        PlatformChannels.keyTotalFrames: content.totalFrames,
       });
     } on PlatformException catch (e) {
       print("Failed to show island: ${e.message}");

@@ -62,7 +62,6 @@ class TestModePage extends ConsumerWidget {
                         subtitle: AppStrings.characterSubtitle,
                         isSelected: testModeState.selectedStyle == 'character',
                         onSelected: (_) => notifier.setStyle('character'),
-                        enabled: false,
                       ),
                     ),
                   ],

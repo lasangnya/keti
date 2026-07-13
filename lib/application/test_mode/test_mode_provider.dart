@@ -46,17 +46,18 @@ class TestMode extends _$TestMode {
     if (state.selectedStyle == 'character') {
       return ReminderContent(
         message: "Keti needs a stretch!",
-        cursorResource: "character_break_cursor",
+        cursorResource: "character_break_cursor_pill",
         notchResource: "character_break_notch",
         trayResource: "character_break_tray",
-        cursorWidth: 150,
-        cursorHeight: 150,
-        cursorOffsetX: -75,
-        cursorOffsetY: -75,
+        cursorWidth: 80,
+        cursorHeight: 80,
+        cursorOffsetX: 0,
+        cursorOffsetY:-40,
         notchWidth: nWidth,
         notchHeight: nHeight,
         trayWidth: 22,
         trayHeight: 22,
+        totalFrames: 300, // 10 seconds
       );
     }
     return ReminderContent(
@@ -71,7 +72,8 @@ class TestMode extends _$TestMode {
       notchWidth: nWidth,
       notchHeight: nHeight,
       trayWidth: 22,
-      trayHeight: 4, // Horizontal pill
+      trayHeight: 4,
+      totalFrames: 120, // 4 seconds
     );
   }
 
@@ -93,6 +95,7 @@ class TestMode extends _$TestMode {
         notchHeight: nHeight,
         trayWidth: 22,
         trayHeight: 22,
+        totalFrames: 300, // 10 seconds
       );
     }
     return ReminderContent(
@@ -106,8 +109,9 @@ class TestMode extends _$TestMode {
       cursorOffsetY: -55,
       notchWidth: nWidth,
       notchHeight: nHeight,
-      trayWidth: 12, // Vertical pill
-      trayHeight: 18,
+      trayWidth: 4,
+      trayHeight: 22,
+      totalFrames: 120, // 4 seconds
     );
   }
 }

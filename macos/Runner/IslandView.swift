@@ -3,6 +3,7 @@ import SwiftUI
 struct IslandView: View {
     let message: String
     let resourceName: String
+    let totalFrames: Int
     var onDismiss: () -> Void
 
     @State private var currentFrame = 0
@@ -10,7 +11,6 @@ struct IslandView: View {
     @State private var hasFinished = false // Prevent multiple dismissal triggers
     
     let timer = Timer.publish(every: 0.033, on: .main, in: .common).autoconnect()
-    let totalFrames = 120
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {

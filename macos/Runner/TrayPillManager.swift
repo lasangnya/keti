@@ -5,7 +5,6 @@ import SwiftUI
 class TrayPillManager {
     private static var statusItem: NSStatusItem?
     private static var cardWindow: NSPanel?
-    private static let visibilityDuration: TimeInterval = 4.0
     private static var animationTimer: Timer?
 
     /// Initializes the tray item and hides it. Call this at app launch.
@@ -18,7 +17,7 @@ class TrayPillManager {
     }
 
     /// Makes the tray item visible and "drops" a small card underneath.
-    static func show(message: String, resourceName: String, width: Double, height: Double) {
+    static func show(message: String, resourceName: String, width: Double, height: Double, totalFrames: Int) {
         if statusItem?.button == nil { setup() }
         
         dismiss() // Clear previous instance
@@ -29,7 +28,6 @@ class TrayPillManager {
 
         // 1. Play PNG sequence animation in the tray
         var currentFrame = 0
-        let totalFrames = 120
         
         animationTimer = Timer.scheduledTimer(withTimeInterval: 0.033, repeats: true) { _ in
             let frameName = String(format: "\(resourceName)_%05d", currentFrame)
@@ -41,20 +39,18 @@ class TrayPillManager {
             }
             if currentFrame < totalFrames - 1 {
                 currentFrame += 1
+            } else {
+                // Sequence finished, dismiss everything
+                dismiss()
             }
         }
 
         // 2. Show the "Dropped" Card with the same resource
-        showCard(message: message, resourceName: resourceName, anchoredTo: button)
-
-        // 3. Auto-dismiss after duration
-        DispatchQueue.main.asyncAfter(deadline: .now() + visibilityDuration) {
-            dismiss()
-        }
+        showCard(message: message, resourceName: resourceName, totalFrames: totalFrames, anchoredTo: button)
     }
 
-    private static func showCard(message: String, resourceName: String, anchoredTo button: NSStatusBarButton) {
-        let contentView = TrayCardView(message: message, resourceName: resourceName)
+    private static func showCard(message: String, resourceName: String, totalFrames: Int, anchoredTo button: NSStatusBarButton) {
+        let contentView = TrayCardView(message: message, resourceName: resourceName, totalFrames: totalFrames)
         let hostingView = NSHostingView(rootView: contentView)
         
         // Let SwiftUI calculate the ideal size for the text

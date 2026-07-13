@@ -12,7 +12,7 @@ class CursorPillManager {
     private static var currentOffsetX: Double = 0
     private static var currentOffsetY: Double = 0
 
-    static func show(resourceName: String, width: Double, height: Double, offsetX: Double, offsetY: Double) {
+    static func show(resourceName: String, width: Double, height: Double, offsetX: Double, offsetY: Double, totalFrames: Int) {
         dismiss()
         
         currentWidth = width
@@ -23,7 +23,7 @@ class CursorPillManager {
         let pillSize = NSSize(width: width, height: height)
         
         // Use a trailing closure for the dismissal callback
-        let contentView = CursorPillView(resourceName: resourceName, frameCount: 120) {
+        let contentView = CursorPillView(resourceName: resourceName, frameCount: totalFrames) {
             dismiss()
         }
         
@@ -37,7 +37,7 @@ class CursorPillManager {
             defer: false
         )
 
-        panel.level = .mainMenu + 1
+        panel.level = NSWindow.Level(Int(NSWindow.Level.mainMenu.rawValue) + 1)
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = false
@@ -84,7 +84,7 @@ struct CursorPillView: View {
     @State private var isVisible = false
     @State private var hasFinished = false
 
-    // ~30 FPS (4 seconds for 120 frames)
+    // ~30 FPS
     let timer = Timer.publish(every: 0.033, on: .main, in: .common).autoconnect()
 
     var body: some View {

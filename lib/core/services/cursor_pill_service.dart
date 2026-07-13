@@ -14,6 +14,7 @@ class CursorPillService {
         PlatformChannels.keyHeight: content.cursorHeight,
         PlatformChannels.keyOffsetX: content.cursorOffsetX,
         PlatformChannels.keyOffsetY: content.cursorOffsetY,
+        PlatformChannels.keyTotalFrames: content.totalFrames,
       });
     } on PlatformException catch (e) {
       print("Failed to show cursor pill: ${e.message}");

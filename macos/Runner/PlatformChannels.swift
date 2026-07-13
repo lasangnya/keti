@@ -22,4 +22,5 @@ enum PlatformChannels {
     static let keyHeight = "height"
     static let keyOffsetX = "offsetX"
     static let keyOffsetY = "offsetY"
+    static let keyTotalFrames = "totalFrames"
 }
