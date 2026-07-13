@@ -26,38 +26,52 @@ class TestMode extends _$TestMode {
     state = state.copyWith(selectedType: type);
   }
 
-  /// Helper to get notch dimensions based on preset
-  (double, double) _getNotchDimensions(String preset) {
-    switch (preset) {
-      case 'wide-shallow':
-        return (500, 40);
-      case 'narrow-deep':
-        return (250, 90);
-      case 'default':
-      default:
-        return (400, 100);
+  /// Helper to get notch dimensions based on preset AND style
+  (double, double) _getNotchDimensions(String preset, String style) {
+    if (style == 'character') {
+      switch (preset) {
+        case 'wide-shallow':
+          return (600, 150);
+        case 'narrow-deep':
+          return (250, 250);
+        case 'default':
+        default:
+          return (400, 400);
+      }
+    } else {
+      switch (preset) {
+        case 'wide-shallow':
+          return (500, 40);
+        case 'narrow-deep':
+          return (200, 300);
+        case 'default':
+        default:
+          return (400, 100);
+      }
     }
   }
 
   /// Logic to determine what content to show for Break Reminders
-  ReminderContent getBreakContent({String notchPreset = 'default'}) {
-    final (nWidth, nHeight) = _getNotchDimensions(notchPreset);
+  ReminderContent getBreakContent({String? notchPreset}) {
+    // PROGRAMMING: Define which preset is used for each style branch here
+    final preset = notchPreset ?? (state.selectedStyle == 'character' ? 'narrow-deep' : 'default');
+    final (nWidth, nHeight) = _getNotchDimensions(preset, state.selectedStyle);
 
     if (state.selectedStyle == 'character') {
       return ReminderContent(
         message: "Keti needs a stretch!",
         cursorResource: "character_break_cursor_pill",
-        notchResource: "character_break_notch",
-        trayResource: "character_break_tray",
+        notchResource: "character_break_cursor_pill",
+        trayResource: "character_break_cursor_pill",
         cursorWidth: 80,
         cursorHeight: 80,
         cursorOffsetX: 0,
-        cursorOffsetY:-40,
+        cursorOffsetY: -40,
         notchWidth: nWidth,
         notchHeight: nHeight,
         trayWidth: 22,
         trayHeight: 22,
-        totalFrames: 300, // 10 seconds
+        totalFrames: 250,
       );
     }
     return ReminderContent(
@@ -73,13 +87,15 @@ class TestMode extends _$TestMode {
       notchHeight: nHeight,
       trayWidth: 22,
       trayHeight: 4,
-      totalFrames: 120, // 4 seconds
+      totalFrames: 100,
     );
   }
 
   /// Logic to determine what content to show for Hydration Reminders
-  ReminderContent getHydrationContent({String notchPreset = 'default'}) {
-    final (nWidth, nHeight) = _getNotchDimensions(notchPreset);
+  ReminderContent getHydrationContent({String? notchPreset}) {
+    // PROGRAMMING: Define which preset is used for each style branch here
+    final preset = notchPreset ?? (state.selectedStyle == 'character' ? 'wide-shallow' : 'default');
+    final (nWidth, nHeight) = _getNotchDimensions(preset, state.selectedStyle);
 
     if (state.selectedStyle == 'character') {
       return ReminderContent(
@@ -95,14 +111,14 @@ class TestMode extends _$TestMode {
         notchHeight: nHeight,
         trayWidth: 22,
         trayHeight: 22,
-        totalFrames: 300, // 10 seconds
+        totalFrames: 250,
       );
     }
     return ReminderContent(
       message: "Stay hydrated",
       cursorResource: "ambient_hydration_cursor_pill",
       notchResource: "ambient_hydration_notch_card",
-      trayResource: "ambient_hydration_cursor_pill",
+      trayResource: "ambient_hydration_cursor_pill", // using the same resource as the cursor proximate
       cursorWidth: 15,
       cursorHeight: 86,
       cursorOffsetX: 20,
@@ -111,7 +127,7 @@ class TestMode extends _$TestMode {
       notchHeight: nHeight,
       trayWidth: 4,
       trayHeight: 22,
-      totalFrames: 120, // 4 seconds
+      totalFrames: 100,
     );
   }
 }

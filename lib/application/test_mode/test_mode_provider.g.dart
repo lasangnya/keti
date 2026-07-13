@@ -41,7 +41,7 @@ final class TestModeProvider
   }
 }
 
-String _$testModeHash() => r'4927e0de80a770a36bac9e9ee597c81bf680df63';
+String _$testModeHash() => r'02a0e9e802f6dd0d4db7740a4aff28393954c37d';
 
 abstract class _$TestMode extends $Notifier<TestModeState> {
   TestModeState build();

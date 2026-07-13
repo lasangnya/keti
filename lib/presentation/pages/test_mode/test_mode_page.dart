@@ -110,14 +110,12 @@ class TestModePage extends ConsumerWidget {
                         showRadio: false,
                         button1Text: AppStrings.testBreak,
                         onButton1Pressed: () async {
-                          // PROGRAMMING: Change notchPreset to 'wide-shallow' or 'narrow-deep' to test
-                          final content = ref.read(testModeProvider.notifier).getBreakContent(notchPreset: 'default');
+                          final content = ref.read(testModeProvider.notifier).getBreakContent();
                           await NotchHookService.showIsland(content);
                         },
                         button2Text: AppStrings.testHydration,
                         onButton2Pressed: () async {
-                          // PROGRAMMING: Change notchPreset to 'wide-shallow' or 'narrow-deep' to test
-                          final content = ref.read(testModeProvider.notifier).getHydrationContent(notchPreset: 'default');
+                          final content = ref.read(testModeProvider.notifier).getHydrationContent();
                           await NotchHookService.showIsland(content);
                         },
                       ),
