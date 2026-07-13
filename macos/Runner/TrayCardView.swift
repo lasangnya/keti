@@ -17,7 +17,7 @@ struct TrayCardView: View {
             Image(frameName)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 24, height: 24)
+                .frame(width: 48, height: 48)
                 .onReceive(timer) { _ in
                     if currentFrame < totalFrames - 1 {
                         currentFrame += 1
@@ -25,7 +25,7 @@ struct TrayCardView: View {
                 }
         }
         .padding(.leading, 8)
-        .padding(.trailing, 16)
+        .padding(.trailing, 8)
         .padding(.vertical, 8)
         .background(Color.black.opacity(0.85))
         .clipShape(Capsule())
