@@ -3,6 +3,7 @@
 
 #include <windows.h>
 
+#include <functional>
 #include <string>
 
 namespace keti {
@@ -51,6 +52,11 @@ class OverlayWindow {
                             int source_width,
                             int source_height);
 
+  // Optional callback invoked for every window message before the default
+  // handler. Return true from the callback to stop further handling.
+  using MessageHandler = std::function<bool(HWND, UINT, WPARAM, LPARAM)>;
+  void SetMessageHandler(MessageHandler handler);
+
  private:
   static LRESULT CALLBACK WndProc(HWND hwnd,
                                   UINT message,
@@ -63,6 +69,7 @@ class OverlayWindow {
   int height_;
   bool transparent_;
   bool topmost_;
+  MessageHandler message_handler_;
 };
 
 }  // namespace keti
