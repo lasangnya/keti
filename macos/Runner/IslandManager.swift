@@ -10,12 +10,13 @@ import SwiftUI
 class IslandManager {
     static var window: NSPanel?
 
-    static func show(message: String, resourceName: String, width: Double, height: Double, totalFrames: Int) {
+    static func show(message: String, resourceName: String, width: Double, height: Double, totalFrames: Int, onDone: @escaping () -> Void) {
         window?.close()
 
         let contentView = IslandView(message: message, resourceName: resourceName, totalFrames: totalFrames) {
             window?.close()
             window = nil
+            onDone()
         }
 
         let panel = NSPanel(

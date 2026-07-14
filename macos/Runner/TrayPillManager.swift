@@ -17,7 +17,7 @@ class TrayPillManager {
     }
 
     /// Makes the tray item visible and "drops" a small card underneath.
-    static func show(message: String, resourceName: String, width: Double, height: Double, totalFrames: Int) {
+    static func show(message: String, resourceName: String, width: Double, height: Double, totalFrames: Int, onDone: @escaping () -> Void) {
         if statusItem?.button == nil { setup() }
         
         dismiss() // Clear previous instance
@@ -42,6 +42,7 @@ class TrayPillManager {
             } else {
                 // Sequence finished, dismiss everything
                 dismiss()
+                onDone()
             }
         }
 

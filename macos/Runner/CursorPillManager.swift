@@ -12,7 +12,7 @@ class CursorPillManager {
     private static var currentOffsetX: Double = 0
     private static var currentOffsetY: Double = 0
 
-    static func show(resourceName: String, width: Double, height: Double, offsetX: Double, offsetY: Double, totalFrames: Int) {
+    static func show(resourceName: String, width: Double, height: Double, offsetX: Double, offsetY: Double, totalFrames: Int, onDone: @escaping () -> Void) {
         dismiss()
         
         currentWidth = width
@@ -25,6 +25,7 @@ class CursorPillManager {
         // Use a trailing closure for the dismissal callback
         let contentView = CursorPillView(resourceName: resourceName, frameCount: totalFrames) {
             dismiss()
+            onDone()
         }
         
         let hostingView = NSHostingView(rootView: contentView)

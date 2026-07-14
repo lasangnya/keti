@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:keti/application/reminders/reminder_manager.dart';
 import 'package:keti/application/test_mode/test_mode_provider.dart';
+import 'package:keti/domain/reminders/reminder_content.dart';
 import '../../../core/constants/app_strings.dart';
-import '../../../core/services/cursor_pill_service.dart';
-import '../../../core/services/notch_hook_service.dart';
-import '../../../core/services/tray_pill_service.dart';
 import '../../widgets/page_title.dart';
 import '../../widgets/keti_card.dart';
 
@@ -90,14 +89,24 @@ class TestModePage extends ConsumerWidget {
                         showButtons: true,
                         showRadio: false,
                         button1Text: AppStrings.testBreak,
-                        onButton1Pressed: () async {
-                          final content = ref.read(testModeProvider.notifier).getBreakContent();
-                          await CursorPillService.showPill(content);
+                        onButton1Pressed: () {
+                          final content = notifier.getBreakContent();
+                          ref.read(reminderManagerProvider.notifier).enqueue(
+                                ReminderRequest(
+                                  content: content,
+                                  location: ReminderLocation.cursor,
+                                ),
+                              );
                         },
                         button2Text: AppStrings.testHydration,
-                        onButton2Pressed: () async {
-                          final content = ref.read(testModeProvider.notifier).getHydrationContent();
-                          await CursorPillService.showPill(content);
+                        onButton2Pressed: () {
+                          final content = notifier.getHydrationContent();
+                          ref.read(reminderManagerProvider.notifier).enqueue(
+                                ReminderRequest(
+                                  content: content,
+                                  location: ReminderLocation.cursor,
+                                ),
+                              );
                         },
                       ),
                     ),
@@ -109,14 +118,24 @@ class TestModePage extends ConsumerWidget {
                         showButtons: true,
                         showRadio: false,
                         button1Text: AppStrings.testBreak,
-                        onButton1Pressed: () async {
-                          final content = ref.read(testModeProvider.notifier).getBreakContent();
-                          await NotchHookService.showIsland(content);
+                        onButton1Pressed: () {
+                          final content = notifier.getBreakContent();
+                          ref.read(reminderManagerProvider.notifier).enqueue(
+                                ReminderRequest(
+                                  content: content,
+                                  location: ReminderLocation.island,
+                                ),
+                              );
                         },
                         button2Text: AppStrings.testHydration,
-                        onButton2Pressed: () async {
-                          final content = ref.read(testModeProvider.notifier).getHydrationContent();
-                          await NotchHookService.showIsland(content);
+                        onButton2Pressed: () {
+                          final content = notifier.getHydrationContent();
+                          ref.read(reminderManagerProvider.notifier).enqueue(
+                                ReminderRequest(
+                                  content: content,
+                                  location: ReminderLocation.island,
+                                ),
+                              );
                         },
                       ),
                     ),
@@ -128,14 +147,24 @@ class TestModePage extends ConsumerWidget {
                         showButtons: true,
                         showRadio: false,
                         button1Text: AppStrings.testBreak,
-                        onButton1Pressed: () async {
-                          final content = ref.read(testModeProvider.notifier).getBreakContent();
-                          await TrayPillService.showPill(content);
+                        onButton1Pressed: () {
+                          final content = notifier.getBreakContent();
+                          ref.read(reminderManagerProvider.notifier).enqueue(
+                                ReminderRequest(
+                                  content: content,
+                                  location: ReminderLocation.tray,
+                                ),
+                              );
                         },
                         button2Text: AppStrings.testHydration,
-                        onButton2Pressed: () async {
-                          final content = ref.read(testModeProvider.notifier).getHydrationContent();
-                          await TrayPillService.showPill(content);
+                        onButton2Pressed: () {
+                          final content = notifier.getHydrationContent();
+                          ref.read(reminderManagerProvider.notifier).enqueue(
+                                ReminderRequest(
+                                  content: content,
+                                  location: ReminderLocation.tray,
+                                ),
+                              );
                         },
                       ),
                     ),

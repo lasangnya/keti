@@ -8,6 +8,9 @@ class PlatformChannels {
   static const String cursorPill = 'app.keti/cursor_pill';
   static const String trayPill = 'app.keti/tray_pill';
 
+  // ── Method names (Shared) ──────────────────────────────────────
+  static const String methodOnDismissed = 'onDismissed';
+
   // ── Method names (notch_hook) ──────────────────────────────────
   static const String methodShowIsland = 'showIsland';
 

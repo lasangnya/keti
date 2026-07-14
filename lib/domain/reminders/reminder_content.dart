@@ -1,3 +1,5 @@
+enum ReminderLocation { cursor, island, tray }
+
 class ReminderContent {
   final String message;
   final String cursorResource;
@@ -35,5 +37,15 @@ class ReminderContent {
     required this.trayWidth,
     required this.trayHeight,
     required this.totalFrames,
+  });
+}
+
+class ReminderRequest {
+  final ReminderContent content;
+  final ReminderLocation location;
+
+  ReminderRequest({
+    required this.content,
+    required this.location,
   });
 }

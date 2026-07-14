@@ -6,6 +6,9 @@ enum PlatformChannels {
     static let cursorPill = "app.keti/cursor_pill"
     static let trayPill = "app.keti/tray_pill"
 
+    // ── Method names (Shared) ──────────────────────────────────────
+    static let methodOnDismissed = "onDismissed"
+
     // ── Method names (notch_hook) ────────────────────────────────
     static let methodShowIsland = "showIsland"
 

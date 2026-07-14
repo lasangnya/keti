@@ -71,7 +71,7 @@ class TestMode extends _$TestMode {
         notchHeight: nHeight,
         trayWidth: 22,
         trayHeight: 22,
-        totalFrames: 250,
+        totalFrames: 250, // 25 fps
       );
     }
     return ReminderContent(
@@ -87,7 +87,7 @@ class TestMode extends _$TestMode {
       notchHeight: nHeight,
       trayWidth: 22,
       trayHeight: 4,
-      totalFrames: 100,
+      totalFrames: 100, // 25 fps
     );
   }
 
@@ -127,7 +127,7 @@ class TestMode extends _$TestMode {
       notchHeight: nHeight,
       trayWidth: 4,
       trayHeight: 22,
-      totalFrames: 100,
+      totalFrames: 100, // 25 fps
     );
   }
 }
