@@ -186,7 +186,8 @@ void OverlayWindow::UpdateLayeredContent(HDC source_dc,
   // StretchBlt into a temporary compatible DC first. For simplicity and to
   // match macOS behavior where content size equals window size, we assume
   // they match and call UpdateLayeredWindow directly.
-  UpdateLayeredWindow(hwnd_, screen_dc, &dst_pos, &dst_size,
+  // Passing nullptr for pptDst ensures the window stays at its current position.
+  UpdateLayeredWindow(hwnd_, screen_dc, nullptr, &dst_size,
                       source_dc, &src_pos, 0, &blend, ULW_ALPHA);
 
   ReleaseDC(nullptr, screen_dc);

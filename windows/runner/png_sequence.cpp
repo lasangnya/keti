@@ -11,6 +11,22 @@ namespace keti {
 
 namespace {
 
+class ScopedComInitializer {
+ public:
+  ScopedComInitializer() {
+    hr_ = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+  }
+  ~ScopedComInitializer() {
+    if (SUCCEEDED(hr_)) {
+      CoUninitialize();
+    }
+  }
+  HRESULT hr() const { return hr_; }
+
+ private:
+  HRESULT hr_;
+};
+
 // Formats a frame index into the 5-digit zero-padded suffix used by the
 // macOS asset catalog.
 std::wstring FormatFramePath(const std::wstring& directory,
@@ -103,6 +119,11 @@ bool PngSequence::Load(const std::wstring& directory,
   Clear();
 
   if (frame_count <= 0) {
+    return false;
+  }
+
+  ScopedComInitializer com_init;
+  if (FAILED(com_init.hr()) && com_init.hr() != RPC_E_CHANGED_MODE) {
     return false;
   }
 

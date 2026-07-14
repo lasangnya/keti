@@ -39,6 +39,22 @@ constexpr char kKeyOffsetX[] = "offsetX";
 constexpr char kKeyOffsetY[] = "offsetY";
 constexpr char kKeyTotalFrames[] = "totalFrames";
 
+double GetDoubleValue(const flutter::EncodableMap* args, const char* key) {
+  auto it = args->find(flutter::EncodableValue(key));
+  if (it != args->end() && !it->second.IsNull()) {
+    if (std::holds_alternative<double>(it->second)) {
+      return std::get<double>(it->second);
+    }
+    if (std::holds_alternative<int32_t>(it->second)) {
+      return static_cast<double>(std::get<int32_t>(it->second));
+    }
+    if (std::holds_alternative<int64_t>(it->second)) {
+      return static_cast<double>(std::get<int64_t>(it->second));
+    }
+  }
+  return 0.0;
+}
+
 }
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
@@ -154,15 +170,15 @@ void FlutterWindow::RegisterReminderChannels() {
 
             it = args->find(flutter::EncodableValue(kKeyWidth));
             if (it != args->end()) {
-              width = static_cast<int>(std::get<double>(it->second));
+              width = static_cast<int>(GetDoubleValue(args, kKeyWidth));
             }
             it = args->find(flutter::EncodableValue(kKeyHeight));
             if (it != args->end()) {
-              height = static_cast<int>(std::get<double>(it->second));
+              height = static_cast<int>(GetDoubleValue(args, kKeyHeight));
             }
             it = args->find(flutter::EncodableValue(kKeyTotalFrames));
             if (it != args->end()) {
-              total_frames = static_cast<int>(std::get<double>(it->second));
+              total_frames = static_cast<int>(GetDoubleValue(args, kKeyTotalFrames));
             }
 
             island_manager_.Show(
@@ -199,23 +215,23 @@ void FlutterWindow::RegisterReminderChannels() {
 
             it = args->find(flutter::EncodableValue(kKeyWidth));
             if (it != args->end()) {
-              width = static_cast<int>(std::get<double>(it->second));
+              width = static_cast<int>(GetDoubleValue(args, kKeyWidth));
             }
             it = args->find(flutter::EncodableValue(kKeyHeight));
             if (it != args->end()) {
-              height = static_cast<int>(std::get<double>(it->second));
+              height = static_cast<int>(GetDoubleValue(args, kKeyHeight));
             }
             it = args->find(flutter::EncodableValue(kKeyOffsetX));
             if (it != args->end()) {
-              offset_x = static_cast<int>(std::get<double>(it->second));
+              offset_x = static_cast<int>(GetDoubleValue(args, kKeyOffsetX));
             }
             it = args->find(flutter::EncodableValue(kKeyOffsetY));
             if (it != args->end()) {
-              offset_y = static_cast<int>(std::get<double>(it->second));
+              offset_y = static_cast<int>(GetDoubleValue(args, kKeyOffsetY));
             }
             it = args->find(flutter::EncodableValue(kKeyTotalFrames));
             if (it != args->end()) {
-              total_frames = static_cast<int>(std::get<double>(it->second));
+              total_frames = static_cast<int>(GetDoubleValue(args, kKeyTotalFrames));
             }
 
             cursor_pill_manager_.Show(
@@ -231,8 +247,8 @@ void FlutterWindow::RegisterReminderChannels() {
       });
 
   tray_channel_->SetMethodCallHandler(
-      [this, assets_path](const flutter::MethodCall<>& call,
-                          std::unique_ptr<flutter::MethodResult<>> result) {
+      [this, assets_path](const flutter::MethodCall<flutter::EncodableValue>& call,
+                          std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
         if (call.method_name() == kMethodShowTrayPill) {
           const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
           if (args != nullptr) {
@@ -249,15 +265,15 @@ void FlutterWindow::RegisterReminderChannels() {
 
             it = args->find(flutter::EncodableValue(kKeyWidth));
             if (it != args->end()) {
-              width = static_cast<int>(std::get<double>(it->second));
+              width = static_cast<int>(GetDoubleValue(args, kKeyWidth));
             }
             it = args->find(flutter::EncodableValue(kKeyHeight));
             if (it != args->end()) {
-              height = static_cast<int>(std::get<double>(it->second));
+              height = static_cast<int>(GetDoubleValue(args, kKeyHeight));
             }
             it = args->find(flutter::EncodableValue(kKeyTotalFrames));
             if (it != args->end()) {
-              total_frames = static_cast<int>(std::get<double>(it->second));
+              total_frames = static_cast<int>(GetDoubleValue(args, kKeyTotalFrames));
             }
 
             tray_pill_manager_.Show(

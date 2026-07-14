@@ -1,12 +1,26 @@
 #include "tray_pill_manager.h"
 
 #include <shellapi.h>
+#include <algorithm>
 
 #include "resource.h"
 
 #pragma comment(lib, "shell32.lib")
 
 namespace keti {
+
+namespace {
+
+// Returns the monitor info for the monitor containing the given point.
+MONITORINFO GetMonitorInfoAtPoint(POINT pt) {
+  HMONITOR monitor = MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
+  MONITORINFO info = {};
+  info.cbSize = sizeof(info);
+  GetMonitorInfoW(monitor, &info);
+  return info;
+}
+
+}  // namespace
 
 TrayPillManager::TrayPillManager()
     : instance_(nullptr),
@@ -205,22 +219,42 @@ void TrayPillManager::PositionCardUnderTray() {
     GetWindowRect(hwnd, &window_rect);
   }
   int window_width = window_rect.right - window_rect.left;
-  if (window_width <= 0) {
-    window_width = 200;
-  }
+  int window_height = window_rect.bottom - window_rect.top;
+  if (window_width <= 0) window_width = 200;
+  if (window_height <= 0) window_height = 200;
 
   int x = 0;
   int y = 0;
 
   if (SUCCEEDED(hr)) {
-    int icon_center = (icon_rect.left + icon_rect.right) / 2;
-    x = icon_center - (window_width / 2);
-    y = icon_rect.bottom + 4;  // 4px gap below the tray icon
+    POINT icon_center_pt = {(icon_rect.left + icon_rect.right) / 2,
+                            (icon_rect.top + icon_rect.bottom) / 2};
+    MONITORINFO mi = GetMonitorInfoAtPoint(icon_center_pt);
+
+    x = icon_center_pt.x - (window_width / 2);
+
+    // If icon is near the bottom of the work area, show above.
+    if (icon_rect.bottom + window_height + 10 > mi.rcWork.bottom) {
+      y = icon_rect.top - window_height - 4;
+    } else {
+      y = icon_rect.bottom + 4;
+    }
+
+    // Clamp X to screen work area
+    x = std::clamp(x, (int)mi.rcWork.left + 5, (int)mi.rcWork.right - window_width - 5);
   } else {
     POINT pt;
     if (GetCursorPos(&pt)) {
+      MONITORINFO mi = GetMonitorInfoAtPoint(pt);
       x = pt.x - (window_width / 2);
-      y = pt.y + 4;
+
+      if (pt.y + window_height + 20 > mi.rcWork.bottom) {
+        y = pt.y - window_height - 10;
+      } else {
+        y = pt.y + 10;
+      }
+
+      x = std::clamp(x, (int)mi.rcWork.left + 5, (int)mi.rcWork.right - window_width - 5);
     }
   }
 
