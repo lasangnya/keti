@@ -3,9 +3,14 @@
 
 #include <flutter/dart_project.h>
 #include <flutter/flutter_view_controller.h>
+#include <flutter/method_channel.h>
+#include <flutter/standard_method_codec.h>
 
 #include <memory>
 
+#include "cursor_pill_manager.h"
+#include "island_manager.h"
+#include "tray_pill_manager.h"
 #include "win32_window.h"
 
 // A window that does nothing but host a Flutter view.
@@ -23,11 +28,27 @@ class FlutterWindow : public Win32Window {
                          LPARAM const lparam) noexcept override;
 
  private:
+  // Registers the method channel handlers for reminder overlays.
+  void RegisterReminderChannels();
+
+  // Builds the filesystem path used to locate PNG sequence assets.
+  std::wstring GetAssetsPath() const;
+
   // The project to run.
   flutter::DartProject project_;
 
   // The Flutter instance hosted by this window.
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;
+
+  // Method channels bridged to the Dart reminder services.
+  std::unique_ptr<flutter::MethodChannel<>> notch_channel_;
+  std::unique_ptr<flutter::MethodChannel<>> cursor_channel_;
+  std::unique_ptr<flutter::MethodChannel<>> tray_channel_;
+
+  // Native managers for each reminder presentation type.
+  keti::IslandManager island_manager_;
+  keti::CursorPillManager cursor_pill_manager_;
+  keti::TrayPillManager tray_pill_manager_;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_
