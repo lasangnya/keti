@@ -41,9 +41,9 @@ class FlutterWindow : public Win32Window {
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;
 
   // Method channels bridged to the Dart reminder services.
-  std::unique_ptr<flutter::MethodChannel<>> notch_channel_;
-  std::unique_ptr<flutter::MethodChannel<>> cursor_channel_;
-  std::unique_ptr<flutter::MethodChannel<>> tray_channel_;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> notch_channel_;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> cursor_channel_;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> tray_channel_;
 
   // Native managers for each reminder presentation type.
   keti::IslandManager island_manager_;

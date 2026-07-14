@@ -124,19 +124,19 @@ void FlutterWindow::RegisterReminderChannels() {
   auto* messenger = flutter_controller_->engine()->messenger();
   const auto& codec = flutter::StandardMethodCodec::GetInstance();
 
-  notch_channel_ = std::make_unique<flutter::MethodChannel<>(
+  notch_channel_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
       messenger, kChannelNotchHook, &codec);
-  cursor_channel_ = std::make_unique<flutter::MethodChannel<>(
+  cursor_channel_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
       messenger, kChannelCursorPill, &codec);
-  tray_channel_ = std::make_unique<flutter::MethodChannel<>(
+  tray_channel_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
       messenger, kChannelTrayPill, &codec);
 
   HINSTANCE instance = GetModuleHandle(nullptr);
   std::wstring assets_path = GetAssetsPath();
 
   notch_channel_->SetMethodCallHandler(
-      [this, instance, assets_path](const flutter::MethodCall<>& call,
-                                    std::unique_ptr<flutter::MethodResult<>>
+      [this, instance, assets_path](const flutter::MethodCall<flutter::EncodableValue>& call,
+                                    std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
                                         result) {
         if (call.method_name() == kMethodShowIsland) {
           const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
@@ -178,8 +178,8 @@ void FlutterWindow::RegisterReminderChannels() {
       });
 
   cursor_channel_->SetMethodCallHandler(
-      [this, instance, assets_path](const flutter::MethodCall<>& call,
-                                    std::unique_ptr<flutter::MethodResult<>>
+      [this, instance, assets_path](const flutter::MethodCall<flutter::EncodableValue>& call,
+                                    std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
                                         result) {
         if (call.method_name() == kMethodShowCursorPill) {
           const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
