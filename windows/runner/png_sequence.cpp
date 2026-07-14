@@ -1,13 +1,11 @@
 #include "png_sequence.h"
 
-#include <shlwapi.h>
 #include <wincodec.h>
 
 #include <iomanip>
 #include <sstream>
 
 #pragma comment(lib, "windowscodecs.lib")
-#pragma comment(lib, "shlwapi.lib")
 
 namespace keti {
 

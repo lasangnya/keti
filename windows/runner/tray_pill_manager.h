@@ -45,6 +45,9 @@ class TrayPillManager {
   // Called by the owner window when a tray callback message arrives.
   void HandleTrayMessage(WPARAM wparam, LPARAM lparam);
 
+  // The registered tray callback message identifier.
+  UINT tray_callback_message() const { return tray_callback_message_; }
+
  private:
   void AdvanceFrame();
   void PositionCardUnderTray();

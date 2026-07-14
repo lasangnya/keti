@@ -1,7 +1,5 @@
 #include "island_manager.h"
 
-#include <shellscalingapi.h>
-
 namespace keti {
 
 namespace {
