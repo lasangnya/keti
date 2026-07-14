@@ -153,6 +153,10 @@ void OverlayWindow::SetSize(int width, int height) {
                SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOZORDER);
 }
 
+void OverlayWindow::SetMessageHandler(MessageHandler handler) {
+  message_handler_ = std::move(handler);
+}
+
 void OverlayWindow::UpdateLayeredContent(HDC source_dc,
                                          int source_width,
                                          int source_height) {
@@ -209,6 +213,15 @@ LRESULT CALLBACK OverlayWindow::WndProc(HWND hwnd,
     }
     default:
       break;
+  }
+
+  auto* window = reinterpret_cast<OverlayWindow*>(
+      GetWindowLongPtr(hwnd, GWLP_USERDATA));
+  if (window != nullptr && window->message_handler_) {
+    bool handled = window->message_handler_(hwnd, message, wparam, lparam);
+    if (handled) {
+      return 0;
+    }
   }
 
   return DefWindowProc(hwnd, message, wparam, lparam);
