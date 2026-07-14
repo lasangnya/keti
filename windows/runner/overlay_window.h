@@ -19,11 +19,16 @@ class OverlayWindow {
   OverlayWindow& operator=(const OverlayWindow&) = delete;
 
   // Creates the window. Returns true on success.
+  // |layered| enables WS_EX_LAYERED for per-pixel alpha via
+  // UpdateLayeredWindow.
+  // |transparent_for_mouse| adds WS_EX_TRANSPARENT so mouse events pass
+  // through to windows underneath (used for the cursor pill).
   bool Create(HINSTANCE instance,
               const std::wstring& class_name,
               int width,
               int height,
-              bool transparent,
+              bool layered,
+              bool transparent_for_mouse,
               bool topmost,
               bool tool_window,
               bool no_activate);

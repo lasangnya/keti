@@ -31,7 +31,8 @@ bool OverlayWindow::Create(HINSTANCE instance,
                            const std::wstring& class_name,
                            int width,
                            int height,
-                           bool transparent,
+                           bool layered,
+                           bool transparent_for_mouse,
                            bool topmost,
                            bool tool_window,
                            bool no_activate) {
@@ -42,7 +43,7 @@ bool OverlayWindow::Create(HINSTANCE instance,
   instance_ = instance;
   width_ = width;
   height_ = height;
-  transparent_ = transparent;
+  transparent_ = layered;
   topmost_ = topmost;
 
   // Generate a unique window class name so multiple overlays can coexist.
@@ -64,8 +65,11 @@ bool OverlayWindow::Create(HINSTANCE instance,
     return false;
   }
 
-  DWORD ex_style = WS_EX_LAYERED;
-  if (transparent) {
+  DWORD ex_style = 0;
+  if (layered) {
+    ex_style |= WS_EX_LAYERED;
+  }
+  if (transparent_for_mouse) {
     ex_style |= WS_EX_TRANSPARENT;
   }
   if (topmost) {
