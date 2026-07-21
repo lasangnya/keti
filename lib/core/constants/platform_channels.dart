@@ -7,9 +7,11 @@ class PlatformChannels {
   static const String notchHook = 'app.keti/notch_hook';
   static const String cursorPill = 'app.keti/cursor_pill';
   static const String trayPill = 'app.keti/tray_pill';
+  static const String complianceCard = 'app.keti/compliance_card';
 
   // ── Method names (Shared) ──────────────────────────────────────
   static const String methodOnDismissed = 'onDismissed';
+  static const String methodOnButtonClicked = 'onButtonClicked';
 
   // ── Method names (notch_hook) ──────────────────────────────────
   static const String methodShowIsland = 'showIsland';
@@ -20,8 +22,14 @@ class PlatformChannels {
   // ── Method names (tray_pill) ───────────────────────────────────
   static const String methodShowTrayPill = 'showPill';
 
+  // ── Method names (compliance_card) ─────────────────────────────
+  static const String methodShowComplianceCard = 'showComplianceCard';
+
   // ── Argument keys (notch_hook) ─────────────────────────────────
   static const String keyMessage = 'message';
+  static const String keyTitle = 'title';
+  static const String keyButton1Text = 'button1Text';
+  static const String keyButton2Text = 'button2Text';
 
   // ── Content resource name (notch_hook) ─────────────────────────────────
   static const String keyResourceName = 'resourceName';

@@ -34,6 +34,8 @@
 		D5E7AB862FFE90A2002D4660 /* PlatformChannels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB842FFE90A2002D4660 /* PlatformChannels.swift */; };
 		D5E7AB8A2FFE9500002D4660 /* CursorPillManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB892FFE9500002D4660 /* CursorPillManager.swift */; };
 		D5E7AB8C2FFE9800002D4660 /* TrayPillManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB8B2FFE9800002D4660 /* TrayPillManager.swift */; };
+		D5E7AB8E2FFE9900002D4660 /* ComplianceCardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB8D2FFE9900002D4660 /* ComplianceCardManager.swift */; };
+		D5E7AB902FFE9A00002D4660 /* ComplianceCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB8F2FFE9A00002D4660 /* ComplianceCardView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -92,6 +94,8 @@
 		D5E7AB842FFE90A2002D4660 /* PlatformChannels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformChannels.swift; sourceTree = "<group>"; };
 		D5E7AB892FFE9500002D4660 /* CursorPillManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CursorPillManager.swift; sourceTree = "<group>"; };
 		D5E7AB8B2FFE9800002D4660 /* TrayPillManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrayPillManager.swift; sourceTree = "<group>"; };
+		D5E7AB8D2FFE9900002D4660 /* ComplianceCardManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComplianceCardManager.swift; sourceTree = "<group>"; };
+		D5E7AB8F2FFE9A00002D4660 /* ComplianceCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComplianceCardView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -178,6 +182,8 @@
 		33FAB671232836740065AC1E /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+				D5E7AB8D2FFE9900002D4660 /* ComplianceCardManager.swift */,
+				D5E7AB8F2FFE9A00002D4660 /* ComplianceCardView.swift */,
 				D50A478430043A18006FA4B2 /* TrayCardView.swift */,
 				D5E7AB822FFE8C66002D4660 /* IslandManager.swift */,
 				D5E7AB7E2FFE8753002D4660 /* IslandView.swift */,
@@ -379,6 +385,8 @@
 				D5E7AB862FFE90A2002D4660 /* PlatformChannels.swift in Sources */,
 				D5E7AB8A2FFE9500002D4660 /* CursorPillManager.swift in Sources */,
 				D5E7AB8C2FFE9800002D4660 /* TrayPillManager.swift in Sources */,
+				D5E7AB8E2FFE9900002D4660 /* ComplianceCardManager.swift in Sources */,
+				D5E7AB902FFE9A00002D4660 /* ComplianceCardView.swift in Sources */,
 				33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */,
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
 			);

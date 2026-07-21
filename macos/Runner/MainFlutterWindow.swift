@@ -10,6 +10,7 @@ class MainFlutterWindow: NSWindow {
         let notchChannel = FlutterMethodChannel(name: PlatformChannels.notchHook, binaryMessenger: flutterViewController.engine.binaryMessenger)
         let cursorChannel = FlutterMethodChannel(name: PlatformChannels.cursorPill, binaryMessenger: flutterViewController.engine.binaryMessenger)
         let trayChannel = FlutterMethodChannel(name: PlatformChannels.trayPill, binaryMessenger: flutterViewController.engine.binaryMessenger)
+        let complianceChannel = FlutterMethodChannel(name: PlatformChannels.complianceCard, binaryMessenger: flutterViewController.engine.binaryMessenger)
 
         notchChannel.setMethodCallHandler { (call, result) in
             if call.method == PlatformChannels.methodShowIsland {
@@ -58,6 +59,20 @@ class MainFlutterWindow: NSWindow {
                 TrayPillManager.show(message: message, resourceName: resourceName, width: width, height: height, totalFrames: totalFrames) {
                     // Notify Flutter that the Tray animation is done
                     trayChannel.invokeMethod(PlatformChannels.methodOnDismissed, arguments: nil)
+                }
+                result(nil)
+            }
+        }
+
+        complianceChannel.setMethodCallHandler { (call, result) in
+            if call.method == PlatformChannels.methodShowComplianceCard {
+                let args = call.arguments as? [String: Any]
+                let title = args?[PlatformChannels.keyTitle] as? String ?? "Compliance Check"
+                let b1 = args?[PlatformChannels.keyButton1Text] as? String ?? "Yes"
+                let b2 = args?[PlatformChannels.keyButton2Text] as? String ?? "No"
+                
+                ComplianceCardManager.show(title: title, button1Text: b1, button2Text: b2) { clickedLabel in
+                    complianceChannel.invokeMethod(PlatformChannels.methodOnButtonClicked, arguments: clickedLabel)
                 }
                 result(nil)
             }

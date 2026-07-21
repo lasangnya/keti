@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keti/application/reminders/reminder_manager.dart';
 import 'package:keti/application/test_mode/test_mode_provider.dart';
 import 'package:keti/domain/reminders/reminder_content.dart';
+import 'package:keti/core/services/compliance_card_service.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../widgets/page_title.dart';
 import '../../widgets/keti_card.dart';
@@ -33,6 +34,32 @@ class TestModePage extends ConsumerWidget {
           if (testModeState.isActive) ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+              child: Text(
+                'Compliance Card',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: KetiCard(
+                title: 'Test Compliance Dropdown',
+                subtitle: 'A dropdown card with interactive buttons from the system tray',
+                showButtons: true,
+                showRadio: false,
+                button1Text: 'Trigger Card',
+                onButton1Pressed: () {
+                  ComplianceCardService.show(
+                    title: 'Take a break with Keti?',
+                    button1Text: 'Sure!',
+                    button2Text: 'Not now',
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
               child: Text(
                 AppStrings.reminderStyle,
                 style: theme.textTheme.titleMedium?.copyWith(
