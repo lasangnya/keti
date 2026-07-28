@@ -36,6 +36,7 @@
 		D5E7AB8C2FFE9800002D4660 /* TrayPillManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB8B2FFE9800002D4660 /* TrayPillManager.swift */; };
 		D5E7AB8E2FFE9900002D4660 /* ComplianceCardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB8D2FFE9900002D4660 /* ComplianceCardManager.swift */; };
 		D5E7AB902FFE9A00002D4660 /* ComplianceCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB8F2FFE9A00002D4660 /* ComplianceCardView.swift */; };
+		E26F6F753EDE8908DAB3C7C6 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = FED74C41328343E5440E85E6 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -96,6 +97,7 @@
 		D5E7AB8B2FFE9800002D4660 /* TrayPillManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrayPillManager.swift; sourceTree = "<group>"; };
 		D5E7AB8D2FFE9900002D4660 /* ComplianceCardManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComplianceCardManager.swift; sourceTree = "<group>"; };
 		D5E7AB8F2FFE9A00002D4660 /* ComplianceCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComplianceCardView.swift; sourceTree = "<group>"; };
+		FED74C41328343E5440E85E6 /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "Runner/GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -144,6 +146,7 @@
 				331C80D6294CF71000263BE5 /* RunnerTests */,
 				33CC10EE2044A3C60003C045 /* Products */,
 				D73912EC22F37F3D000D13A0 /* Frameworks */,
+				FED74C41328343E5440E85E6 /* GoogleService-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -292,7 +295,7 @@
 			);
 			mainGroup = 33CC10E42044A3C60003C045;
 			packageReferences = (
-				781AD8BC2B33823900A9FFBB /* XCLocalSwiftPackageReference "Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage" */,
+				781AD8BC2B33823900A9FFBB /* XCLocalSwiftPackageReference "FlutterGeneratedPluginSwiftPackage" */,
 			);
 			productRefGroup = 33CC10EE2044A3C60003C045 /* Products */;
 			projectDirPath = "";
@@ -319,6 +322,7 @@
 			files = (
 				33CC10F32044A3C60003C045 /* Assets.xcassets in Resources */,
 				33CC10F62044A3C60003C045 /* MainMenu.xib in Resources */,
+				E26F6F753EDE8908DAB3C7C6 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -744,7 +748,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		781AD8BC2B33823900A9FFBB /* XCLocalSwiftPackageReference "Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage" */ = {
+		781AD8BC2B33823900A9FFBB /* XCLocalSwiftPackageReference "FlutterGeneratedPluginSwiftPackage" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage;
 		};
