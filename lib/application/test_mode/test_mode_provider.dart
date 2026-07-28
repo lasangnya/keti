@@ -1,10 +1,14 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../domain/reminders/reminder_content.dart';
+import '../../domain/study/reminder_content_resolver.dart';
+import '../../domain/study/study_enums.dart';
 
 part 'test_mode_provider.g.dart';
 
 @riverpod
 class TestMode extends _$TestMode {
+  static const _resolver = ReminderContentResolver();
+
   @override
   TestModeState build() {
     return TestModeState(
@@ -26,7 +30,11 @@ class TestMode extends _$TestMode {
     state = state.copyWith(selectedType: type);
   }
 
-  /// Helper to get notch dimensions based on preset AND style
+  /// Helper to get notch dimensions based on preset AND style.
+  ///
+  /// Test-mode-only escape hatch: the study resolver bakes in the protocol
+  /// defaults (character → narrow-deep 250×250, ambient → default 400×100);
+  /// this override exists for layout experimentation in the test tab.
   (double, double) _getNotchDimensions(String preset, String style) {
     if (style == 'character') {
       switch (preset) {
@@ -51,84 +59,26 @@ class TestMode extends _$TestMode {
     }
   }
 
-  /// Logic to determine what content to show for Break Reminders
-  ReminderContent getBreakContent({String? notchPreset}) {
-    // PROGRAMMING: Define which preset is used for each style branch here
-    final preset = notchPreset ?? (state.selectedStyle == 'character' ? 'narrow-deep' : 'default');
-    final (nWidth, nHeight) = _getNotchDimensions(preset, state.selectedStyle);
+  PresentationStyle get _selectedPresentationStyle =>
+      state.selectedStyle == 'character'
+          ? PresentationStyle.characterBased
+          : PresentationStyle.ambient;
 
-    if (state.selectedStyle == 'character') {
-      return ReminderContent(
-        message: "Keti needs a stretch!",
-        cursorResource: "character_break_cursor_pill",
-        notchResource: "character_break_cursor_pill",
-        trayResource: "character_break_cursor_pill",
-        cursorWidth: 80,
-        cursorHeight: 80,
-        cursorOffsetX: 0,
-        cursorOffsetY: -40,
-        notchWidth: nWidth,
-        notchHeight: nHeight,
-        trayWidth: 22,
-        trayHeight: 22,
-        totalFrames: 250, // 25 fps
-      );
-    }
-    return ReminderContent(
-      message: "Time for a break",
-      cursorResource: "ambient_break_cursor_pill",
-      notchResource: "ambient_break_notch_card",
-      trayResource: "ambient_break_cursor_pill",
-      cursorWidth: 86,
-      cursorHeight: 15,
-      cursorOffsetX: -10,
-      cursorOffsetY: -30,
-      notchWidth: nWidth,
-      notchHeight: nHeight,
-      trayWidth: 22,
-      trayHeight: 4,
-      totalFrames: 100, // 25 fps
-    );
-  }
+  /// Content for Break (micro-break) reminders in the selected style,
+  /// resolved via the shared study resolver.
+  ReminderContent getBreakContent({String? notchPreset}) =>
+      _resolve(ReminderKind.microBreak, notchPreset);
 
-  /// Logic to determine what content to show for Hydration Reminders
-  ReminderContent getHydrationContent({String? notchPreset}) {
-    // PROGRAMMING: Define which preset is used for each style branch here
-    final preset = notchPreset ?? (state.selectedStyle == 'character' ? 'narrow-deep' : 'default');
-    final (nWidth, nHeight) = _getNotchDimensions(preset, state.selectedStyle);
+  /// Content for Hydration reminders in the selected style,
+  /// resolved via the shared study resolver.
+  ReminderContent getHydrationContent({String? notchPreset}) =>
+      _resolve(ReminderKind.hydration, notchPreset);
 
-    if (state.selectedStyle == 'character') {
-      return ReminderContent(
-        message: "Drink water with Keti!",
-        cursorResource: "character_hydration_cursor_pill",
-        notchResource: "character_hydration_cursor_pill",
-        trayResource: "character_hydration_cursor_pill",
-        cursorWidth: 80,
-        cursorHeight: 80,
-        cursorOffsetX: 0,
-        cursorOffsetY:-40,
-        notchWidth: nWidth,
-        notchHeight: nHeight,
-        trayWidth: 22,
-        trayHeight: 22,
-        totalFrames: 250,
-      );
-    }
-    return ReminderContent(
-      message: "Stay hydrated",
-      cursorResource: "ambient_hydration_cursor_pill",
-      notchResource: "ambient_hydration_notch_card",
-      trayResource: "ambient_hydration_cursor_pill", // using the same resource as the cursor proximate
-      cursorWidth: 15,
-      cursorHeight: 86,
-      cursorOffsetX: 20,
-      cursorOffsetY: -55,
-      notchWidth: nWidth,
-      notchHeight: nHeight,
-      trayWidth: 4,
-      trayHeight: 22,
-      totalFrames: 100, // 25 fps
-    );
+  ReminderContent _resolve(ReminderKind kind, String? notchPreset) {
+    final resolved = _resolver.resolve(kind, _selectedPresentationStyle).content;
+    if (notchPreset == null) return resolved;
+    final (nWidth, nHeight) = _getNotchDimensions(notchPreset, state.selectedStyle);
+    return resolved.copyWith(notchWidth: nWidth, notchHeight: nHeight);
   }
 }
 
