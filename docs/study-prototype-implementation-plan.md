@@ -553,7 +553,7 @@ service cloud.firestore {
 - Tests: unit (CSV write/read-back, atomic write via temp+rename, log append), widget (entry flow, invalid ID, cached path).
 
 **M3 — Firestore wiring + anonymous auth + rules v1 (Emulator-first)**
-- Goal: add `cloud_firestore`, `firebase_auth`; **fix entitlements (`network.client`, both files)**; repositories; silent anonymous sign-in; draft rules in Emulator; commit `firestore.rules`, `.firebaserc`, Firebase config files.
+- Goal: add `cloud_firestore`, `firebase_auth`; **fix entitlements (`network.client`, both files)**; repositories; silent anonymous sign-in; draft rules in Emulator; commit `firestore.rules` and `.firebaserc` (Firebase client config stays **local-only/gitignored** — the repo is public — with committed `.example` templates).
 - Files: `core/services/firestore/*`, `macos/Runner/*.entitlements`, `main.dart` (emulator switch + auth), `pubspec.yaml`, new `firestore.rules`.
 - Dependencies: M2; console: enable Auth (anonymous + email), Firestore at europe-west3.
 - Acceptance: against emulator — ID entry creates nothing but reads participant; session create blocked unless `activeDay` matches; participant doc write blocked for non-admin; event field-tampering blocked.
@@ -644,7 +644,7 @@ service cloud.firestore {
 - *macOS sandbox blocking network* (verified missing `network.client`). Mitigation: M3 entitlement fix + real-project smoke test before pilot.
 
 **Deployment**
-- *Untracked Firebase config.* Mitigation: commit `firebase_options.dart`/`firebase.json`/`.firebaserc`; decide on `GoogleService-Info.plist` explicitly; stamp versions on every doc.
+- *Firebase config with API keys in a public repo.* Mitigation: `firebase_options.dart` and `GoogleService-Info.plist` are gitignored and local-only, with committed `.example` templates and a gitignored `.env.local` reference; `firebase.json`/`.firebaserc` (no keys) are committed; rotate/restrict keys in the Google Cloud console if they are ever exposed.
 - *Admin claim mis-setup locks out admin.* Mitigation: `set_admin.js` script + runbook; tested in emulator first.
 - *Link rot / wrong Form URLs.* Mitigation: admin "open test link" button in the links form; placeholder validation on save (`{participantId}` must be present).
 - *Unknown study machines.* Mitigation: macOS-only, one researcher-controlled release build per machine, M5 QA checklist per machine, frozen `protocolVersion`.

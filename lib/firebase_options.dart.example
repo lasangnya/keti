@@ -1,0 +1,62 @@
+// Template for lib/firebase_options.dart — copy this file to
+// lib/firebase_options.dart and replace every REPLACE_ME value with the real
+// one from the Firebase console (Project settings → Your apps).
+//
+// lib/firebase_options.dart is gitignored and must NEVER be committed
+// (it contains the project's API keys).
+//
+// The same values live in .env.local for reference.
+import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
+
+class DefaultFirebaseOptions {
+  static FirebaseOptions get currentPlatform {
+    if (kIsWeb) {
+      throw UnsupportedError(
+        'DefaultFirebaseOptions have not been configured for web.',
+      );
+    }
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for android.',
+        );
+      case TargetPlatform.iOS:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for ios.',
+        );
+      case TargetPlatform.macOS:
+        return macos;
+      case TargetPlatform.windows:
+        return windows;
+      case TargetPlatform.linux:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for linux.',
+        );
+      default:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions are not supported for this platform.',
+        );
+    }
+  }
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'REPLACE_ME_MACOS_API_KEY',
+    appId: 'REPLACE_ME_MACOS_APP_ID', // e.g. 1:405786487800:ios:…
+    messagingSenderId: 'REPLACE_ME_SENDER_ID', // e.g. 405786487800
+    projectId: 'REPLACE_ME_PROJECT_ID', // e.g. keti-fcfd6
+    storageBucket: 'REPLACE_ME_STORAGE_BUCKET', // e.g. keti-fcfd6.firebasestorage.app
+    iosBundleId: 'app.keti.keti',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'REPLACE_ME_WINDOWS_API_KEY',
+    appId: 'REPLACE_ME_WINDOWS_APP_ID', // e.g. 1:405786487800:web:…
+    messagingSenderId: 'REPLACE_ME_SENDER_ID',
+    projectId: 'REPLACE_ME_PROJECT_ID',
+    authDomain: 'REPLACE_ME_PROJECT_ID.firebaseapp.com',
+    storageBucket: 'REPLACE_ME_STORAGE_BUCKET',
+    measurementId: 'REPLACE_ME_MEASUREMENT_ID',
+  );
+}
