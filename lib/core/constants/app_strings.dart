@@ -1,7 +1,16 @@
 class AppStrings {
-  static const String dashboard = 'Dashboard';
-  static const String breakReminders = 'Break Reminders';
-  static const String hydrationReminders = 'Hydration Reminders';
+  static const String study = 'Study';
+  static const String startStudySession = 'Start study session';
+  static const String participantCode = 'Participant code';
+  static const String participantCodeHint = 'e.g. P014';
+  static const String continueLabel = 'Continue';
+  static const String changeParticipant = 'Use a different code';
+  static const String day = 'Day';
+  static const String resumeAvailable = 'Unfinished session found on this machine';
+  static const String offlineCacheNote = 'Loaded from local cache (offline)';
+  static const String startDay = 'Start Day';
+  static const String sessionStartPending =
+      'Session start becomes available with the scheduler milestone (M4).';
   static const String testMode = 'Test Mode';
   static const String testModeActive = 'Test Mode Active';
   static const String reminderStyle = 'Reminder Style';
