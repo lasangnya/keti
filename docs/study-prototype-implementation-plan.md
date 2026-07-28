@@ -478,7 +478,9 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function signedIn() { return request.auth != null; }
-    function isAdmin()  { return signedIn() && request.auth.token.admin == true; }
+    // token.get() avoids "Property admin is undefined" errors for tokens
+    // without the claim (anonymous participant sessions).
+    function isAdmin()  { return signedIn() && request.auth.token.get('admin', false) == true; }
 
     match /config/study {
       allow read: if signedIn();
@@ -498,10 +500,10 @@ service cloud.firestore {
         allow read: if signedIn();
         // a participant app may start only the currently active day, once
         allow create: if signedIn()
-          && dayId in ['day1','day2']
+          && (dayId == 'day1' || dayId == 'day2')
           && request.resource.data.dayNumber ==
                get(/databases/$(database)/documents/participants/$(pid)).data.activeDay
-          && !('voided' in request.resource.data.status);
+          && request.resource.data.status != 'voided';
         allow update: if isAdmin() || (signedIn()
           && request.resource.data.diff(resource.data).affectedKeys()
                .hasOnly(['status','completedAt','resumedCount']));
