@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../application/study/participant_entry_provider.dart';
 import '../../../application/study/participant_providers.dart';
+import '../../../application/study/session_controller.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../domain/study/study_enums.dart';
 import '../../widgets/page_title.dart';
 
 /// Home of the participant build (plan §3.2): enter the participant code,
@@ -47,6 +49,7 @@ class _StudyPageState extends ConsumerState<StudyPage> {
   @override
   Widget build(BuildContext context) {
     final entry = ref.watch(participantEntryProvider);
+    final session = ref.watch(sessionControllerProvider);
 
     return SingleChildScrollView(
       child: Column(
@@ -54,7 +57,10 @@ class _StudyPageState extends ConsumerState<StudyPage> {
         children: [
           const PageTitle(title: AppStrings.study),
           if (!entry.isReady) _buildEntryForm(context, entry),
-          if (entry.isReady) _buildDayOverview(context, entry),
+          if (entry.isReady && !session.active && !session.completed)
+            _buildDayOverview(context, entry, session),
+          if (session.active) _buildSessionView(context, session),
+          if (session.completed) _buildCompletedView(context, session),
         ],
       ),
     );
@@ -112,7 +118,11 @@ class _StudyPageState extends ConsumerState<StudyPage> {
     );
   }
 
-  Widget _buildDayOverview(BuildContext context, ParticipantEntryState entry) {
+  Widget _buildDayOverview(
+    BuildContext context,
+    ParticipantEntryState entry,
+    StudySessionState session,
+  ) {
     final theme = Theme.of(context);
     final participant = entry.participant!;
     final schedule = entry.daySchedule!;
@@ -150,13 +160,22 @@ class _StudyPageState extends ConsumerState<StudyPage> {
             ),
           ),
           const SizedBox(height: 16),
-          FilledButton(
-            onPressed: null, // Wired by the scheduler milestone (M4).
+          if (entry.resumableDayId != null) ...[
+            FilledButton(
+              onPressed: () => ref
+                  .read(sessionControllerProvider.notifier)
+                  .resumeActiveSession(),
+              child: Text('Resume Day ${schedule.dayNumber}'),
+            ),
+            const SizedBox(height: 8),
+          ],
+          FilledButton.tonal(
+            onPressed: entry.dayAlreadyCompleted
+                ? null
+                : () =>
+                    ref.read(sessionControllerProvider.notifier).startDay(),
             child: Text('${AppStrings.startDay} ${schedule.dayNumber}'),
           ),
-          const SizedBox(height: 8),
-          Text(AppStrings.sessionStartPending,
-              style: theme.textTheme.bodySmall),
           if (entry.errorMessage != null) ...[
             const SizedBox(height: 12),
             Text(
@@ -165,6 +184,101 @@ class _StudyPageState extends ConsumerState<StudyPage> {
                   ?.copyWith(color: theme.colorScheme.error),
             ),
           ],
+          const SizedBox(height: 16),
+          TextButton(
+            onPressed: () {
+              ref.read(participantEntryProvider.notifier).reset();
+            },
+            child: const Text(AppStrings.changeParticipant),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSessionView(BuildContext context, StudySessionState session) {
+    final theme = Theme.of(context);
+    final s = session.session!;
+    final next = session.nextFireTime;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Session active — Day ${s.dayNumber}',
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(s.participantCode, style: theme.textTheme.bodyMedium),
+                  if (next != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Next reminder at ${TimeOfDay.fromDateTime(next).format(context)}',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          for (final event in session.events)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 110,
+                    child: Text('Reminder ${event.reminderNumber}',
+                        style: theme.textTheme.bodyMedium),
+                  ),
+                  Text(
+                    event.deliveryStatus.wireName,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: event.deliveryStatus == DeliveryStatus.delivered
+                          ? theme.colorScheme.primary
+                          : theme.textTheme.bodySmall?.color,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompletedView(BuildContext context, StudySessionState session) {
+    final theme = Theme.of(context);
+    final s = session.session!;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Day ${s.dayNumber} complete',
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text('Thank you! The questionnaire link appears here in a '
+                      'later milestone (M6).'),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
           TextButton(
             onPressed: () {

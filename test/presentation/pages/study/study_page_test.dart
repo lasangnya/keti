@@ -1,20 +1,26 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keti/application/study/participant_providers.dart';
+import 'package:keti/application/study/scheduler_provider.dart';
+import 'package:keti/core/services/firebase/firestore_providers.dart';
 import 'package:keti/core/services/local/csv_store.dart';
 import 'package:keti/core/services/local/local_store.dart';
 import 'package:keti/core/services/study/mock_participant_repository.dart';
 import 'package:keti/domain/study/day_schedule.dart';
 import 'package:keti/domain/study/participant.dart';
+import 'package:keti/domain/study/reminder_event.dart';
 import 'package:keti/domain/study/scheduled_reminder.dart';
 import 'package:keti/domain/study/study_config.dart';
 import 'package:keti/domain/study/study_enums.dart';
 import 'package:keti/domain/study/study_session.dart';
 import 'package:keti/presentation/pages/study/study_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../application/study/session_test_fakes.dart';
 
 void main() {
   late Directory csvRoot;
@@ -38,6 +44,11 @@ void main() {
     MockParticipantRepository? repository,
   }) async {
     final store = localStore ?? await mockLocalStore();
+    // Native channels under test: answer session-lifecycle calls with null.
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('app.keti/session_lifecycle'),
+      (call) async => null,
+    );
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -45,6 +56,14 @@ void main() {
               .overrideWithValue(repository ?? MockParticipantRepository()),
           localStoreProvider.overrideWith((ref) async => store),
           csvStoreProvider.overrideWithValue(CsvStore(rootDir: csvRoot)),
+          sessionRepositoryProvider.overrideWithValue(FakeSessionRepository()),
+          reminderEventRepositoryProvider
+              .overrideWithValue(FakeEventRepository()),
+          reminderDeliveryProvider.overrideWithValue(RecordingDelivery()),
+          studyClockProvider.overrideWithValue(
+              () => DateTime.parse('2026-08-03T09:00:00+02:00')),
+          schedulerTickIntervalProvider
+              .overrideWithValue(const Duration(days: 365)),
         ],
         child: const MaterialApp(home: Scaffold(body: StudyPage())),
       ),
@@ -170,6 +189,65 @@ void main() {
     await enterCodeAndContinue(tester, 'P001');
     expect(find.text('P001'), findsOneWidget);
     expect(find.text('Loaded from local cache (offline)'), findsOneWidget);
+  });
+
+  testWidgets('Start Day begins the session and shows the event list',
+      (tester) async {
+    await pumpStudyPage(tester);
+    await enterCodeAndContinue(tester, 'P001');
+    await tester.ensureVisible(find.text('Start Day 1'));
+    await tester.tap(find.text('Start Day 1'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Session active — Day 1'), findsOneWidget);
+    expect(find.text('Reminder 1'), findsOneWidget);
+    expect(find.text('Reminder 8'), findsOneWidget);
+    expect(find.text('SCHEDULED'), findsNWidgets(8));
+  });
+
+  testWidgets('Resume button resumes an unfinished session', (tester) async {
+    final csv = CsvStore(rootDir: csvRoot);
+    final start = DateTime.parse('2026-08-03T09:00:00+02:00');
+    await csv.writeSession(
+      StudySession(
+        participantCode: 'P001',
+        dayNumber: 1,
+        style: PresentationStyle.ambient,
+        status: StudySessionStatus.active,
+        startedAtLocal: start,
+        schedule: const DaySchedule(
+          dayNumber: 1,
+          style: PresentationStyle.ambient,
+          reminders: kDefaultScheduleTemplate,
+        ),
+        links: const QuestionnaireLinks(),
+      ),
+    );
+    await csv.writeEvents(
+      'P001',
+      'day1',
+      [
+        for (final reminder in kDefaultScheduleTemplate)
+          ReminderEvent.scheduled(
+            participantCode: 'P001',
+            dayNumber: 1,
+            reminder: reminder,
+            style: PresentationStyle.ambient,
+            sessionStartLocal: start,
+            environment: 'dev',
+            appVersion: '1.0.0+1',
+            protocolVersion: '2026-08-v1',
+          ),
+      ],
+    );
+
+    await pumpStudyPage(tester);
+    await enterCodeAndContinue(tester, 'P001');
+    await tester.ensureVisible(find.text('Resume Day 1'));
+    await tester.tap(find.text('Resume Day 1'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Session active — Day 1'), findsOneWidget);
   });
 }
 

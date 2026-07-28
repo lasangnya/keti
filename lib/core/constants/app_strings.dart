@@ -9,8 +9,6 @@ class AppStrings {
   static const String resumeAvailable = 'Unfinished session found on this machine';
   static const String offlineCacheNote = 'Loaded from local cache (offline)';
   static const String startDay = 'Start Day';
-  static const String sessionStartPending =
-      'Session start becomes available with the scheduler milestone (M4).';
   static const String testMode = 'Test Mode';
   static const String testModeActive = 'Test Mode Active';
   static const String reminderStyle = 'Reminder Style';
