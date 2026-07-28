@@ -10,16 +10,16 @@ part of 'participant_providers.dart';
 // ignore_for_file: type=lint, type=warning
 /// Read-side repository for participant/config/schedule documents.
 ///
-/// M2 returns the in-memory mock; M3 overrides this with the Firestore
-/// implementation.
+/// Defaults to Firestore (real project or emulator, depending on
+/// `USE_FIRESTORE_EMULATOR`); tests override with the in-memory mock.
 
 @ProviderFor(participantRepository)
 final participantRepositoryProvider = ParticipantRepositoryProvider._();
 
 /// Read-side repository for participant/config/schedule documents.
 ///
-/// M2 returns the in-memory mock; M3 overrides this with the Firestore
-/// implementation.
+/// Defaults to Firestore (real project or emulator, depending on
+/// `USE_FIRESTORE_EMULATOR`); tests override with the in-memory mock.
 
 final class ParticipantRepositoryProvider
     extends
@@ -31,8 +31,8 @@ final class ParticipantRepositoryProvider
     with $Provider<ParticipantRepository> {
   /// Read-side repository for participant/config/schedule documents.
   ///
-  /// M2 returns the in-memory mock; M3 overrides this with the Firestore
-  /// implementation.
+  /// Defaults to Firestore (real project or emulator, depending on
+  /// `USE_FIRESTORE_EMULATOR`); tests override with the in-memory mock.
   ParticipantRepositoryProvider._()
     : super(
         from: null,
@@ -68,7 +68,7 @@ final class ParticipantRepositoryProvider
 }
 
 String _$participantRepositoryHash() =>
-    r'039aef10af6147f26302bd93d8fe8a1d456ffea1';
+    r'd3b0df6c1686e00f4190a3640ebddcd660647678';
 
 @ProviderFor(localStore)
 final localStoreProvider = LocalStoreProvider._();
