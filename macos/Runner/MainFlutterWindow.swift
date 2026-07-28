@@ -11,6 +11,7 @@ class MainFlutterWindow: NSWindow {
         let cursorChannel = FlutterMethodChannel(name: PlatformChannels.cursorPill, binaryMessenger: flutterViewController.engine.binaryMessenger)
         let trayChannel = FlutterMethodChannel(name: PlatformChannels.trayPill, binaryMessenger: flutterViewController.engine.binaryMessenger)
         let complianceChannel = FlutterMethodChannel(name: PlatformChannels.complianceCard, binaryMessenger: flutterViewController.engine.binaryMessenger)
+        let sessionChannel = FlutterMethodChannel(name: PlatformChannels.sessionLifecycle, binaryMessenger: flutterViewController.engine.binaryMessenger)
 
         notchChannel.setMethodCallHandler { (call, result) in
             if call.method == PlatformChannels.methodShowIsland {
@@ -62,6 +63,13 @@ class MainFlutterWindow: NSWindow {
                 }
                 result(nil)
             }
+        }
+
+        sessionChannel.setMethodCallHandler { (call, result) in
+            if call.method == PlatformChannels.methodSetSessionActive, let active = call.arguments as? Bool {
+                (NSApp.delegate as? AppDelegate)?.setSessionActive(active)
+            }
+            result(nil)
         }
 
         complianceChannel.setMethodCallHandler { (call, result) in

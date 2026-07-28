@@ -6,6 +6,7 @@ enum PlatformChannels {
     static let cursorPill = "app.keti/cursor_pill"
     static let trayPill = "app.keti/tray_pill"
     static let complianceCard = "app.keti/compliance_card"
+    static let sessionLifecycle = "app.keti/session_lifecycle"
 
     // ── Method names (Shared) ──────────────────────────────────────
     static let methodOnDismissed = "onDismissed"
@@ -22,6 +23,9 @@ enum PlatformChannels {
 
     // ── Method names (compliance_card) ───────────────────────────
     static let methodShowComplianceCard = "showComplianceCard"
+
+    // ── Method names (session_lifecycle) ─────────────────────────
+    static let methodSetSessionActive = "setSessionActive"
 
     // ── Argument keys ─────────────────────────────────────────────
     static let keyMessage = "message"
