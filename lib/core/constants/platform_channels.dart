@@ -8,6 +8,7 @@ class PlatformChannels {
   static const String cursorPill = 'app.keti/cursor_pill';
   static const String trayPill = 'app.keti/tray_pill';
   static const String complianceCard = 'app.keti/compliance_card';
+  static const String sessionLifecycle = 'app.keti/session_lifecycle';
 
   // ── Method names (Shared) ──────────────────────────────────────
   static const String methodOnDismissed = 'onDismissed';
@@ -24,6 +25,9 @@ class PlatformChannels {
 
   // ── Method names (compliance_card) ─────────────────────────────
   static const String methodShowComplianceCard = 'showComplianceCard';
+
+  // ── Method names (session_lifecycle) ───────────────────────────
+  static const String methodSetSessionActive = 'setSessionActive';
 
   // ── Argument keys (notch_hook) ─────────────────────────────────
   static const String keyMessage = 'message';
