@@ -1,0 +1,389 @@
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../../core/constants/app_config.dart';
+import '../../core/services/firebase/firestore_providers.dart';
+import '../../core/services/session_lifecycle_service.dart';
+import '../../domain/study/event_log_entry.dart';
+import '../../domain/study/reminder_content_resolver.dart';
+import '../../domain/study/reminder_event.dart';
+import '../../domain/study/schedule_evaluator.dart';
+import '../../domain/study/scheduled_reminder.dart';
+import '../../domain/study/study_enums.dart';
+import '../../domain/study/study_session.dart';
+import 'participant_entry_provider.dart';
+import 'participant_providers.dart';
+import 'scheduler_provider.dart';
+
+part 'session_controller.g.dart';
+
+/// UI-facing state of the running (or finished) study session.
+class StudySessionState {
+  const StudySessionState({
+    this.session,
+    this.events = const [],
+    this.active = false,
+    this.completed = false,
+    this.errorMessage,
+  });
+
+  final StudySession? session;
+  final List<ReminderEvent> events;
+  final bool active;
+  final bool completed;
+  final String? errorMessage;
+
+  /// Next pending fire time (absolute), for the status display.
+  DateTime? get nextFireTime {
+    final s = session;
+    if (s == null) return null;
+    final pending = events
+        .where((e) => e.deliveryStatus == DeliveryStatus.scheduled)
+        .map((e) => e.reminderNumber)
+        .toSet();
+    if (pending.isEmpty) return null;
+    DateTime? earliest;
+    for (final r in s.schedule.reminders) {
+      if (!pending.contains(r.reminderNumber)) continue;
+      final fire = s.startedAtLocal.add(r.offset);
+      if (earliest == null || fire.isBefore(earliest)) earliest = fire;
+    }
+    return earliest;
+  }
+
+  StudySessionState copyWith({
+    StudySession? session,
+    List<ReminderEvent>? events,
+    bool? active,
+    bool? completed,
+    String? errorMessage,
+  }) =>
+      StudySessionState(
+        session: session ?? this.session,
+        events: events ?? this.events,
+        active: active ?? this.active,
+        completed: completed ?? this.completed,
+        errorMessage: errorMessage ?? this.errorMessage,
+      );
+}
+
+/// Orchestrates a participant-day session (plan §5.2/§6.5):
+/// session + event creation (CSV-first, then Firestore), the tick
+/// scheduler, delivery, catch-up and resume after an app quit, and
+/// day completion.
+@Riverpod(keepAlive: true)
+class SessionController extends _$SessionController {
+  static const _resolver = ReminderContentResolver();
+
+  StudyScheduler? _scheduler;
+
+  @override
+  StudySessionState build() {
+    ref.onDispose(() => _scheduler?.stop());
+    return const StudySessionState();
+  }
+
+  DateTime _now() => ref.read(studyClockProvider)();
+
+  /// Starts the currently loaded participant-day. Assumes the ID-entry
+  /// flow already validated participant, config and schedule.
+  Future<void> startDay() async {
+    final entry = ref.read(participantEntryProvider);
+    if (!entry.isReady || state.active) return;
+    final participant = entry.participant!;
+    final schedule = entry.daySchedule!;
+    final config = entry.config!;
+
+    final now = _now();
+    final session = StudySession(
+      participantCode: participant.participantCode,
+      dayNumber: schedule.dayNumber,
+      style: schedule.style,
+      status: StudySessionStatus.active,
+      startedAtLocal: now,
+      schedule: schedule,
+      links: config.links,
+    );
+    final events = [
+      for (final reminder in schedule.reminders)
+        ReminderEvent.scheduled(
+          participantCode: participant.participantCode,
+          dayNumber: schedule.dayNumber,
+          reminder: reminder,
+          style: schedule.style,
+          sessionStartLocal: now,
+          environment: AppConfig.environment,
+          appVersion: AppConfig.appVersion,
+          protocolVersion: AppConfig.protocolVersion,
+        ),
+    ];
+
+    final csv = ref.read(csvStoreProvider);
+    final store = await ref.read(localStoreProvider.future);
+    final code = participant.participantCode;
+    final dayId = session.dayId;
+
+    // CSV-first: local record is ground truth.
+    await csv.writeSession(session);
+    await csv.writeEvents(code, dayId, events);
+    await csv.appendEventLog(
+      code,
+      dayId,
+      EventLogEntry(
+        timestamp: now,
+        eventId: 'session',
+        transition: 'session_started',
+        newValue: dayId,
+      ),
+    );
+    await store.setActiveSession(code, dayId);
+
+    // Firestore second — failures here are covered by reconciliation (M8).
+    try {
+      await ref.read(sessionRepositoryProvider).createSession(session);
+      await ref
+          .read(reminderEventRepositoryProvider)
+          .createScheduledEvents(code, dayId, events);
+    } catch (_) {
+      // Offline: the SDK queues what it can; CSVs hold everything.
+    }
+
+    await SessionLifecycleService.setSessionActive(true);
+
+    state = StudySessionState(session: session, events: events, active: true);
+    _startScheduler(session);
+  }
+
+  /// Resumes an unfinished session for the entered participant after an
+  /// app quit (plan §3.4). Re-anchors to the ORIGINAL start time, marks
+  /// long-missed reminders as `notDisplayed(app_terminated)`, delivers
+  /// anything still inside the grace window, and continues the schedule.
+  Future<bool> resumeActiveSession() async {
+    final entry = ref.read(participantEntryProvider);
+    final participant = entry.participant;
+    if (participant == null || state.active) return false;
+    final code = participant.participantCode;
+
+    final csv = ref.read(csvStoreProvider);
+    final dayId = await csv.findActiveDayId(code);
+    if (dayId == null) return false;
+
+    final session = await csv.readSession(code, dayId);
+    final events = await csv.readEvents(code, dayId);
+    if (session == null || events == null || events.isEmpty) return false;
+
+    final resumedSession =
+        session.copyWith(resumedCount: session.resumedCount + 1);
+    await csv.writeSession(resumedSession);
+    await csv.appendEventLog(
+      code,
+      dayId,
+      EventLogEntry(
+        timestamp: _now(),
+        eventId: 'session',
+        transition: 'session_resumed',
+        newValue: '${resumedSession.resumedCount}',
+      ),
+    );
+    try {
+      await ref
+          .read(sessionRepositoryProvider)
+          .markSessionResumed(code, dayId);
+    } catch (_) {}
+
+    // Everything still pending is from after the resume — flag it.
+    var currentEvents = [
+      for (final e in events)
+        e.deliveryStatus == DeliveryStatus.scheduled
+            ? e.markSessionResumed()
+            : e,
+    ];
+    await csv.writeEvents(code, dayId, currentEvents);
+
+    state = StudySessionState(
+        session: resumedSession, events: currentEvents, active: true);
+
+    // Catch up on anything that came due while the app was dead.
+    await _evaluate(
+      missedReason: 'app_terminated',
+      now: _now(),
+    );
+
+    if (!state.completed) {
+      await SessionLifecycleService.setSessionActive(true);
+      _startScheduler(resumedSession);
+    }
+    return true;
+  }
+
+  /// Test seam: drive one scheduler tick with the (fake) injected clock.
+  Future<void> debugTick() async => _scheduler?.tickOnce();
+
+  // ── internals ────────────────────────────────────────────────────
+
+  void _startScheduler(StudySession session) {
+    _scheduler?.stop();
+    final finalized = state.events
+        .where((e) => e.deliveryStatus != DeliveryStatus.scheduled)
+        .map((e) => e.reminderNumber)
+        .toSet();
+    final scheduler = StudyScheduler(
+      clock: _now,
+      onDecisions: _handleDecisions,
+    );
+    scheduler.start(
+      sessionStartLocal: session.startedAtLocal,
+      schedule: session.schedule.reminders,
+      finalizedReminders: finalized,
+      tickInterval: ref.read(schedulerTickIntervalProvider),
+    );
+    _scheduler = scheduler;
+  }
+
+  Future<void> _handleDecisions(List<ScheduleDecision> decisions) async {
+    for (final decision in decisions) {
+      if (!ref.mounted) return;
+      switch (decision) {
+        case ScheduleDue(:final reminder, :final latenessMs):
+          await _deliver(reminder, latenessMs);
+        case ScheduleMissed(:final reminder, :final reason):
+          await _miss(reminder, reason);
+      }
+    }
+    if (!ref.mounted) return;
+    await _completeDayIfDone();
+  }
+
+  /// One catch-up evaluation outside the timer (used by resume).
+  Future<void> _evaluate({
+    required String missedReason,
+    required DateTime now,
+  }) async {
+    final session = state.session!;
+    final finalized = state.events
+        .where((e) => e.deliveryStatus != DeliveryStatus.scheduled)
+        .map((e) => e.reminderNumber)
+        .toSet();
+    final decisions = evaluateSchedule(
+      now: now,
+      sessionStartLocal: session.startedAtLocal,
+      schedule: session.schedule.reminders,
+      finalizedReminders: finalized,
+      missedReason: missedReason,
+    );
+    await _handleDecisions(decisions);
+  }
+
+  Future<void> _deliver(ScheduledReminder reminder, int latenessMs) async {
+    final session = state.session!;
+    final code = session.participantCode;
+    final event = state.events
+        .firstWhere((e) => e.reminderNumber == reminder.reminderNumber);
+
+    final resolved = _resolver.resolve(reminder.kind, session.style);
+    final usedFallback = resolved.isFallback(reminder.placement);
+
+    ReminderEvent updated;
+    String transition;
+    try {
+      await ref.read(reminderDeliveryProvider).show(
+            content: resolved.content,
+            placement: reminder.placement,
+          );
+      updated = event.markDelivered(
+        shownAtLocal: _now(),
+        latenessMs: latenessMs,
+        usedFallback: usedFallback,
+      );
+      transition = 'delivered';
+    } catch (e) {
+      updated = event.markFailed('display_dispatch:${e.runtimeType}');
+      transition = 'failed';
+    }
+    await _persistEvent(code, session.dayId, updated, transition);
+  }
+
+  Future<void> _miss(ScheduledReminder reminder, String reason) async {
+    final session = state.session!;
+    final code = session.participantCode;
+    final event = state.events
+        .firstWhere((e) => e.reminderNumber == reminder.reminderNumber);
+
+    final updated = reason == 'app_terminated'
+        ? event.markNotDisplayed(reason)
+        : event.markSuppressed(reason);
+    await _persistEvent(code, session.dayId, updated, 'missed:$reason');
+  }
+
+  Future<void> _persistEvent(
+    String code,
+    String dayId,
+    ReminderEvent updated,
+    String transition,
+  ) async {
+    if (!ref.mounted) return;
+    final events = [
+      for (final e in state.events)
+        e.eventId == updated.eventId ? updated : e,
+    ];
+    state = state.copyWith(events: events);
+
+    final csv = ref.read(csvStoreProvider);
+    await csv.writeEvents(code, dayId, events);
+    await csv.appendEventLog(
+      code,
+      dayId,
+      EventLogEntry(
+        timestamp: _now(),
+        eventId: updated.eventId,
+        transition: transition,
+        field: 'deliveryStatus',
+        newValue: updated.deliveryStatus.wireName,
+      ),
+    );
+    try {
+      await ref
+          .read(reminderEventRepositoryProvider)
+          .updateEventLifecycle(code, dayId, updated);
+    } catch (_) {}
+  }
+
+  Future<void> _completeDayIfDone() async {
+    if (!ref.mounted) return;
+    final session = state.session;
+    if (session == null || state.completed) return;
+    final allFinalized = state.events
+        .every((e) => e.deliveryStatus != DeliveryStatus.scheduled);
+    if (!allFinalized) return;
+
+    _scheduler?.finish();
+    final completed = session.copyWith(
+      status: StudySessionStatus.completed,
+      completedAtLocal: _now(),
+    );
+    final csv = ref.read(csvStoreProvider);
+    await csv.writeSession(completed);
+    await csv.appendEventLog(
+      session.participantCode,
+      session.dayId,
+      EventLogEntry(
+        timestamp: _now(),
+        eventId: 'session',
+        transition: 'session_completed',
+      ),
+    );
+    final store = await ref.read(localStoreProvider.future);
+    await store.clearActiveSession(session.participantCode);
+    try {
+      await ref
+          .read(sessionRepositoryProvider)
+          .completeSession(session.participantCode, session.dayId);
+    } catch (_) {}
+    await SessionLifecycleService.setSessionActive(false);
+
+    state = state.copyWith(
+      session: completed,
+      active: false,
+      completed: true,
+    );
+  }
+}
