@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -5,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keti/application/theme/theme_provider.dart';
 import 'package:keti/application/user_activity/user_activity_provider.dart';
+import 'package:keti/core/constants/app_config.dart';
+import 'package:keti/core/services/firebase/auth_service.dart';
 import 'package:keti/firebase_options.dart';
 import 'package:keti/presentation/pages/home/home_page.dart';
 
@@ -13,6 +17,12 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  if (AppConfig.useFirebaseEmulator) {
+    FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
+    await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
+  }
+  // Silent anonymous sign-in — participants never see a login screen.
+  await AuthService().signInAnonymouslyIfNeeded();
   runApp(const ProviderScope(child: KetiApp()));
 }
 
