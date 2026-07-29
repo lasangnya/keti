@@ -11,6 +11,10 @@ enum PlatformChannels {
     // ── Method names (Shared) ──────────────────────────────────────
     static let methodOnDismissed = "onDismissed"
     static let methodOnButtonClicked = "onButtonClicked"
+    static let methodOnShown = "onShown"
+    static let methodOnHidden = "onHidden"
+    static let methodOnCardAction = "onCardAction"
+    static let methodOnCardTimeout = "onCardTimeout"
 
     // ── Method names (notch_hook) ────────────────────────────────
     static let methodShowIsland = "showIsland"
@@ -38,4 +42,11 @@ enum PlatformChannels {
     static let keyOffsetX = "offsetX"
     static let keyOffsetY = "offsetY"
     static let keyTotalFrames = "totalFrames"
+
+    // ── Study channel contract v2 ─────────────────────────────────
+    static let keyReminderId = "reminderId"
+    static let keyVisibilityMs = "visibilityMs"
+    static let keyTimeoutMs = "timeoutMs"
+    static let keyQuestion = "question"
+    static let keyAction = "action"
 }

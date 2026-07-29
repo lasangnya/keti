@@ -1,78 +1,73 @@
 import Cocoa
 import SwiftUI
 
+/// The uniform compliance card (plan §5.4): a small panel at the top-right
+/// corner of the screen with a question and two outcome buttons. Position,
+/// size, styling, and behavior are identical for every reminder, placement,
+/// style, day, and participant — it is the constant measurement instrument
+/// of the study, so nothing about it is parameterized by condition.
 class ComplianceCardManager {
-    private static var statusItem: NSStatusItem?
     private static var cardWindow: NSPanel?
-    private static var autoDismissTimer: Timer?
-    
-    static func setup() {
-        if statusItem != nil { return }
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem?.button?.isHidden = true
-    }
-    
+    private static var timeoutTimer: Timer?
+
     static func show(
-        title: String,
+        question: String,
         button1Text: String,
         button2Text: String,
-        onButtonClicked: @escaping (String) -> Void
+        timeoutMs: Int,
+        onAction: @escaping (String) -> Void,
+        onTimeout: @escaping () -> Void
     ) {
-        if statusItem?.button == nil { setup() }
-        
         dismiss()
-        
-        guard let button = statusItem?.button else { return }
-        button.isHidden = false
-        // Temporary placeholder image for the tray anchor
-        button.image = NSImage(systemSymbolName: "checkmark.circle.fill", accessibilityDescription: nil)
-        
+
         let contentView = ComplianceCardView(
-            title: title,
+            question: question,
             button1Text: button1Text,
             button2Text: button2Text,
-            onAction: { btnLabel in
-                onButtonClicked(btnLabel)
+            onAction: { action in
+                onAction(action)
                 dismiss()
             }
         )
-        
+
         let hostingView = NSHostingView(rootView: contentView)
         let idealSize = hostingView.fittingSize
-        
+
         let panel = NSPanel(
             contentRect: NSRect(origin: .zero, size: idealSize),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
-        
-        panel.level = .mainMenu
+
+        panel.level = NSWindow.Level(Int(NSWindow.Level.mainMenu.rawValue) + 1)
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = false
+        panel.canHide = false
         panel.contentView = hostingView
-        
-        if let windowFrame = button.window?.frame {
-            let x = windowFrame.origin.x + (windowFrame.width / 2) - (idealSize.width / 2)
-            let y = windowFrame.origin.y - idealSize.height - 8
+
+        // Top-right corner of the main screen, always.
+        if let screen = NSScreen.main {
+            let x = screen.frame.maxX - idealSize.width - 16
+            let y = screen.frame.maxY - idealSize.height - 16
             panel.setFrameOrigin(NSPoint(x: x, y: y))
         }
-        
+
         panel.makeKeyAndOrderFront(nil)
         self.cardWindow = panel
-        
-        // Auto-dismiss after 5 seconds
-        autoDismissTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { _ in
+
+        let seconds = max(1.0, Double(timeoutMs) / 1000.0)
+        timeoutTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { _ in
             dismiss()
+            onTimeout()
         }
     }
-    
+
     static func dismiss() {
-        autoDismissTimer?.invalidate()
-        autoDismissTimer = nil
+        timeoutTimer?.invalidate()
+        timeoutTimer = nil
         cardWindow?.close()
         cardWindow = nil
-        statusItem?.button?.isHidden = true
     }
 }
