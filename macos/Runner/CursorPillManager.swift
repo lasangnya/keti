@@ -2,32 +2,30 @@ import Cocoa
 import SwiftUI
 
 /// Shows an animated PNG sequence next to the mouse cursor.
-/// The animation follows the cursor and auto-hides after the sequence finishes.
+/// The animation follows the cursor, holds its final frame once the sequence
+/// ends, and stays visible until the visibility window elapses.
 class CursorPillManager {
     private static var window: NSPanel?
     private static var trackingTimer: Timer?
-    
+    private static var windowTimer: Timer?
+
     private static var currentWidth: Double = 150
     private static var currentHeight: Double = 150
     private static var currentOffsetX: Double = 0
     private static var currentOffsetY: Double = 0
 
-    static func show(resourceName: String, width: Double, height: Double, offsetX: Double, offsetY: Double, totalFrames: Int, onDone: @escaping () -> Void) {
+    static func show(resourceName: String, width: Double, height: Double, offsetX: Double, offsetY: Double, totalFrames: Int, visibilityMs: Int, onShown: @escaping () -> Void, onHidden: @escaping () -> Void) {
         dismiss()
-        
+
         currentWidth = width
         currentHeight = height
         currentOffsetX = offsetX
         currentOffsetY = offsetY
 
         let pillSize = NSSize(width: width, height: height)
-        
-        // Use a trailing closure for the dismissal callback
-        let contentView = CursorPillView(resourceName: resourceName, frameCount: totalFrames) {
-            dismiss()
-            onDone()
-        }
-        
+
+        let contentView = CursorPillView(resourceName: resourceName, frameCount: totalFrames)
+
         let hostingView = NSHostingView(rootView: contentView)
         hostingView.frame.size = pillSize
 
@@ -51,16 +49,25 @@ class CursorPillManager {
 
         positionAtCursor()
 
-        // Track cursor at 60fps
         trackingTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { _ in
             guard window != nil else { return }
             positionAtCursor()
+        }
+
+        onShown()
+
+        let seconds = max(0.1, Double(visibilityMs) / 1000.0)
+        windowTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { _ in
+            dismiss()
+            onHidden()
         }
     }
 
     static func dismiss() {
         trackingTimer?.invalidate()
         trackingTimer = nil
+        windowTimer?.invalidate()
+        windowTimer = nil
 
         window?.close()
         window = nil
@@ -69,7 +76,6 @@ class CursorPillManager {
     private static func positionAtCursor() {
         guard let panel = window else { return }
         let mouse = NSEvent.mouseLocation
-        // Apply dynamic offset
         panel.setFrameOrigin(NSPoint(x: mouse.x + currentOffsetX, y: mouse.y + currentOffsetY))
     }
 }
@@ -79,13 +85,10 @@ class CursorPillManager {
 struct CursorPillView: View {
     let resourceName : String
     let frameCount: Int
-    var onDismiss: () -> Void
-    
+
     @State private var currentFrame = 0
     @State private var isVisible = false
-    @State private var hasFinished = false
 
-    // ~30 FPS
     let timer = Timer.publish(every: 0.033, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -97,9 +100,6 @@ struct CursorPillView: View {
             .onReceive(timer) { _ in
                 if currentFrame < frameCount - 1 {
                     currentFrame += 1
-                } else if !hasFinished {
-                    hasFinished = true
-                    dismissWithAnimation()
                 }
             }
             .scaleEffect(isVisible ? 1.0 : 0.5)
@@ -109,15 +109,5 @@ struct CursorPillView: View {
                     isVisible = true
                 }
             }
-    }
-    
-    private func dismissWithAnimation() {
-        withAnimation(.easeIn(duration: 0.3)) {
-            isVisible = false
-        }
-        // Wait for animation to finish before closing window
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            onDismiss()
-        }
     }
 }
