@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../application/study/participant_entry_provider.dart';
 import '../../../application/study/participant_providers.dart';
 import '../../../application/study/session_controller.dart';
+import '../../../core/constants/app_config.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/services/link_launcher_service.dart';
 import '../../../domain/study/study_config.dart';
@@ -72,11 +74,33 @@ class _StudyPageState extends ConsumerState<StudyPage> {
 
   Widget _buildEntryForm(BuildContext context, ParticipantEntryState entry) {
     final theme = Theme.of(context);
+    final user = FirebaseAuth.instance.currentUser;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (AppConfig.environment == 'dev') ...[
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(user != null ? Icons.lock_open : Icons.lock, size: 16),
+                  const SizedBox(width: 8),
+                  Text(
+                    user != null ? 'Authenticated: ${user.uid.substring(0, 8)}...' : 'Not Authenticated',
+                    style: theme.textTheme.labelSmall,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
           Text(AppStrings.startStudySession,
               style: theme.textTheme.titleMedium
                   ?.copyWith(fontWeight: FontWeight.bold)),

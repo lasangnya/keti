@@ -38,11 +38,12 @@ class DaySchedule {
     Map<String, Object?> json, {
     required PresentationStyle style,
   }) {
-    final rawReminders = (json['reminders'] as List)
-        .map((r) => ScheduledReminder.fromJson((r as Map).cast<String, Object?>()))
+    final rawReminders = (json['reminders'] as List? ?? [])
+        .map((r) =>
+            ScheduledReminder.fromJson((r as Map).cast<String, Object?>()))
         .toList();
     return DaySchedule(
-      dayNumber: json['dayNumber'] as int,
+      dayNumber: (json['dayNumber'] as num?)?.toInt() ?? 1,
       style: style,
       reminders: rawReminders,
     );

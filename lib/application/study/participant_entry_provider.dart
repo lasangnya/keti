@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../core/services/local/csv_store.dart';
@@ -119,14 +121,28 @@ class ParticipantEntry extends _$ParticipantEntry {
     } on ParticipantNotFoundException {
       state = ParticipantEntryState(
           errorMessage: 'Unknown participant code $code.');
-    } catch (_) {
+    } catch (e) {
+      debugPrint('ParticipantEntry error: $e');
+
+      // If we are signed out, Firestore will throw a permission-denied error.
+      final auth = FirebaseAuth.instance;
+      if (auth.currentUser == null) {
+        state = ParticipantEntryState(
+            errorMessage: 'Authentication failed. Please check your internet '
+                'connection or Firebase Console settings.');
+        return;
+      }
+
       // Network failure path: fall back to whatever is cached locally.
       final cached = store.readCachedParticipant(code);
       final cachedConfig = store.readCachedStudyConfig();
       if (cached == null || cachedConfig == null) {
-        state = ParticipantEntryState(
-            errorMessage:
-                'Could not load $code (offline and no cached data on this machine).');
+        // If there's no cache, the error might be data-related (cast error)
+        // or a real network error on the first run.
+        final message = (e is TypeError)
+            ? 'Data error: $e. Check the Firestore document for $code.'
+            : 'Could not load $code (offline and no cached data on this machine).';
+        state = ParticipantEntryState(errorMessage: message);
         return;
       }
       final style = styleForDay(cached.styleOrder, cached.activeDay);

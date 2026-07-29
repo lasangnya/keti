@@ -41,11 +41,13 @@ class ScheduledReminder {
 
   factory ScheduledReminder.fromJson(Map<String, Object?> json) =>
       ScheduledReminder(
-        reminderNumber: json['n'] as int,
-        offset: Duration(seconds: json['offsetSec'] as int),
-        placement: PlacementWire.fromWireName(json['placement'] as String),
-        kind: ReminderKindWire.fromWireName(json['kind'] as String),
-        variantNumber: json['variant'] as int,
+        reminderNumber: (json['n'] as num?)?.toInt() ?? 0,
+        offset: Duration(seconds: (json['offsetSec'] as num?)?.toInt() ?? 0),
+        placement: PlacementWire.fromWireName(
+            json['placement'] as String? ?? 'CURSOR_PROXIMATE'),
+        kind: ReminderKindWire.fromWireName(
+            json['kind'] as String? ?? 'HYDRATION'),
+        variantNumber: (json['variant'] as num?)?.toInt() ?? 1,
       );
 
   @override

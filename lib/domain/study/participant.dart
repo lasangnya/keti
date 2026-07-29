@@ -52,13 +52,14 @@ class Participant {
       };
 
   factory Participant.fromJson(Map<String, Object?> json) => Participant(
-        participantCode: json['participantCode'] as String,
-        serial: json['serial'] as int,
-        styleOrder: StyleOrderWire.fromWireName(json['styleOrder'] as String),
-        assignmentOverride: json['assignmentOverride'] as bool,
-        activeDay: json['activeDay'] as int,
-        environment: json['environment'] as String,
-        protocolVersion: json['protocolVersion'] as String,
+        participantCode: json['participantCode'] as String? ?? 'UNKNOWN',
+        serial: (json['serial'] as num?)?.toInt() ?? 0,
+        styleOrder: StyleOrderWire.fromWireName(
+            json['styleOrder'] as String? ?? 'AMBIENT_FIRST'),
+        assignmentOverride: json['assignmentOverride'] as bool? ?? false,
+        activeDay: (json['activeDay'] as num?)?.toInt() ?? 1,
+        environment: json['environment'] as String? ?? 'dev',
+        protocolVersion: json['protocolVersion'] as String? ?? 'unknown',
       );
 
   // ── CSV (admin export) ───────────────────────────────────────────

@@ -20,7 +20,12 @@ void main() async {
     await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
   }
   // Silent anonymous sign-in — participants never see a login screen.
-  await AuthService().signInAnonymouslyIfNeeded();
+  try {
+    await AuthService().signInAnonymouslyIfNeeded();
+  } catch (e) {
+    debugPrint('Firebase Auth Error: $e');
+    // We continue so the app still launches, but Firestore may fail if rules require auth.
+  }
   runApp(const ProviderScope(child: KetiApp()));
 }
 

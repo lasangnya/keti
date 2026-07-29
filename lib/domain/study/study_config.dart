@@ -76,12 +76,15 @@ class StudyConfig {
       };
 
   factory StudyConfig.fromJson(Map<String, Object?> json) => StudyConfig(
-        protocolVersion: json['protocolVersion'] as String,
-        links: QuestionnaireLinks.fromJson(
-            (json['questionnaireLinks'] as Map).cast<String, Object?>()),
+        protocolVersion: json['protocolVersion'] as String? ?? 'unknown',
+        links: json['questionnaireLinks'] != null
+            ? QuestionnaireLinks.fromJson(
+                (json['questionnaireLinks'] as Map).cast<String, Object?>())
+            : const QuestionnaireLinks(),
         defaultSchedule: [
-          for (final r in json['defaultSchedule'] as List)
-            ScheduledReminder.fromJson((r as Map).cast<String, Object?>()),
+          if (json['defaultSchedule'] != null)
+            for (final r in json['defaultSchedule'] as List)
+              ScheduledReminder.fromJson((r as Map).cast<String, Object?>()),
         ],
       );
 }
