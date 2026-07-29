@@ -50,7 +50,7 @@ final class ParticipantEntryProvider
   }
 }
 
-String _$participantEntryHash() => r'f761ded18b94252bc61e3d55cff2772e0994cba5';
+String _$participantEntryHash() => r'080f75d1b558aa70c008754c786605bb8b27e92d';
 
 /// Keep-alive: this controller performs async work (fetch + cache) on behalf
 /// of the whole page; autoDispose could tear it down mid-flight and strand

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../core/services/local/csv_store.dart';
+import '../../core/services/local/sync_service.dart';
 import '../../core/services/study/participant_repository.dart';
 import '../../domain/study/condition_assignment.dart';
 import '../../domain/study/day_schedule.dart';
@@ -105,6 +108,11 @@ class ParticipantEntry extends _$ParticipantEntry {
       await store.cacheParticipant(participant);
       await store.cacheStudyConfig(config);
       await store.cacheScheduleFor(participant.participantCode, schedule);
+
+      // Best-effort background reconciliation of any offline sessions.
+      unawaited(ref
+          .read(syncServiceProvider)
+          .reconcileParticipant(participant.participantCode));
 
       state = await _readyState(csv, participant, config, schedule,
           fromCache: false);
