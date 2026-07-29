@@ -14,6 +14,8 @@ import 'package:keti/domain/study/study_enums.dart';
 import 'package:keti/domain/study/study_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:keti/application/reminders/reminder_orchestrator.dart';
+
 import 'session_test_fakes.dart';
 
 void main() {
@@ -24,14 +26,14 @@ void main() {
   late DateTime fakeNow;
   late FakeSessionRepository sessionRepo;
   late FakeEventRepository eventRepo;
-  late RecordingDelivery delivery;
+  late FakeReminderOrchestrator orchestrator;
 
   setUp(() {
     csvRoot = Directory.systemTemp.createTempSync('keti_m4_resume_test');
     fakeNow = DateTime.parse('2026-08-03T09:00:00+02:00');
     sessionRepo = FakeSessionRepository();
     eventRepo = FakeEventRepository();
-    delivery = RecordingDelivery();
+    orchestrator = FakeReminderOrchestrator();
   });
 
   tearDown(() {
@@ -48,7 +50,7 @@ void main() {
       csvStoreProvider.overrideWithValue(CsvStore(rootDir: csvRoot)),
       sessionRepositoryProvider.overrideWithValue(sessionRepo),
       reminderEventRepositoryProvider.overrideWithValue(eventRepo),
-      reminderDeliveryProvider.overrideWithValue(delivery),
+      reminderOrchestratorProvider.overrideWithValue(orchestrator),
       studyClockProvider.overrideWithValue(() => fakeNow),
       schedulerTickIntervalProvider
           .overrideWithValue(const Duration(days: 365)),
@@ -105,7 +107,8 @@ void main() {
       // Reminder 2 still arrives on time after the resume.
       fakeNow = DateTime.parse('2026-08-03T09:30:00+02:00');
       await container.read(sessionControllerProvider.notifier).debugTick();
-      expect(delivery.calls, hasLength(1));
+      await container.read(sessionControllerProvider.notifier).debugAwaitIdle();
+      expect(orchestrator.calls, hasLength(1));
       final second = container
           .read(sessionControllerProvider)
           .events
@@ -139,6 +142,7 @@ void main() {
       // 8 is due exactly on time (delivered).
       fakeNow = DateTime.parse('2026-08-03T10:40:00+02:00');
       await container.read(sessionControllerProvider.notifier).debugTick();
+      await container.read(sessionControllerProvider.notifier).debugAwaitIdle();
 
       final state = container.read(sessionControllerProvider);
       expect(state.completed, isTrue);
@@ -149,7 +153,7 @@ void main() {
             .every((e) => e.deliveryStatus != DeliveryStatus.scheduled),
         isTrue,
       );
-      expect(delivery.calls, hasLength(1)); // only reminder 8 was shown
+      expect(orchestrator.calls, hasLength(1)); // only reminder 8 was shown
 
       expect(sessionRepo.completeCalls, 1);
 

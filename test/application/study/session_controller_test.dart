@@ -14,6 +14,8 @@ import 'package:keti/domain/study/study_enums.dart';
 import 'package:keti/domain/study/study_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:keti/application/reminders/reminder_orchestrator.dart';
+
 import 'session_test_fakes.dart';
 
 void main() {
@@ -24,14 +26,14 @@ void main() {
   late DateTime fakeNow;
   late FakeSessionRepository sessionRepo;
   late FakeEventRepository eventRepo;
-  late RecordingDelivery delivery;
+  late FakeReminderOrchestrator orchestrator;
 
   setUp(() {
     csvRoot = Directory.systemTemp.createTempSync('keti_m4_test');
     fakeNow = DateTime.parse('2026-08-03T09:00:00+02:00');
     sessionRepo = FakeSessionRepository();
     eventRepo = FakeEventRepository();
-    delivery = RecordingDelivery();
+    orchestrator = FakeReminderOrchestrator();
   });
 
   tearDown(() {
@@ -48,7 +50,7 @@ void main() {
       csvStoreProvider.overrideWithValue(CsvStore(rootDir: csvRoot)),
       sessionRepositoryProvider.overrideWithValue(sessionRepo),
       reminderEventRepositoryProvider.overrideWithValue(eventRepo),
-      reminderDeliveryProvider.overrideWithValue(delivery),
+      reminderOrchestratorProvider.overrideWithValue(orchestrator),
       studyClockProvider.overrideWithValue(() => fakeNow),
       schedulerTickIntervalProvider
           .overrideWithValue(const Duration(days: 365)),
@@ -107,17 +109,25 @@ void main() {
       final container = await startedContainer();
       fakeNow = DateTime.parse('2026-08-03T09:20:00+02:00');
       await container.read(sessionControllerProvider.notifier).debugTick();
+      await container.read(sessionControllerProvider.notifier).debugAwaitIdle();
 
-      expect(delivery.calls, hasLength(1));
-      expect(delivery.calls.single.placement, Placement.cursorProximate);
-      expect(delivery.calls.single.content.message, 'Stay hydrated');
+      expect(orchestrator.calls, hasLength(1));
+      expect(orchestrator.calls.single.placement, Placement.cursorProximate);
+      expect(orchestrator.calls.single.content.message, 'Stay hydrated');
 
       final state = container.read(sessionControllerProvider);
       final event = state.events.firstWhere((e) => e.reminderNumber == 1);
       expect(event.deliveryStatus, DeliveryStatus.delivered);
       expect(event.deliveryLatenessMs, 0);
+      // The full chain persisted: delivered → hidden → card shown → answered.
       expect(
-          eventRepo.updated.single.deliveryStatus, DeliveryStatus.delivered);
+        eventRepo.updated
+            .map((e) => e.deliveryStatus)
+            .contains(DeliveryStatus.delivered),
+        isTrue,
+      );
+      expect(event.outcome, ResponseOutcome.completed);
+      expect(event.cardShownAtLocal, isNotNull);
     });
 
     test('within grace records lateness; past grace is suppressed', () async {
@@ -126,6 +136,7 @@ void main() {
       // 90s late → delivered with lateness.
       fakeNow = DateTime.parse('2026-08-03T09:21:30+02:00');
       await container.read(sessionControllerProvider.notifier).debugTick();
+      await container.read(sessionControllerProvider.notifier).debugAwaitIdle();
       var state = container.read(sessionControllerProvider);
       expect(
         state.events.firstWhere((e) => e.reminderNumber == 1).deliveryStatus,
@@ -143,18 +154,20 @@ void main() {
       // late_delivery is reserved for app-alive lateness (display queue, M5).
       fakeNow = DateTime.parse('2026-08-03T09:32:01+02:00');
       await container.read(sessionControllerProvider.notifier).debugTick();
+      await container.read(sessionControllerProvider.notifier).debugAwaitIdle();
       state = container.read(sessionControllerProvider);
       final missed = state.events.firstWhere((e) => e.reminderNumber == 2);
       expect(missed.deliveryStatus, DeliveryStatus.suppressed);
       expect(missed.suppressionReason, 'device_inactive');
-      expect(delivery.calls, hasLength(1)); // nothing new shown
+      expect(orchestrator.calls, hasLength(1)); // nothing new shown
     });
 
     test('display failure marks the event failed and continues', () async {
       final container = await startedContainer();
-      delivery.throwNext = true;
+      orchestrator.failNext = true;
       fakeNow = DateTime.parse('2026-08-03T09:20:00+02:00');
       await container.read(sessionControllerProvider.notifier).debugTick();
+      await container.read(sessionControllerProvider.notifier).debugAwaitIdle();
 
       final event = container
           .read(sessionControllerProvider)

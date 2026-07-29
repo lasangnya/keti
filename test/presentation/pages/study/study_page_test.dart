@@ -20,6 +20,8 @@ import 'package:keti/domain/study/study_session.dart';
 import 'package:keti/presentation/pages/study/study_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:keti/application/reminders/reminder_orchestrator.dart';
+
 import '../../../application/study/session_test_fakes.dart';
 
 void main() {
@@ -59,7 +61,7 @@ void main() {
           sessionRepositoryProvider.overrideWithValue(FakeSessionRepository()),
           reminderEventRepositoryProvider
               .overrideWithValue(FakeEventRepository()),
-          reminderDeliveryProvider.overrideWithValue(RecordingDelivery()),
+          reminderOrchestratorProvider.overrideWithValue(FakeReminderOrchestrator()),
           studyClockProvider.overrideWithValue(
               () => DateTime.parse('2026-08-03T09:00:00+02:00')),
           schedulerTickIntervalProvider

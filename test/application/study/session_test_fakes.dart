@@ -1,6 +1,6 @@
+import 'package:keti/application/reminders/reminder_orchestrator.dart';
 import 'package:keti/core/services/firestore/reminder_event_repository.dart';
 import 'package:keti/core/services/firestore/session_repository.dart';
-import 'package:keti/core/services/study/reminder_delivery.dart';
 import 'package:keti/domain/reminders/reminder_content.dart';
 import 'package:keti/domain/study/reminder_event.dart';
 import 'package:keti/domain/study/study_enums.dart';
@@ -62,19 +62,46 @@ class FakeEventRepository implements ReminderEventRepository {
       [...created]..sort((a, b) => a.reminderNumber.compareTo(b.reminderNumber));
 }
 
-class RecordingDelivery implements ReminderDelivery {
-  final calls = <({ReminderContent content, Placement placement})>[];
-  bool throwNext = false;
+/// Records sequences and drives the callback chain synchronously.
+class FakeReminderOrchestrator extends ReminderOrchestrator {
+  final calls =
+      <({String reminderId, ReminderContent content, Placement placement})>[];
+  bool failNext = false;
+
+  /// When true (default), runs deliver → hidden → cardShown → answered.
+  /// When false, stops after onDelivered (outcome stays open).
+  bool completeChain = true;
+  String answerAction = 'completed';
 
   @override
-  Future<void> show({
+  Future<void> runReminderSequence({
+    required String reminderId,
     required ReminderContent content,
     required Placement placement,
+    required String question,
+    required String button1Text,
+    required String button2Text,
+    required int visibilityMs,
+    required int cardTimeoutMs,
+    required Future<void> Function() onDelivered,
+    required Future<void> Function() onReminderHidden,
+    required Future<void> Function() onCardShown,
+    required Future<void> Function(String action) onCardAnswered,
+    required Future<void> Function() onCardTimedOut,
+    required Future<void> Function(String reason) onFailed,
   }) async {
-    if (throwNext) {
-      throwNext = false;
-      throw StateError('simulated display failure');
+    calls.add(
+        (reminderId: reminderId, content: content, placement: placement));
+    if (failNext) {
+      failNext = false;
+      await onFailed('display_dispatch:simulated');
+      return;
     }
-    calls.add((content: content, placement: placement));
+    await onDelivered();
+    if (completeChain) {
+      await onReminderHidden();
+      await onCardShown();
+      await onCardAnswered(answerAction);
+    }
   }
 }
