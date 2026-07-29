@@ -18,6 +18,8 @@ class ReminderManager extends _$ReminderManager {
     ref.keepAlive();
   }
 
+  int _testReminderCounter = 0;
+
   void enqueue(ReminderRequest request) {
     _queue.add(request);
     if (!_isProcessing) {
@@ -34,25 +36,30 @@ class ReminderManager extends _$ReminderManager {
     _isProcessing = true;
     final request = _queue.removeAt(0);
 
+    // Test-mode displays are fire-and-forget; the study sequence (reminder +
+    // compliance card) is driven by the ReminderOrchestrator instead.
+    final visibilityMs = (request.content.totalFrames / 25 * 1000).toInt() + 800;
+    final reminderId = 'test-${_testReminderCounter++}';
+
     try {
-      // 1. Trigger the native service
       switch (request.location) {
         case ReminderLocation.cursor:
-          await CursorPillService.showPill(request.content);
+          await CursorPillService.showPill(request.content,
+              reminderId: reminderId, visibilityMs: visibilityMs);
           break;
         case ReminderLocation.island:
-          await NotchHookService.showIsland(request.content);
+          await NotchHookService.showIsland(request.content,
+              reminderId: reminderId, visibilityMs: visibilityMs);
           break;
         case ReminderLocation.tray:
-          await TrayPillService.showPill(request.content);
+          await TrayPillService.showPill(request.content,
+              reminderId: reminderId, visibilityMs: visibilityMs);
           break;
       }
 
-      // 2. Wait for the exact duration of the sequence (frames / 25fps)
-      // We add an 800ms buffer (500ms for exit animation + 300ms gap)
-      final durationMs = (request.content.totalFrames / 25 * 1000).toInt() + 800;
-      await Future.delayed(Duration(milliseconds: durationMs));
-      
+      // Wait out the visibility window before dequeuing the next in line.
+      await Future.delayed(Duration(milliseconds: visibilityMs));
+
     } catch (e) {
       print('Error processing reminder: $e');
     } finally {

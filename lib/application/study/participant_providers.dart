@@ -6,7 +6,6 @@ import '../../core/services/firestore/firestore_participant_repository.dart';
 import '../../core/services/local/csv_store.dart';
 import '../../core/services/local/local_store.dart';
 import '../../core/services/study/participant_repository.dart';
-import '../../core/services/study/reminder_delivery.dart';
 
 part 'participant_providers.g.dart';
 
@@ -24,8 +23,3 @@ Future<LocalStore> localStore(Ref ref) async =>
 
 @riverpod
 CsvStore csvStore(Ref ref) => CsvStore();
-
-/// Display sink for due reminders. Native services in production;
-/// a recording fake in tests.
-@riverpod
-ReminderDelivery reminderDelivery(Ref ref) => NativeReminderDelivery();

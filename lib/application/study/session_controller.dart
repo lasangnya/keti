@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../core/constants/app_config.dart';
+import '../../core/constants/app_strings.dart';
 import '../../core/services/firebase/firestore_providers.dart';
 import '../../core/services/session_lifecycle_service.dart';
 import '../../domain/study/event_log_entry.dart';
@@ -10,6 +13,7 @@ import '../../domain/study/schedule_evaluator.dart';
 import '../../domain/study/scheduled_reminder.dart';
 import '../../domain/study/study_enums.dart';
 import '../../domain/study/study_session.dart';
+import '../reminders/reminder_orchestrator.dart';
 import 'participant_entry_provider.dart';
 import 'participant_providers.dart';
 import 'scheduler_provider.dart';
@@ -218,6 +222,16 @@ class SessionController extends _$SessionController {
   /// Test seam: drive one scheduler tick with the (fake) injected clock.
   Future<void> debugTick() async => _scheduler?.tickOnce();
 
+  /// Test seam: wait until all in-flight reminder sequences have finished.
+  Future<void> debugAwaitIdle() => Future.wait(_inFlight.toList());
+
+  final Set<Future<void>> _inFlight = {};
+
+  void _trackInFlight(Future<void> future) {
+    _inFlight.add(future);
+    future.whenComplete(() => _inFlight.remove(future));
+  }
+
   // ── internals ────────────────────────────────────────────────────
 
   void _startScheduler(StudySession session) {
@@ -281,26 +295,100 @@ class SessionController extends _$SessionController {
 
     final resolved = _resolver.resolve(reminder.kind, session.style);
     final usedFallback = resolved.isFallback(reminder.placement);
+    final question = reminder.kind == ReminderKind.hydration
+        ? AppStrings.complianceHydrationQuestion
+        : AppStrings.complianceBreakQuestion;
 
-    ReminderEvent updated;
-    String transition;
-    try {
-      await ref.read(reminderDeliveryProvider).show(
-            content: resolved.content,
-            placement: reminder.placement,
+    // The reminder → window → compliance-card chain runs for up to ~3
+    // minutes. It is kicked off detached — the 1 s tick must not block on
+    // it — and progress arrives through the callbacks below.
+    final sequence = ref.read(reminderOrchestratorProvider).runReminderSequence(
+        reminderId: event.eventId,
+        content: resolved.content,
+        placement: reminder.placement,
+        question: question,
+        button1Text: AppStrings.complianceButton1,
+        button2Text: AppStrings.complianceButton2,
+        visibilityMs: AppConfig.reminderVisibilityMs,
+        cardTimeoutMs: AppConfig.complianceCardTimeoutMs,
+        onDelivered: () async {
+          if (!ref.mounted) return;
+          final current = _eventById(event.eventId);
+          await _persistEvent(
+            code,
+            session.dayId,
+            current.markDelivered(
+              shownAtLocal: _now(),
+              latenessMs: latenessMs,
+              usedFallback: usedFallback,
+            ),
+            'delivered',
           );
-      updated = event.markDelivered(
-        shownAtLocal: _now(),
-        latenessMs: latenessMs,
-        usedFallback: usedFallback,
+        },
+        onReminderHidden: () async {
+          if (!ref.mounted) return;
+          final current = _eventById(event.eventId);
+          await _persistEvent(
+            code,
+            session.dayId,
+            current.markReminderHidden(_now()),
+            'reminder_hidden',
+          );
+        },
+        onCardShown: () async {
+          if (!ref.mounted) return;
+          final current = _eventById(event.eventId);
+          await _persistEvent(
+            code,
+            session.dayId,
+            current.markCardShown(_now()),
+            'card_shown',
+          );
+        },
+        onCardAnswered: (action) async {
+          if (!ref.mounted) return;
+          final current = _eventById(event.eventId);
+          await _persistEvent(
+            code,
+            session.dayId,
+            current.markAnswered(
+              outcome: action == 'completed'
+                  ? ResponseOutcome.completed
+                  : ResponseOutcome.dismissed,
+              answeredAtLocal: _now(),
+            ),
+            'answered',
+          );
+          await _completeDayIfDone();
+        },
+        onCardTimedOut: () async {
+          if (!ref.mounted) return;
+          final current = _eventById(event.eventId);
+          await _persistEvent(
+            code,
+            session.dayId,
+            current.markTimedOut(_now()),
+            'timed_out',
+          );
+          await _completeDayIfDone();
+        },
+        onFailed: (reason) async {
+          if (!ref.mounted) return;
+          final current = _eventById(event.eventId);
+          await _persistEvent(
+            code,
+            session.dayId,
+            current.markFailed(reason),
+            'failed',
+          );
+          await _completeDayIfDone();
+        },
       );
-      transition = 'delivered';
-    } catch (e) {
-      updated = event.markFailed('display_dispatch:${e.runtimeType}');
-      transition = 'failed';
-    }
-    await _persistEvent(code, session.dayId, updated, transition);
+    _trackInFlight(sequence);
   }
+
+  ReminderEvent _eventById(String eventId) =>
+      state.events.firstWhere((e) => e.eventId == eventId);
 
   Future<void> _miss(ScheduledReminder reminder, String reason) async {
     final session = state.session!;
@@ -347,12 +435,22 @@ class SessionController extends _$SessionController {
     } catch (_) {}
   }
 
+  /// An event is final when it left the scheduled state AND — for delivered
+  /// reminders — the compliance card has produced an outcome.
+  static bool _isFinal(ReminderEvent e) {
+    if (e.deliveryStatus == DeliveryStatus.scheduled) return false;
+    if (e.deliveryStatus == DeliveryStatus.delivered &&
+        e.outcome == ResponseOutcome.none) {
+      return false;
+    }
+    return true;
+  }
+
   Future<void> _completeDayIfDone() async {
     if (!ref.mounted) return;
     final session = state.session;
     if (session == null || state.completed) return;
-    final allFinalized = state.events
-        .every((e) => e.deliveryStatus != DeliveryStatus.scheduled);
+    final allFinalized = state.events.every(_isFinal);
     if (!allFinalized) return;
 
     _scheduler?.finish();

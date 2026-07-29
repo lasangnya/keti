@@ -51,9 +51,11 @@ class TestModePage extends ConsumerWidget {
                 button1Text: 'Trigger Card',
                 onButton1Pressed: () {
                   ComplianceCardService.show(
-                    title: 'Take a break with Keti?',
-                    button1Text: 'Sure!',
+                    reminderId: 'test-compliance-card',
+                    question: 'Did you take a short break?',
+                    button1Text: 'Done',
                     button2Text: 'Not now',
+                    timeoutMs: 120000,
                   );
                 },
               ),
