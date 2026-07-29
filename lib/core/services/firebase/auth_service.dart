@@ -14,12 +14,9 @@ class AuthService {
   String? get uid => _auth.currentUser?.uid;
 
   /// Signs in anonymously unless a session already exists. Idempotent and
-  /// safe to call on every launch. The app uses in-memory persistence so
-  /// macOS sandbox never touches the Keychain (plan §8: auth is disposable
-  /// — participants sign in fresh every launch).
+  /// safe to call on every launch.
   Future<void> signInAnonymouslyIfNeeded() async {
     if (_auth.currentUser != null) return;
-    await _auth.setPersistence(Persistence.NONE);
     await _auth.signInAnonymously();
   }
 }
