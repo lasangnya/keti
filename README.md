@@ -62,3 +62,7 @@ This deletes the participant subtree from Firestore. The participant machine's `
 | Firestore (authoritative) | `participants/{code}/studySessions/{dayId}/reminderEvents/{eventId}` |
 | Admin in-app export | `~/Documents/keti_exports/{code}_events.csv` |
 | Fallback script export | `node tooling/export.js` → `*.csv` in any directory |
+
+### Signing / distribution
+
+For the pilot, build and run from source on each study machine (`flutter build macos --debug`). For the full study with many machines, consider code-signing with an Apple Developer account so the `.app` bundle can be copied directly without requiring Flutter and Xcode on every machine.
