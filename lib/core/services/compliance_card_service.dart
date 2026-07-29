@@ -1,29 +1,32 @@
 import 'package:flutter/services.dart';
 import 'package:keti/core/constants/platform_channels.dart';
 
+/// Shows the uniform compliance card (plan §5.4): same look, position
+/// (top-right of the screen), and behavior for every reminder, placement,
+/// style, and participant. Outcomes arrive via [ReminderChannels] as
+/// `completed`, `dismissed`, or a card timeout.
 class ComplianceCardService {
   static const _channel = MethodChannel(PlatformChannels.complianceCard);
 
   static Future<void> show({
-    required String title,
+    required String reminderId,
+    required String question,
     required String button1Text,
     required String button2Text,
+    required int timeoutMs,
   }) async {
-    _channel.setMethodCallHandler((call) async {
-      if (call.method == PlatformChannels.methodOnButtonClicked) {
-        final clickedButton = call.arguments as String;
-        print('--- Compliance Card Clicked: $clickedButton ---');
-      }
-    });
-
     try {
       await _channel.invokeMethod(PlatformChannels.methodShowComplianceCard, {
-        PlatformChannels.keyTitle: title,
+        PlatformChannels.keyReminderId: reminderId,
+        PlatformChannels.keyQuestion: question,
         PlatformChannels.keyButton1Text: button1Text,
         PlatformChannels.keyButton2Text: button2Text,
+        PlatformChannels.keyTimeoutMs: timeoutMs,
       });
     } on PlatformException catch (e) {
-      print("Failed to show compliance card: ${e.message}");
+      throw StateError('compliance_card platform failure: ${e.message}');
+    } on MissingPluginException {
+      throw StateError('compliance_card not available on this platform');
     }
   }
 }
