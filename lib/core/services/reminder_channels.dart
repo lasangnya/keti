@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:keti/core/constants/platform_channels.dart';
 
@@ -39,9 +40,21 @@ class ReminderChannels {
     if (reminderId is! String) return;
     switch (call.method) {
       case PlatformChannels.methodOnShown:
-        _shownWaiters.remove(reminderId)?.complete();
+        final waiter = _shownWaiters.remove(reminderId);
+        if (waiter != null) {
+          debugPrint('ReminderChannels: onShown confirmed for $reminderId');
+          waiter.complete();
+        } else {
+          debugPrint('ReminderChannels: IGNORED onShown for $reminderId (no waiter)');
+        }
       case PlatformChannels.methodOnHidden:
-        _hiddenWaiters.remove(reminderId)?.complete();
+        final waiter = _hiddenWaiters.remove(reminderId);
+        if (waiter != null) {
+          debugPrint('ReminderChannels: onHidden received for $reminderId');
+          waiter.complete();
+        } else {
+          debugPrint('ReminderChannels: IGNORED onHidden for $reminderId (no waiter)');
+        }
     }
   }
 
@@ -53,11 +66,13 @@ class ReminderChannels {
         final reminderId = args[PlatformChannels.keyReminderId];
         final action = args[PlatformChannels.keyAction];
         if (reminderId is String && action is String) {
+          debugPrint('ReminderChannels: Card action ($action) for $reminderId');
           _cardOutcomeWaiters.remove(reminderId)?.complete(action);
         }
       case PlatformChannels.methodOnCardTimeout:
         final reminderId = call.arguments;
         if (reminderId is String) {
+          debugPrint('ReminderChannels: Card timeout for $reminderId');
           _cardOutcomeWaiters.remove(reminderId)?.complete('timeout');
         }
     }
@@ -68,7 +83,7 @@ class ReminderChannels {
   /// as a delivery failure by the caller.
   static Future<bool> waitForShown(
     String reminderId, {
-    Duration timeout = const Duration(seconds: 3),
+    Duration timeout = const Duration(seconds: 5),
   }) async {
     ensureRegistered();
     final completer = Completer<void>();
@@ -77,6 +92,7 @@ class ReminderChannels {
       await completer.future.timeout(timeout);
       return true;
     } on TimeoutException {
+      debugPrint('ReminderChannels: TIMEOUT waiting for onShown for $reminderId');
       _shownWaiters.remove(reminderId);
       return false;
     }

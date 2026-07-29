@@ -9,6 +9,7 @@ class TrayPillManager {
     private static var cardWindow: NSPanel?
     private static var animationTimer: Timer?
     private static var windowTimer: Timer?
+    private static var currentOnHidden: (() -> Void)?
 
     /// Initializes the tray item and hides it. Call this at app launch.
     static func setup() {
@@ -49,19 +50,19 @@ class TrayPillManager {
         }
 
         // 2. Show the "Dropped" Card with the message text.
-        showCard(message: message, resourceName: resourceName, totalFrames: totalFrames, anchoredTo: button)
+        showCard(message: message, resourceName: resourceName, totalFrames: totalFrames, visibilityMs: visibilityMs, anchoredTo: button)
 
+        self.currentOnHidden = onHidden
         onShown()
 
         let seconds = max(0.1, Double(visibilityMs) / 1000.0)
         windowTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { _ in
             dismiss()
-            onHidden()
         }
     }
 
-    private static func showCard(message: String, resourceName: String, totalFrames: Int, anchoredTo button: NSStatusBarButton) {
-        let contentView = TrayCardView(message: message, resourceName: resourceName, totalFrames: totalFrames)
+    private static func showCard(message: String, resourceName: String, totalFrames: Int, visibilityMs: Int, anchoredTo button: NSStatusBarButton) {
+        let contentView = TrayCardView(message: message, resourceName: resourceName, totalFrames: totalFrames, visibilityMs: visibilityMs)
         let hostingView = NSHostingView(rootView: contentView)
 
         let idealSize = hostingView.fittingSize
@@ -100,5 +101,8 @@ class TrayPillManager {
 
         cardWindow?.close()
         cardWindow = nil
+        
+        currentOnHidden?()
+        currentOnHidden = nil
     }
 }

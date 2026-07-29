@@ -7,6 +7,7 @@ struct IslandView: View {
     let message: String
     let resourceName: String
     let totalFrames: Int
+    let visibilityMs: Int
 
     @State private var currentFrame = 0
     @State private var isVisible = false
@@ -35,6 +36,14 @@ struct IslandView: View {
         .onAppear {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                 isVisible = true
+            }
+
+            // Start exit animation 500ms before the manager's dismiss() is called.
+            let exitDelay = max(0.1, Double(visibilityMs) / 1000.0 - 0.5)
+            DispatchQueue.main.asyncAfter(deadline: .now() + exitDelay) {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                    isVisible = false
+                }
             }
         }
     }

@@ -8,6 +8,7 @@ class CursorPillManager {
     private static var window: NSPanel?
     private static var trackingTimer: Timer?
     private static var windowTimer: Timer?
+    private static var currentOnHidden: (() -> Void)?
 
     private static var currentWidth: Double = 150
     private static var currentHeight: Double = 150
@@ -24,7 +25,7 @@ class CursorPillManager {
 
         let pillSize = NSSize(width: width, height: height)
 
-        let contentView = CursorPillView(resourceName: resourceName, frameCount: totalFrames)
+        let contentView = CursorPillView(resourceName: resourceName, frameCount: totalFrames, visibilityMs: visibilityMs)
 
         let hostingView = NSHostingView(rootView: contentView)
         hostingView.frame.size = pillSize
@@ -46,6 +47,7 @@ class CursorPillManager {
         panel.contentView = hostingView
         panel.makeKeyAndOrderFront(nil)
         window = panel
+        currentOnHidden = onHidden
 
         positionAtCursor()
 
@@ -59,7 +61,6 @@ class CursorPillManager {
         let seconds = max(0.1, Double(visibilityMs) / 1000.0)
         windowTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { _ in
             dismiss()
-            onHidden()
         }
     }
 
@@ -71,6 +72,9 @@ class CursorPillManager {
 
         window?.close()
         window = nil
+        
+        currentOnHidden?()
+        currentOnHidden = nil
     }
 
     private static func positionAtCursor() {
@@ -85,6 +89,7 @@ class CursorPillManager {
 struct CursorPillView: View {
     let resourceName : String
     let frameCount: Int
+    let visibilityMs: Int
 
     @State private var currentFrame = 0
     @State private var isVisible = false
@@ -107,6 +112,14 @@ struct CursorPillView: View {
             .onAppear {
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
                     isVisible = true
+                }
+
+                // Start exit animation 500ms before the manager's dismiss() is called.
+                let exitDelay = max(0.1, Double(visibilityMs) / 1000.0 - 0.5)
+                DispatchQueue.main.asyncAfter(deadline: .now() + exitDelay) {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                        isVisible = false
+                    }
                 }
             }
     }

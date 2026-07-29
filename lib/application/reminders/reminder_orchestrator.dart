@@ -50,6 +50,10 @@ class ReminderOrchestrator {
   }) async {
     ReminderChannels.ensureRegistered();
     try {
+      // Register the waiter BEFORE triggering the show method to avoid
+      // losing the onShown signal if it arrives during the invokeMethod await.
+      final shownFuture = ReminderChannels.waitForShown(reminderId);
+
       await _showPlacement(
         reminderId: reminderId,
         content: content,
@@ -57,7 +61,7 @@ class ReminderOrchestrator {
         visibilityMs: visibilityMs,
       );
 
-      final confirmed = await ReminderChannels.waitForShown(reminderId);
+      final confirmed = await shownFuture;
       if (!confirmed) {
         await onFailed('shown_not_confirmed:$placement');
         return;

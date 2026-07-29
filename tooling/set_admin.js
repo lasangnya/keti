@@ -10,7 +10,8 @@
  *   The user must already exist in Firebase Auth.
  */
 
-const admin = require('firebase-admin');
+const { initializeApp, applicationDefault } = require('firebase-admin/app');
+const { getAuth } = require('firebase-admin/auth');
 
 const email = process.argv[2];
 if (!email) {
@@ -25,15 +26,16 @@ if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
   );
 }
 
-admin.initializeApp({
-  credential: admin.credential.applicationDefault(),
+initializeApp({
+  credential: applicationDefault(),
   projectId: 'keti-fcfd6',
 });
 
 async function main() {
   try {
-    const user = await admin.auth().getUserByEmail(email);
-    await admin.auth().setCustomUserClaims(user.uid, { admin: true });
+    const auth = getAuth();
+    const user = await auth.getUserByEmail(email);
+    await auth.setCustomUserClaims(user.uid, { admin: true });
     console.log(`SUCCESS: admin claim set for ${user.email} (${user.uid}).`);
   } catch (e) {
     console.error(`ERROR: ${e.message}`);
