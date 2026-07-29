@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../core/services/cursor_pill_service.dart';
 import '../../core/services/notch_hook_service.dart';
@@ -61,7 +62,8 @@ class ReminderManager extends _$ReminderManager {
       await Future.delayed(Duration(milliseconds: visibilityMs));
 
     } catch (e) {
-      print('Error processing reminder: $e');
+      // Test-mode robustness: a failed display must not stall the queue.
+      debugPrint('Error processing reminder: $e');
     } finally {
       // Small safety gap before starting next in line
       await Future.delayed(const Duration(milliseconds: 100));

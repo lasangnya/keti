@@ -53,7 +53,7 @@ final class SessionControllerProvider
   }
 }
 
-String _$sessionControllerHash() => r'145a0380cff73d8d83bdb99b63d0abce26d148aa';
+String _$sessionControllerHash() => r'f5946deb691398b455e52353175ef04bf7c1d129';
 
 /// Orchestrates a participant-day session (plan §5.2/§6.5):
 /// session + event creation (CSV-first, then Firestore), the tick

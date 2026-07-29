@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +8,8 @@ import '../../../application/study/participant_entry_provider.dart';
 import '../../../application/study/participant_providers.dart';
 import '../../../application/study/session_controller.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/services/link_launcher_service.dart';
+import '../../../domain/study/study_config.dart';
 import '../../../domain/study/study_enums.dart';
 import '../../widgets/page_title.dart';
 
@@ -219,10 +223,7 @@ class _StudyPageState extends ConsumerState<StudyPage> {
                   Text(s.participantCode, style: theme.textTheme.bodyMedium),
                   if (next != null) ...[
                     const SizedBox(height: 4),
-                    Text(
-                      'Next reminder at ${TimeOfDay.fromDateTime(next).format(context)}',
-                      style: theme.textTheme.bodySmall,
-                    ),
+                    _CountdownText(target: next),
                   ],
                 ],
               ),
@@ -258,6 +259,10 @@ class _StudyPageState extends ConsumerState<StudyPage> {
   Widget _buildCompletedView(BuildContext context, StudySessionState session) {
     final theme = Theme.of(context);
     final s = session.session!;
+    final links = s.links;
+    final endLink = links.endLinkForDay(s.dayNumber);
+    final finalLink = s.dayNumber == 2 ? links.finalLink : null;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -273,12 +278,45 @@ class _StudyPageState extends ConsumerState<StudyPage> {
                       style: theme.textTheme.titleMedium
                           ?.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Text('Thank you! The questionnaire link appears here in a '
-                      'later milestone (M6).'),
+                  Text(
+                    'Thank you! All reminders for today are recorded.',
+                    style: theme.textTheme.bodyMedium,
+                  ),
                 ],
               ),
             ),
           ),
+          const SizedBox(height: 16),
+          if (endLink != null)
+            FilledButton.icon(
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('Complete end of day questionnaire'),
+              onPressed: () => LinkLauncherService.open(
+                QuestionnaireLinks.fill(
+                  endLink,
+                  participantId: s.participantCode,
+                  day: s.dayNumber,
+                ),
+              ),
+            ),
+          if (finalLink != null) ...[
+            const SizedBox(height: 8),
+            FilledButton.tonalIcon(
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('Complete final questionnaire'),
+              onPressed: () => LinkLauncherService.open(
+                QuestionnaireLinks.fill(
+                  finalLink,
+                  participantId: s.participantCode,
+                ),
+              ),
+            ),
+          ],
+          if (endLink == null && finalLink == null)
+            Text(
+              'No questionnaire links are configured yet.',
+              style: theme.textTheme.bodySmall,
+            ),
           const SizedBox(height: 16),
           TextButton(
             onPressed: () {
@@ -293,5 +331,48 @@ class _StudyPageState extends ConsumerState<StudyPage> {
 
   void _submit() {
     ref.read(participantEntryProvider.notifier).enterCode(_codeController.text);
+  }
+}
+
+/// Self-contained per-second countdown to the next reminder.
+class _CountdownText extends StatefulWidget {
+  const _CountdownText({required this.target});
+
+  final DateTime target;
+
+  @override
+  State<_CountdownText> createState() => _CountdownTextState();
+}
+
+class _CountdownTextState extends State<_CountdownText> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = widget.target.difference(DateTime.now());
+    final theme = Theme.of(context);
+    if (remaining.isNegative) {
+      return Text('Reminder arriving…', style: theme.textTheme.bodySmall);
+    }
+    final minutes = remaining.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = remaining.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return Text(
+      'Next reminder in $minutes:$seconds',
+      style: theme.textTheme.bodySmall,
+    );
   }
 }
