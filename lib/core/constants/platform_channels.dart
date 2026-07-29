@@ -13,6 +13,10 @@ class PlatformChannels {
   // ── Method names (Shared) ──────────────────────────────────────
   static const String methodOnDismissed = 'onDismissed';
   static const String methodOnButtonClicked = 'onButtonClicked';
+  static const String methodOnShown = 'onShown';
+  static const String methodOnHidden = 'onHidden';
+  static const String methodOnCardAction = 'onCardAction';
+  static const String methodOnCardTimeout = 'onCardTimeout';
 
   // ── Method names (notch_hook) ──────────────────────────────────
   static const String methodShowIsland = 'showIsland';
@@ -42,4 +46,11 @@ class PlatformChannels {
   static const String keyOffsetX = 'offsetX';
   static const String keyOffsetY = 'offsetY';
   static const String keyTotalFrames = 'totalFrames';
+
+  // ── Study channel contract v2 ────────────────────────────────────
+  static const String keyReminderId = 'reminderId';
+  static const String keyVisibilityMs = 'visibilityMs';
+  static const String keyTimeoutMs = 'timeoutMs';
+  static const String keyQuestion = 'question';
+  static const String keyAction = 'action';
 }
