@@ -9,6 +9,15 @@ class AppStrings {
   static const String resumeAvailable = 'Unfinished session found on this machine';
   static const String offlineCacheNote = 'Loaded from local cache (offline)';
   static const String startDay = 'Start Day';
+
+  // ── Uniform compliance card (plan §5.4 — constant instrument) ────
+  static const String complianceHydrationQuestion =
+      'Did you drink some water?';
+  static const String complianceBreakQuestion =
+      'Did you take a short break?';
+  static const String complianceButton1 = 'Done';
+  static const String complianceButton2 = 'Not now';
+
   static const String testMode = 'Test Mode';
   static const String testModeActive = 'Test Mode Active';
   static const String reminderStyle = 'Reminder Style';
