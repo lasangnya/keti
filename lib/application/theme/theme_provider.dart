@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/reminder_colors.dart';
@@ -18,9 +17,11 @@ class AppTheme extends _$AppTheme {
   }
 
   ThemeData _buildTheme(Color seedColor) {
+    final base = ThemeData(useMaterial3: true);
     return ThemeData(
       useMaterial3: true,
-      textTheme: GoogleFonts.geistTextTheme(),
+      fontFamily: 'Geist',
+      textTheme: base.textTheme.apply(fontFamily: 'Geist'),
       colorScheme: ColorScheme.fromSeed(
         seedColor: seedColor,
         surface: AppColors.background,
