@@ -30,3 +30,17 @@ emulators start and stop around the suite automatically.
 - **Manual step remaining:** enable the Anonymous sign-in provider in the
   Firebase console (Authentication → Sign-in method → Anonymous → Enable).
   The CLI cannot toggle auth providers. Needed before any real-device run.
+
+### Admin-claim setup (one-time)
+
+After creating the researcher account in Firebase Auth (email/password),
+grant the `admin` claim:
+
+```sh
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json \
+  node tooling/set_admin.js researcher@example.com
+```
+
+Requires `npm install firebase-admin` (not in `package.json` by default —
+add it or run `npm install firebase-admin` in `tooling/`).
+

@@ -7,6 +7,7 @@ import 'package:keti/application/theme/theme_provider.dart';
 import 'package:keti/core/constants/app_config.dart';
 import 'package:keti/core/services/firebase/auth_service.dart';
 import 'package:keti/firebase_options.dart';
+import 'package:keti/presentation/pages/admin/admin_root_page.dart';
 import 'package:keti/presentation/pages/home/home_page.dart';
 
 void main() async {
@@ -33,7 +34,7 @@ class KetiApp extends ConsumerWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: theme,
-      home: const KetiHomePage(),
+      home: AppConfig.isAdminBuild ? const AdminRootPage() : const KetiHomePage(),
     );
   }
 }
