@@ -60,4 +60,26 @@ class Participant {
         environment: json['environment'] as String,
         protocolVersion: json['protocolVersion'] as String,
       );
+
+  // ── CSV (admin export) ───────────────────────────────────────────
+
+  static const csvHeader = <String>[
+    'participantCode',
+    'serial',
+    'styleOrder',
+    'assignmentOverride',
+    'activeDay',
+    'environment',
+    'protocolVersion',
+  ];
+
+  List<Object?> toCsvRow() => [
+        participantCode,
+        serial,
+        styleOrder.wireName,
+        assignmentOverride,
+        activeDay,
+        environment,
+        protocolVersion,
+      ];
 }
