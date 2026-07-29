@@ -1,12 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:keti/core/services/firestore/reminder_event_repository.dart';
-import 'package:keti/core/services/firestore/session_repository.dart';
 import 'package:keti/core/services/local/csv_store.dart';
 import 'package:keti/core/services/local/sync_service.dart';
-import 'package:keti/core/services/study/mock_participant_repository.dart';
-import 'package:keti/core/services/study/participant_repository.dart';
 import 'package:keti/domain/study/day_schedule.dart';
 import 'package:keti/domain/study/reminder_event.dart';
 import 'package:keti/domain/study/scheduled_reminder.dart';
@@ -21,7 +17,6 @@ void main() {
   late CsvStore csvStore;
   late FakeSessionRepository sessionRepo;
   late FakeEventRepository eventRepo;
-  late ParticipantRepository participantRepo;
   late SyncService syncService;
 
   setUp(() {
@@ -29,7 +24,6 @@ void main() {
     csvStore = CsvStore(rootDir: csvRoot);
     sessionRepo = FakeSessionRepository();
     eventRepo = FakeEventRepository();
-    participantRepo = MockParticipantRepository(); // unused — sync doesn't take it
     syncService = SyncService(
       csvStore: csvStore,
       sessionRepo: sessionRepo,
