@@ -51,9 +51,11 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
                       icon: const Icon(Icons.logout, size: 16),
                       label: Text(auth.email ?? 'Sign out',
                           style: const TextStyle(fontSize: 12)),
-                      onPressed: () {
-                        ref.read(adminAuthProvider.notifier).signOut();
-                        ref.read(appModeStateProvider.notifier).setMode(AppMode.participant);
+                      onPressed: () async {
+                        await ref.read(adminAuthProvider.notifier).signOut();
+                        await ref
+                            .read(appModeStateProvider.notifier)
+                            .setMode(AppMode.participant);
                       },
                     ),
                   ),

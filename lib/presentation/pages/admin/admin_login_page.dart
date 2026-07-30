@@ -83,8 +83,10 @@ class _AdminLoginPageState extends ConsumerState<AdminLoginPage> {
               ],
               const SizedBox(height: 32),
               TextButton(
-                onPressed: () {
-                  ref.read(appModeStateProvider.notifier).setMode(AppMode.participant);
+                onPressed: () async {
+                  await ref
+                      .read(appModeStateProvider.notifier)
+                      .setMode(AppMode.participant);
                 },
                 child: const Text('Back to Participant App'),
               ),
