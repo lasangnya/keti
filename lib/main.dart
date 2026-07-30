@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:keti/application/app_mode_provider.dart';
 import 'package:keti/application/theme/theme_provider.dart';
 import 'package:keti/core/constants/app_config.dart';
 import 'package:keti/core/services/firebase/auth_service.dart';
@@ -35,11 +36,12 @@ class KetiApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = ref.watch(appThemeProvider);
+    final mode = ref.watch(appModeStateProvider);
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: theme,
-      home: AppConfig.isAdminBuild ? const AdminRootPage() : const KetiHomePage(),
+      home: mode == AppMode.admin ? const AdminRootPage() : const KetiHomePage(),
     );
   }
 }

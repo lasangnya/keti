@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../application/admin/admin_auth_provider.dart';
+import '../../../application/app_mode_provider.dart';
 import 'links_settings_page.dart';
 import 'participants_page.dart';
 
@@ -50,8 +51,10 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
                       icon: const Icon(Icons.logout, size: 16),
                       label: Text(auth.email ?? 'Sign out',
                           style: const TextStyle(fontSize: 12)),
-                      onPressed: () =>
-                          ref.read(adminAuthProvider.notifier).signOut(),
+                      onPressed: () {
+                        ref.read(adminAuthProvider.notifier).signOut();
+                        ref.read(appModeStateProvider.notifier).setMode(AppMode.participant);
+                      },
                     ),
                   ),
                 ),
