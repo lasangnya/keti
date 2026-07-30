@@ -31,6 +31,10 @@ abstract class AdminRepository {
   /// pilot corrections).
   Future<void> setActiveDay(String participantCode, int day);
 
+  /// Deletes the day1 session and its events, and marks the participant
+  /// for a local wipe.
+  Future<void> resetDay1(String participantCode);
+
   /// Admin-only order change — the UI blocks it once Day 1 has started.
   Future<void> setStyleOrder(String participantCode, StyleOrder order,
       {required bool assignmentOverride});
@@ -134,6 +138,32 @@ class FirestoreAdminRepository implements AdminRepository {
   @override
   Future<void> setActiveDay(String participantCode, int day) =>
       _participant(participantCode).update({'activeDay': day});
+
+  @override
+  Future<void> resetDay1(String participantCode) async {
+    final batch = _firestore.batch();
+
+    // 1. Delete Day 1 session.
+    final sessionRef = _participant(participantCode)
+        .collection('studySessions')
+        .doc('day1');
+    batch.delete(sessionRef);
+
+    // 2. Delete all reminderEvents in Day 1.
+    final eventsRef = sessionRef.collection('reminderEvents');
+    final eventsSnap = await eventsRef.get();
+    for (final doc in eventsSnap.docs) {
+      batch.delete(doc.reference);
+    }
+
+    // 3. Mark the participant for local wipe and return to Day 1.
+    batch.update(_participant(participantCode), {
+      'activeDay': 1,
+      'resetDay1At': FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
+  }
 
   @override
   Future<void> setStyleOrder(String participantCode, StyleOrder order,

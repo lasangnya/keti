@@ -45,6 +45,14 @@ class CsvStore {
     return File(p.join(dir.path, _sessionFile)).existsSync();
   }
 
+  /// Recursively deletes the entire day directory for [code] and [dayId].
+  Future<void> deleteSessionDirectory(String code, String dayId) async {
+    final dir = await _sessionDir(code, dayId);
+    if (dir.existsSync()) {
+      dir.deleteSync(recursive: true);
+    }
+  }
+
   // ── session.csv ──────────────────────────────────────────────────
 
   Future<void> writeSession(StudySession session) async {

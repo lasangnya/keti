@@ -14,6 +14,7 @@ class Participant {
     required this.activeDay,
     required this.environment,
     required this.protocolVersion,
+    this.resetDay1At,
   });
 
   /// Pseudonymous code, e.g. `P014`. Document key and the only identifier
@@ -37,6 +38,9 @@ class Participant {
   final String environment;
   final String protocolVersion;
 
+  /// Server-signal to wipe local Day 1 data.
+  final DateTime? resetDay1At;
+
   /// Accepts codes like `P001`…`P9999` (case-insensitive).
   static bool isValidCode(String code) =>
       RegExp(r'^[Pp]\d{3,4}$').hasMatch(code.trim());
@@ -49,18 +53,36 @@ class Participant {
         'activeDay': activeDay,
         'environment': environment,
         'protocolVersion': protocolVersion,
+        'resetDay1At': resetDay1At?.toIso8601String(),
       };
 
-  factory Participant.fromJson(Map<String, Object?> json) => Participant(
-        participantCode: json['participantCode'] as String? ?? 'UNKNOWN',
-        serial: (json['serial'] as num?)?.toInt() ?? 0,
-        styleOrder: StyleOrderWire.fromWireName(
-            json['styleOrder'] as String? ?? 'AMBIENT_FIRST'),
-        assignmentOverride: json['assignmentOverride'] as bool? ?? false,
-        activeDay: (json['activeDay'] as num?)?.toInt() ?? 1,
-        environment: json['environment'] as String? ?? 'dev',
-        protocolVersion: json['protocolVersion'] as String? ?? 'unknown',
-      );
+  factory Participant.fromJson(Map<String, Object?> json) {
+    DateTime? parseDate(String key) {
+      final val = json[key];
+      if (val == null) return null;
+      if (val is String) return val.isEmpty ? null : DateTime.parse(val);
+      if (val is DateTime) return val;
+
+      // Handle Firestore Timestamp (duck typing to avoid Firestore dependency in domain)
+      try {
+        return (val as dynamic).toDate() as DateTime;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return Participant(
+      participantCode: json['participantCode'] as String? ?? 'UNKNOWN',
+      serial: (json['serial'] as num?)?.toInt() ?? 0,
+      styleOrder: StyleOrderWire.fromWireName(
+          json['styleOrder'] as String? ?? 'AMBIENT_FIRST'),
+      assignmentOverride: json['assignmentOverride'] as bool? ?? false,
+      activeDay: (json['activeDay'] as num?)?.toInt() ?? 1,
+      environment: json['environment'] as String? ?? 'dev',
+      protocolVersion: json['protocolVersion'] as String? ?? 'unknown',
+      resetDay1At: parseDate('resetDay1At'),
+    );
+  }
 
   // ── CSV (admin export) ───────────────────────────────────────────
 

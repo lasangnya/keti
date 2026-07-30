@@ -43,7 +43,7 @@ service cloud.firestore {
         allow update: if isAdmin() || (signedIn()
           && request.resource.data.diff(resource.data).affectedKeys()
                .hasOnly(['status','completedAt','resumedCount']));
-        allow delete: if false;
+        allow delete: if isAdmin();
 
         match /reminderEvents/{eventId} {
           allow read: if signedIn();
@@ -54,7 +54,7 @@ service cloud.firestore {
                   'deliveryLatenessMs','deliveryStatus','failureReason','suppressionReason',
                   'usedFallback','cardShownAtLocal','outcome','answeredAt',
                   'responseLatencyMs','sessionResumed','updatedAt']);
-          allow delete: if false;
+          allow delete: if isAdmin();
         }
       }
     }

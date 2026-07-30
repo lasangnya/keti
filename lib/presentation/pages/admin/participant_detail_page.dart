@@ -161,10 +161,51 @@ class _ParticipantDetailPageState
                   : null,
               child: const Text('Activate Day 2'),
             ),
+            const SizedBox(height: 12),
+            if (safe?.sessions[0] != null)
+              OutlinedButton.icon(
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Reset Day 1'),
+                style: OutlinedButton.styleFrom(
+                    foregroundColor: theme.colorScheme.error),
+                onPressed: () => _confirmReset(context),
+              ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _confirmReset(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset Day 1?'),
+        content: const Text(
+            'This will delete Day 1 from Firestore and trigger a local wipe '
+            'on the participant\'s device next time they enter their code. '
+            'This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Reset',
+                style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ref
+          .read(adminParticipantsProvider.notifier)
+          .resetDay1(widget.participantCode);
+      ref.invalidate(participantDetailProvider(widget.participantCode));
+      setState(() => _message = 'Day 1 reset signal sent.');
+    }
   }
 
   Widget _buildOrderCard(ThemeData theme, Participant participant,

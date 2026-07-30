@@ -106,6 +106,26 @@ class ParticipantEntry extends _$ParticipantEntry {
         style: style,
       );
 
+      // --- NEW: Reset Day 1 signal detection ---
+      if (participant.resetDay1At != null) {
+        final localSession = await csv.readSession(participant.participantCode, 'day1');
+        debugPrint('Checking reset signal for ${participant.participantCode}. '
+            'Server resetDay1At: ${participant.resetDay1At}. '
+            'Local session start: ${localSession?.startedAtLocal}');
+            
+        if (localSession != null) {
+          if (localSession.startedAtLocal.isBefore(participant.resetDay1At!)) {
+            debugPrint('MATCH: Local session is older than reset signal. Wiping...');
+            await csv.deleteSessionDirectory(participant.participantCode, 'day1');
+            debugPrint('Local Day 1 session wiped (server reset signal).');
+          } else {
+            debugPrint('SKIP: Local session is newer than or equal to reset signal.');
+          }
+        } else {
+          debugPrint('SKIP: No local session found for day1.');
+        }
+      }
+
       await store.setLastParticipantCode(participant.participantCode);
       await store.cacheParticipant(participant);
       await store.cacheStudyConfig(config);
