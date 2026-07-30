@@ -7,8 +7,8 @@ import SwiftUI
 class CursorPillManager {
     private static var window: NSPanel?
     private static var trackingTimer: Timer?
-    private static var windowTimer: Timer?
     private static var currentOnHidden: (() -> Void)?
+    private static var dismissWorkItem: DispatchWorkItem?
 
     private static var currentWidth: Double = 150
     private static var currentHeight: Double = 150
@@ -16,7 +16,12 @@ class CursorPillManager {
     private static var currentOffsetY: Double = 0
 
     static func show(resourceName: String, width: Double, height: Double, offsetX: Double, offsetY: Double, totalFrames: Int, visibilityMs: Int, onShown: @escaping () -> Void, onHidden: @escaping () -> Void) {
-        dismiss()
+        let t0 = CFAbsoluteTimeGetCurrent()
+        print("[CursorPillManager] show() called. visibilityMs=\(visibilityMs) totalFrames=\(totalFrames) resource=\(resourceName)")
+
+        dismissWorkItem?.cancel()
+        dismissWorkItem = nil
+        closeInstantly()
 
         currentWidth = width
         currentHeight = height
@@ -25,7 +30,15 @@ class CursorPillManager {
 
         let pillSize = NSSize(width: width, height: height)
 
-        let contentView = CursorPillView(resourceName: resourceName, frameCount: totalFrames, visibilityMs: visibilityMs)
+        let contentView = CursorPillView(
+            resourceName: resourceName,
+            frameCount: totalFrames,
+            visibilityMs: visibilityMs,
+            onAnimationDone: {
+                print("[CursorPillManager] 🔔 onAnimationDone callback fired from CursorPillView")
+                closeInstantly()
+            }
+        )
 
         let hostingView = NSHostingView(rootView: contentView)
         hostingView.frame.size = pillSize
@@ -56,25 +69,45 @@ class CursorPillManager {
             positionAtCursor()
         }
 
+        print("[CursorPillManager] Window ordered front. Calling onShown(). t=\(String(format: "%.3f", CFAbsoluteTimeGetCurrent() - t0))s")
         onShown()
 
-        let seconds = max(0.1, Double(visibilityMs) / 1000.0)
-        windowTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { _ in
-            dismiss()
+        // Safety-net timer: the view schedules its own exit animation and
+        // calls onAnimationDone when settled. This fires slightly later to
+        // guarantee cleanup even if the view's timer is missed.
+        let workItem = DispatchWorkItem {
+            print("[CursorPillManager] 🛟 SAFETY-NET timer fired — closing window. t=\(String(format: "%.3f", CFAbsoluteTimeGetCurrent() - t0))s")
+            closeInstantly()
         }
+        dismissWorkItem = workItem
+        let holdSeconds = max(0.1, Double(visibilityMs) / 1000.0)
+        let bufferSeconds: Double = 0.6 // leave room for the 0.5 s spring exit
+        let totalDelay = holdSeconds + bufferSeconds
+        print("[CursorPillManager] Safety-net timer scheduled in \(String(format: "%.3f", totalDelay))s (hold=\(String(format: "%.3f", holdSeconds))s + buffer=\(bufferSeconds)s)")
+        DispatchQueue.main.asyncAfter(deadline: .now() + totalDelay,
+                                      execute: workItem)
+        print("[CursorPillManager] show() complete. t=\(String(format: "%.3f", CFAbsoluteTimeGetCurrent() - t0))s")
+    }
+
+    private static func closeInstantly() {
+        let hadWindow = window != nil
+        print("[CursorPillManager] 💥 closeInstantly() called. hadWindow=\(hadWindow)")
+        trackingTimer?.invalidate()
+        trackingTimer = nil
+
+        window?.orderOut(nil)
+        window?.close()
+        window = nil
+
+        currentOnHidden?()
+        currentOnHidden = nil
     }
 
     static func dismiss() {
-        trackingTimer?.invalidate()
-        trackingTimer = nil
-        windowTimer?.invalidate()
-        windowTimer = nil
-
-        window?.close()
-        window = nil
-        
-        currentOnHidden?()
-        currentOnHidden = nil
+        print("[CursorPillManager] dismiss() called (external/manual)")
+        dismissWorkItem?.cancel()
+        dismissWorkItem = nil
+        closeInstantly()
     }
 
     private static func positionAtCursor() {
@@ -90,9 +123,11 @@ struct CursorPillView: View {
     let resourceName : String
     let frameCount: Int
     let visibilityMs: Int
+    let onAnimationDone: () -> Void
 
     @State private var currentFrame = 0
     @State private var isVisible = false
+    @State private var hasFinished = false
 
     let timer = Timer.publish(every: 0.033, on: .main, in: .common).autoconnect()
 
@@ -105,22 +140,32 @@ struct CursorPillView: View {
             .onReceive(timer) { _ in
                 if currentFrame < frameCount - 1 {
                     currentFrame += 1
+                } else if !hasFinished {
+                    let t0 = CFAbsoluteTimeGetCurrent()
+                    print("[CursorPillView] 🎞️ Last frame reached — starting out-animation. frameCount=\(frameCount)")
+                    hasFinished = true
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                        isVisible = false
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        print("[CursorPillView] ✅ onAnimationDone() called. t=\(String(format: "%.3f", CFAbsoluteTimeGetCurrent() - t0))s")
+                        onAnimationDone()
+                    }
                 }
             }
             .scaleEffect(isVisible ? 1.0 : 0.5)
             .opacity(isVisible ? 1.0 : 0.0)
             .onAppear {
+                let t0 = CFAbsoluteTimeGetCurrent()
+                print("[CursorPillView] onAppear fired. frameCount=\(frameCount)")
+
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
                     isVisible = true
                 }
-
-                // Start exit animation 500ms before the manager's dismiss() is called.
-                let exitDelay = max(0.1, Double(visibilityMs) / 1000.0 - 0.5)
-                DispatchQueue.main.asyncAfter(deadline: .now() + exitDelay) {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
-                        isVisible = false
-                    }
-                }
+                print("[CursorPillView] In-animation started (isVisible -> true). t=\(String(format: "%.3f", CFAbsoluteTimeGetCurrent() - t0))s")
+            }
+            .onDisappear {
+                print("[CursorPillView] 👻 onDisappear fired")
             }
     }
 }

@@ -1,16 +1,18 @@
 import SwiftUI
 
 /// Top-center notch card. Purely presentational (uniform study instrument):
-/// the animation plays once, holds its final frame, and the manager ends
-/// the visibility window — there is deliberately no dismiss affordance.
+/// the animation plays once, then the out-animation triggers immediately
+/// when the last frame is reached.
 struct IslandView: View {
     let message: String
     let resourceName: String
     let totalFrames: Int
     let visibilityMs: Int
+    let onAnimationDone: () -> Void
 
     @State private var currentFrame = 0
     @State private var isVisible = false
+    @State private var hasFinished = false
 
     let timer = Timer.publish(every: 0.033, on: .main, in: .common).autoconnect()
 
@@ -24,6 +26,17 @@ struct IslandView: View {
                 .onReceive(timer) { _ in
                     if currentFrame < totalFrames - 1 {
                         currentFrame += 1
+                    } else if !hasFinished {
+                        let t0 = CFAbsoluteTimeGetCurrent()
+                        print("[IslandView] 🎞️ Last frame reached — starting out-animation. totalFrames=\(totalFrames)")
+                        hasFinished = true
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                            isVisible = false
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            print("[IslandView] ✅ onAnimationDone() called. t=\(String(format: "%.3f", CFAbsoluteTimeGetCurrent() - t0))s")
+                            onAnimationDone()
+                        }
                     }
                 }
         }
@@ -34,17 +47,16 @@ struct IslandView: View {
         .offset(y: isVisible ? 0 : -20)
         .opacity(isVisible ? 1 : 0)
         .onAppear {
+            let t0 = CFAbsoluteTimeGetCurrent()
+            print("[IslandView] onAppear fired. totalFrames=\(totalFrames)")
+
             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                 isVisible = true
             }
-
-            // Start exit animation 500ms before the manager's dismiss() is called.
-            let exitDelay = max(0.1, Double(visibilityMs) / 1000.0 - 0.5)
-            DispatchQueue.main.asyncAfter(deadline: .now() + exitDelay) {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    isVisible = false
-                }
-            }
+            print("[IslandView] In-animation started (isVisible -> true). t=\(String(format: "%.3f", CFAbsoluteTimeGetCurrent() - t0))s")
+        }
+        .onDisappear {
+            print("[IslandView] 👻 onDisappear fired")
         }
     }
 }

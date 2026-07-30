@@ -8,8 +8,8 @@ class TrayPillManager {
     private static var statusItem: NSStatusItem?
     private static var cardWindow: NSPanel?
     private static var animationTimer: Timer?
-    private static var windowTimer: Timer?
     private static var currentOnHidden: (() -> Void)?
+    private static var dismissWorkItem: DispatchWorkItem?
 
     /// Initializes the tray item and hides it. Call this at app launch.
     static func setup() {
@@ -22,16 +22,24 @@ class TrayPillManager {
 
     /// Makes the tray item visible and "drops" the message card underneath.
     static func show(message: String, resourceName: String, width: Double, height: Double, totalFrames: Int, visibilityMs: Int, onShown: @escaping () -> Void, onHidden: @escaping () -> Void) {
+        let t0 = CFAbsoluteTimeGetCurrent()
+        print("[TrayPillManager] show() called. visibilityMs=\(visibilityMs) totalFrames=\(totalFrames) resource=\(resourceName)")
+
         if statusItem?.button == nil { setup() }
 
-        dismiss()
+        dismissWorkItem?.cancel()
+        dismissWorkItem = nil
+        closeInstantly()
 
-        guard let button = statusItem?.button else { return }
+        guard let button = statusItem?.button else {
+            print("[TrayPillManager] ❌ No statusItem button — aborting")
+            return
+        }
         button.isHidden = false
         button.highlight(true)
 
         // 1. Play PNG sequence animation once in the tray, then hold the
-        // final frame for the rest of the window.
+        //    final frame for the rest of the visibility window.
         var currentFrame = 0
 
         animationTimer = Timer.scheduledTimer(withTimeInterval: 0.033, repeats: true) { timer in
@@ -49,20 +57,48 @@ class TrayPillManager {
             }
         }
 
-        // 2. Show the "Dropped" Card with the message text.
-        showCard(message: message, resourceName: resourceName, totalFrames: totalFrames, visibilityMs: visibilityMs, anchoredTo: button)
+        // 2. Show the "Dropped" Card — the card handles its own exit animation.
+        showCard(
+            message: message,
+            resourceName: resourceName,
+            totalFrames: totalFrames,
+            visibilityMs: visibilityMs,
+            anchoredTo: button,
+            onAnimationDone: {
+                print("[TrayPillManager] 🔔 onAnimationDone callback fired from TrayCardView")
+                closeInstantly()
+            }
+        )
 
         self.currentOnHidden = onHidden
+        print("[TrayPillManager] Card shown. Calling onShown(). t=\(String(format: "%.3f", CFAbsoluteTimeGetCurrent() - t0))s")
         onShown()
 
-        let seconds = max(0.1, Double(visibilityMs) / 1000.0)
-        windowTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { _ in
-            dismiss()
+        // Safety-net timer: the card schedules its own exit animation and
+        // calls onAnimationDone when settled. This fires slightly later to
+        // guarantee cleanup even if the card's timer is missed.
+        let workItem = DispatchWorkItem {
+            print("[TrayPillManager] 🛟 SAFETY-NET timer fired — closing window. t=\(String(format: "%.3f", CFAbsoluteTimeGetCurrent() - t0))s")
+            closeInstantly()
         }
+        dismissWorkItem = workItem
+        let holdSeconds = max(0.1, Double(visibilityMs) / 1000.0)
+        let bufferSeconds: Double = 0.6 // leave room for the 0.5 s spring exit
+        let totalDelay = holdSeconds + bufferSeconds
+        print("[TrayPillManager] Safety-net timer scheduled in \(String(format: "%.3f", totalDelay))s (hold=\(String(format: "%.3f", holdSeconds))s + buffer=\(bufferSeconds)s)")
+        DispatchQueue.main.asyncAfter(deadline: .now() + totalDelay,
+                                      execute: workItem)
+        print("[TrayPillManager] show() complete. t=\(String(format: "%.3f", CFAbsoluteTimeGetCurrent() - t0))s")
     }
 
-    private static func showCard(message: String, resourceName: String, totalFrames: Int, visibilityMs: Int, anchoredTo button: NSStatusBarButton) {
-        let contentView = TrayCardView(message: message, resourceName: resourceName, totalFrames: totalFrames, visibilityMs: visibilityMs)
+    private static func showCard(message: String, resourceName: String, totalFrames: Int, visibilityMs: Int, anchoredTo button: NSStatusBarButton, onAnimationDone: @escaping () -> Void) {
+        let contentView = TrayCardView(
+            message: message,
+            resourceName: resourceName,
+            totalFrames: totalFrames,
+            visibilityMs: visibilityMs,
+            onAnimationDone: onAnimationDone
+        )
         let hostingView = NSHostingView(rootView: contentView)
 
         let idealSize = hostingView.fittingSize
@@ -90,19 +126,28 @@ class TrayPillManager {
         self.cardWindow = panel
     }
 
-    /// Hides the tray item and the card.
-    static func dismiss() {
+    /// Purges the window and state instantly (no animation — the card's own
+    /// exit animation should have completed before this is called).
+    private static func closeInstantly() {
+        let hadCard = cardWindow != nil
+        print("[TrayPillManager] 💥 closeInstantly() called. hadCard=\(hadCard)")
         animationTimer?.invalidate()
         animationTimer = nil
-        windowTimer?.invalidate()
-        windowTimer = nil
 
         statusItem?.button?.isHidden = true
 
+        cardWindow?.orderOut(nil)
         cardWindow?.close()
         cardWindow = nil
         
         currentOnHidden?()
         currentOnHidden = nil
+    }
+
+    static func dismiss() {
+        print("[TrayPillManager] dismiss() called (external/manual)")
+        dismissWorkItem?.cancel()
+        dismissWorkItem = nil
+        closeInstantly()
     }
 }

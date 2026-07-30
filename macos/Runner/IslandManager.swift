@@ -2,15 +2,29 @@ import Cocoa
 import SwiftUI
 
 class IslandManager {
-    static var window: NSPanel?
-    private static var windowTimer: Timer?
+    private static var window: NSPanel?
     private static var currentOnHidden: (() -> Void)?
+    private static var dismissWorkItem: DispatchWorkItem?
 
     static func show(message: String, resourceName: String, width: Double, height: Double, totalFrames: Int, visibilityMs: Int, onShown: @escaping () -> Void, onHidden: @escaping () -> Void) {
-        // If an island is already showing, dismiss it first (and trigger its onHidden).
-        dismiss()
+        let t0 = CFAbsoluteTimeGetCurrent()
+        print("[IslandManager] show() called. visibilityMs=\(visibilityMs) totalFrames=\(totalFrames) resource=\(resourceName)")
 
-        let contentView = IslandView(message: message, resourceName: resourceName, totalFrames: totalFrames, visibilityMs: visibilityMs)
+        // 1. Force-kill any existing window instantly (no animation for clobbered).
+        dismissWorkItem?.cancel()
+        dismissWorkItem = nil
+        closeInstantly()
+
+        let contentView = IslandView(
+            message: message,
+            resourceName: resourceName,
+            totalFrames: totalFrames,
+            visibilityMs: visibilityMs,
+            onAnimationDone: {
+                print("[IslandManager] 🔔 onAnimationDone callback fired from IslandView")
+                closeInstantly()
+            }
+        )
 
         let panel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)),
@@ -37,23 +51,42 @@ class IslandManager {
         self.window = panel
         self.currentOnHidden = onHidden
 
+        print("[IslandManager] Window ordered front. Calling onShown(). t=\(String(format: "%.3f", CFAbsoluteTimeGetCurrent() - t0))s")
         onShown()
 
-        let seconds = max(0.1, Double(visibilityMs) / 1000.0)
-        windowTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { _ in
-            dismiss()
+        // 2. Safety-net timer: the view schedules its own exit animation and
+        //    calls onAnimationDone when settled. This fires slightly later to
+        //    guarantee cleanup even if the view's timer is missed.
+        let workItem = DispatchWorkItem {
+            print("[IslandManager] 🛟 SAFETY-NET timer fired — closing window. t=\(String(format: "%.3f", CFAbsoluteTimeGetCurrent() - t0))s")
+            closeInstantly()
         }
+        dismissWorkItem = workItem
+        let holdSeconds = max(0.1, Double(visibilityMs) / 1000.0)
+        let bufferSeconds: Double = 0.6 // leave room for the 0.5 s spring exit
+        let totalDelay = holdSeconds + bufferSeconds
+        print("[IslandManager] Safety-net timer scheduled in \(String(format: "%.3f", totalDelay))s (hold=\(String(format: "%.3f", holdSeconds))s + buffer=\(bufferSeconds)s)")
+        DispatchQueue.main.asyncAfter(deadline: .now() + totalDelay,
+                                      execute: workItem)
+        print("[IslandManager] show() complete. t=\(String(format: "%.3f", CFAbsoluteTimeGetCurrent() - t0))s")
+    }
+
+    /// Purges the window and state instantly.
+    private static func closeInstantly() {
+        let hadWindow = window != nil
+        print("[IslandManager] 💥 closeInstantly() called. hadWindow=\(hadWindow)")
+        window?.orderOut(nil)
+        window?.close()
+        window = nil
+
+        currentOnHidden?()
+        currentOnHidden = nil
     }
 
     static func dismiss() {
-        windowTimer?.invalidate()
-        windowTimer = nil
-        
-        window?.close()
-        window = nil
-        
-        // Ensure the sequence in Flutter finishes if we clobbered it.
-        currentOnHidden?()
-        currentOnHidden = nil
+        print("[IslandManager] dismiss() called (external/manual)")
+        dismissWorkItem?.cancel()
+        dismissWorkItem = nil
+        closeInstantly()
     }
 }
