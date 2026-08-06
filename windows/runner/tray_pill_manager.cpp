@@ -262,9 +262,9 @@ void TrayPillManager::PositionCardUnderTray() {
 }
 
 void TrayPillManager::OnDismiss() {
+  auto callback = std::move(on_dismissed_);
   Dismiss();
-  if (on_dismissed_) {
-    auto callback = std::move(on_dismissed_);
+  if (callback) {
     callback();
   }
 }
