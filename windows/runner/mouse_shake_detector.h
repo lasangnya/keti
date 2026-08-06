@@ -5,11 +5,14 @@
 
 #include <functional>
 
+#include "shake_detector.h"
+
 namespace keti {
 
 // Windows equivalent of the macOS MouseShakeDetector.
-// Polls the cursor position via a timer while a reminder is showing and fires
-// a callback when a quick back-and-forth shake of the mouse is detected.
+// Polls the cursor position via a timer while a reminder is showing and feeds
+// the pure ShakeDetector state machine; fires a callback when a quick
+// back-and-forth shake of the mouse is detected.
 // Start() replaces any running detector; Stop() cancels the timer.
 class MouseShakeDetector {
  public:
@@ -35,29 +38,14 @@ class MouseShakeDetector {
   static constexpr UINT kTimerId = 10;
 
  private:
-  void ResetGesture();
   void Sample();
 
   HWND hwnd_ = nullptr;
   UINT_PTR timer_id_ = 0;
   ShakeCallback on_shake_;
+  ShakeDetector detector_;
 
-  POINT last_pos_{};
-  DWORD last_tick_ = 0;
-  int axis_ = 0;   // 0 = none, 1 = x, 2 = y
-  int last_dir_ = 0;
-  double segment_distance_ = 0;
-  int reversals_ = 0;
-  DWORD gesture_start_ms_ = 0;
-  DWORD cooldown_until_ms_ = 0;
-
-  static constexpr UINT kIntervalMs = 16;       // ~60 Hz
-  static constexpr double kMinSegmentPx = 30.0;
-  static constexpr int kRequiredReversals = 3;
-  static constexpr DWORD kMaxGestureMs = 600;
-  static constexpr DWORD kStaleGapMs = 250;
-  static constexpr double kMinSampleDist = 2.0;
-  static constexpr DWORD kCooldownMs = 1500;
+  static constexpr UINT kIntervalMs = 16;  // ~60 Hz
 };
 
 }  // namespace keti

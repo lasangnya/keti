@@ -14,6 +14,7 @@ add_executable(${BINARY_NAME} WIN32
   "mouse_shake_detector.cpp"
   "overlay_window.cpp"
   "png_sequence.cpp"
+  "shake_detector.cpp"
   "tray_pill_manager.cpp"
   "utils.cpp"
   "win32_window.cpp"
@@ -45,3 +46,13 @@ target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)
+
+# Unit tests for the pure shake-detection algorithm. Built as a console
+# executable (no Flutter, no windows.h UI) so it can run under ctest.
+enable_testing()
+add_executable(shake_detector_test
+  "shake_detector.cpp"
+  "shake_detector_test.cpp"
+)
+target_include_directories(shake_detector_test PRIVATE "${CMAKE_SOURCE_DIR}")
+add_test(NAME shake_detector_test COMMAND shake_detector_test)
