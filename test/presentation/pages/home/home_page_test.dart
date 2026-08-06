@@ -4,7 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keti/application/study/app_environment_provider.dart';
 import 'package:keti/presentation/pages/home/home_page.dart';
 
+import '../../../helpers/firebase_mock.dart';
+
 void main() {
+  setUpAll(initFirebaseForTest);
+
   Future<void> pumpHome(WidgetTester tester, String environment) async {
     await tester.pumpWidget(
       ProviderScope(

@@ -14,9 +14,13 @@ import 'package:keti/domain/study/study_enums.dart';
 import 'package:keti/domain/study/study_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/firebase_mock.dart';
+
 void main() {
   late Directory csvRoot;
   late ProviderContainer container;
+
+  setUpAll(initFirebaseForTest);
 
   setUp(() async {
     csvRoot = Directory.systemTemp.createTempSync('keti_entry_test');

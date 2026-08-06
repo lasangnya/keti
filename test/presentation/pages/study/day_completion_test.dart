@@ -16,11 +16,14 @@ import 'package:keti/presentation/pages/study/study_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../application/study/session_test_fakes.dart';
+import '../../../helpers/firebase_mock.dart';
 
 void main() {
   late Directory csvRoot;
   late DateTime fakeNow;
   late List<String> launchedUrls;
+
+  setUpAll(initFirebaseForTest);
 
   setUp(() {
     csvRoot = Directory.systemTemp.createTempSync('keti_m6_test');

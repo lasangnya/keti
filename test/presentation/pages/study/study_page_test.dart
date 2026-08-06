@@ -23,9 +23,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:keti/application/reminders/reminder_orchestrator.dart';
 
 import '../../../application/study/session_test_fakes.dart';
+import '../../../helpers/firebase_mock.dart';
 
 void main() {
   late Directory csvRoot;
+
+  setUpAll(initFirebaseForTest);
 
   setUp(() {
     csvRoot = Directory.systemTemp.createTempSync('keti_widget_test');
