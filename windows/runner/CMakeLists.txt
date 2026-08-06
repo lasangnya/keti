@@ -11,6 +11,7 @@ add_executable(${BINARY_NAME} WIN32
   "flutter_window.cpp"
   "island_manager.cpp"
   "main.cpp"
+  "mouse_shake_detector.cpp"
   "overlay_window.cpp"
   "png_sequence.cpp"
   "tray_pill_manager.cpp"

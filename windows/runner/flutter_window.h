@@ -10,6 +10,7 @@
 
 #include "cursor_pill_manager.h"
 #include "island_manager.h"
+#include "mouse_shake_detector.h"
 #include "tray_pill_manager.h"
 #include "win32_window.h"
 
@@ -49,6 +50,9 @@ class FlutterWindow : public Win32Window {
   keti::IslandManager island_manager_;
   keti::CursorPillManager cursor_pill_manager_;
   keti::TrayPillManager tray_pill_manager_;
+
+  // Detects a quick mouse shake while a reminder overlay is showing.
+  keti::MouseShakeDetector mouse_shake_detector_;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

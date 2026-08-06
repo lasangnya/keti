@@ -24,8 +24,10 @@ class MainFlutterWindow: NSWindow {
                 let visibilityMs = args?[PlatformChannels.keyVisibilityMs] as? Int ?? 5000
 
                 IslandManager.show(message: message, resourceName: resourceName, width: width, height: height, totalFrames: totalFrames, visibilityMs: visibilityMs, onShown: {
+                    MouseShakeDetector.start { IslandManager.dismiss() }
                     notchChannel.invokeMethod(PlatformChannels.methodOnShown, arguments: reminderId)
                 }, onHidden: {
+                    MouseShakeDetector.stop()
                     notchChannel.invokeMethod(PlatformChannels.methodOnHidden, arguments: reminderId)
                 })
                 result(nil)
@@ -45,8 +47,10 @@ class MainFlutterWindow: NSWindow {
                 let visibilityMs = args?[PlatformChannels.keyVisibilityMs] as? Int ?? 5000
 
                 CursorPillManager.show(resourceName: resourceName, width: width, height: height, offsetX: offsetX, offsetY: offsetY, totalFrames: totalFrames, visibilityMs: visibilityMs, onShown: {
+                    MouseShakeDetector.start { CursorPillManager.dismiss() }
                     cursorChannel.invokeMethod(PlatformChannels.methodOnShown, arguments: reminderId)
                 }, onHidden: {
+                    MouseShakeDetector.stop()
                     cursorChannel.invokeMethod(PlatformChannels.methodOnHidden, arguments: reminderId)
                 })
                 result(nil)
@@ -65,8 +69,10 @@ class MainFlutterWindow: NSWindow {
                 let visibilityMs = args?[PlatformChannels.keyVisibilityMs] as? Int ?? 5000
 
                 TrayPillManager.show(message: message, resourceName: resourceName, width: width, height: height, totalFrames: totalFrames, visibilityMs: visibilityMs, onShown: {
+                    MouseShakeDetector.start { TrayPillManager.dismiss() }
                     trayChannel.invokeMethod(PlatformChannels.methodOnShown, arguments: reminderId)
                 }, onHidden: {
+                    MouseShakeDetector.stop()
                     trayChannel.invokeMethod(PlatformChannels.methodOnHidden, arguments: reminderId)
                 })
                 result(nil)

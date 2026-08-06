@@ -96,6 +96,7 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  mouse_shake_detector_.Stop();
   tray_pill_manager_.Teardown();
 
   if (flutter_controller_) {
@@ -122,6 +123,12 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
   switch (message) {
     case WM_FONTCHANGE:
       flutter_controller_->engine()->ReloadSystemFonts();
+      break;
+    case WM_TIMER:
+      if (wparam == keti::MouseShakeDetector::kTimerId) {
+        mouse_shake_detector_.HandleTimer();
+        return 0;
+      }
       break;
   }
 
@@ -184,8 +191,14 @@ void FlutterWindow::RegisterReminderChannels() {
             island_manager_.Show(
                 instance, assets_path, resource_name, width, height,
                 total_frames, [this]() {
+                  mouse_shake_detector_.Stop();
                   notch_channel_->InvokeMethod(kMethodOnDismissed, nullptr);
                 });
+            if (island_manager_.IsShowing()) {
+              mouse_shake_detector_.Start(GetHandle(), [this]() {
+                island_manager_.Dismiss();
+              });
+            }
           }
           result->Success();
           return;
@@ -237,8 +250,14 @@ void FlutterWindow::RegisterReminderChannels() {
             cursor_pill_manager_.Show(
                 instance, assets_path, resource_name, width, height, offset_x,
                 offset_y, total_frames, [this]() {
+                  mouse_shake_detector_.Stop();
                   cursor_channel_->InvokeMethod(kMethodOnDismissed, nullptr);
                 });
+            if (cursor_pill_manager_.IsShowing()) {
+              mouse_shake_detector_.Start(GetHandle(), [this]() {
+                cursor_pill_manager_.Dismiss();
+              });
+            }
           }
           result->Success();
           return;
@@ -279,8 +298,14 @@ void FlutterWindow::RegisterReminderChannels() {
             tray_pill_manager_.Show(
                 assets_path, resource_name, width, height, total_frames,
                 [this]() {
+                  mouse_shake_detector_.Stop();
                   tray_channel_->InvokeMethod(kMethodOnDismissed, nullptr);
                 });
+            if (tray_pill_manager_.IsShowing()) {
+              mouse_shake_detector_.Start(GetHandle(), [this]() {
+                tray_pill_manager_.Dismiss();
+              });
+            }
           }
           result->Success();
           return;

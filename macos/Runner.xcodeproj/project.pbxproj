@@ -36,6 +36,7 @@
 		D5E7AB8C2FFE9800002D4660 /* TrayPillManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB8B2FFE9800002D4660 /* TrayPillManager.swift */; };
 		D5E7AB8E2FFE9900002D4660 /* ComplianceCardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB8D2FFE9900002D4660 /* ComplianceCardManager.swift */; };
 		D5E7AB902FFE9A00002D4660 /* ComplianceCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB8F2FFE9A00002D4660 /* ComplianceCardView.swift */; };
+		D5E7AB932FFEA700002D4660 /* MouseShakeDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB922FFEA700002D4660 /* MouseShakeDetector.swift */; };
 		E26F6F753EDE8908DAB3C7C6 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = FED74C41328343E5440E85E6 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
@@ -97,6 +98,7 @@
 		D5E7AB8B2FFE9800002D4660 /* TrayPillManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrayPillManager.swift; sourceTree = "<group>"; };
 		D5E7AB8D2FFE9900002D4660 /* ComplianceCardManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComplianceCardManager.swift; sourceTree = "<group>"; };
 		D5E7AB8F2FFE9A00002D4660 /* ComplianceCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComplianceCardView.swift; sourceTree = "<group>"; };
+		D5E7AB922FFEA700002D4660 /* MouseShakeDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MouseShakeDetector.swift; sourceTree = "<group>"; };
 		FED74C41328343E5440E85E6 /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "Runner/GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -193,6 +195,7 @@
 				D5E7AB842FFE90A2002D4660 /* PlatformChannels.swift */,
 				D5E7AB892FFE9500002D4660 /* CursorPillManager.swift */,
 				D5E7AB8B2FFE9800002D4660 /* TrayPillManager.swift */,
+				D5E7AB922FFEA700002D4660 /* MouseShakeDetector.swift */,
 				33CC10F02044A3C60003C045 /* AppDelegate.swift */,
 				33CC11122044BFA00003C045 /* MainFlutterWindow.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
@@ -391,6 +394,7 @@
 				D5E7AB8C2FFE9800002D4660 /* TrayPillManager.swift in Sources */,
 				D5E7AB8E2FFE9900002D4660 /* ComplianceCardManager.swift in Sources */,
 				D5E7AB902FFE9A00002D4660 /* ComplianceCardView.swift in Sources */,
+				D5E7AB932FFEA700002D4660 /* MouseShakeDetector.swift in Sources */,
 				33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */,
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
 			);
