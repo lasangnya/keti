@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../application/app_mode_provider.dart';
 import '../../../application/study/participant_entry_provider.dart';
 import '../../../application/study/participant_providers.dart';
 import '../../../application/study/session_controller.dart';
