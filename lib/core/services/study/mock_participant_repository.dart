@@ -33,6 +33,23 @@ class MockParticipantRepository implements ParticipantRepository {
       environment: 'dev',
       protocolVersion: '2026-08-v1',
     ),
+    'P003': const Participant(
+      participantCode: 'P003',
+      serial: 3,
+      styleOrder: StyleOrder.ambientFirst,
+      assignmentOverride: false,
+      activeDay: 1,
+      environment: 'dev',
+      protocolVersion: '2026-08-v1',
+      questionnaireLinks: QuestionnaireLinks(
+        start:
+            'https://docs.google.com/forms/d/e/override_start/viewform?usp=pp_url&entry.10={participantId}',
+        day1End: null,
+        day2End: null,
+        finalLink:
+            'https://docs.google.com/forms/d/e/override_final/viewform?usp=pp_url&entry.10={participantId}',
+      ),
+    ),
   };
 
   static const config = StudyConfig(

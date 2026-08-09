@@ -7,6 +7,7 @@ import '../../../application/admin/participants_provider.dart';
 import '../../../application/admin/study_config_provider.dart';
 import '../../../domain/study/participant.dart';
 import '../../../domain/study/scheduled_reminder.dart';
+import '../../../domain/study/study_config.dart';
 import '../../../domain/study/study_enums.dart';
 import '../../../domain/study/study_session.dart';
 
@@ -30,6 +31,13 @@ class _ParticipantDetailPageState
   bool _scheduleLoaded = false;
   String? _message;
 
+  // Links editor state.
+  final _startController = TextEditingController();
+  final _day1EndController = TextEditingController();
+  final _day2EndController = TextEditingController();
+  final _finalController = TextEditingController();
+  bool _linksLoaded = false;
+
   @override
   void initState() {
     super.initState();
@@ -44,6 +52,10 @@ class _ParticipantDetailPageState
     for (final c in _offsetControllers) {
       c.dispose();
     }
+    _startController.dispose();
+    _day1EndController.dispose();
+    _day2EndController.dispose();
+    _finalController.dispose();
     super.dispose();
   }
 
@@ -70,6 +82,8 @@ class _ParticipantDetailPageState
             const SizedBox(height: 16),
             if (participant != null)
               _buildOrderCard(theme, participant, detail),
+            const SizedBox(height: 16),
+            if (participant != null) _buildLinksCard(theme, participant),
             const SizedBox(height: 16),
             _buildScheduleCard(theme),
             const SizedBox(height: 16),
@@ -253,6 +267,144 @@ class _ParticipantDetailPageState
         ),
       ),
     );
+  }
+
+  Widget _buildLinksCard(ThemeData theme, Participant participant) {
+    final config = ref.watch(adminStudyConfigProvider);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Questionnaire links',
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(
+              'Override shared config links for this participant. '
+              'Leave empty to fall back to shared config.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            config.when(
+              loading: () => const Text('Loading shared config…'),
+              error: (e, _) => Text('Failed to load config: $e'),
+              data: (c) {
+                if (!_linksLoaded) {
+                  _loadLinks(participant.questionnaireLinks);
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _linkField(theme, 'Pre-study (start)', _startController,
+                        c.links.start, 1),
+                    _linkField(theme, 'End of Day 1', _day1EndController,
+                        c.links.day1End, 1),
+                    _linkField(theme, 'End of Day 2', _day2EndController,
+                        c.links.day2End, 2),
+                    _linkField(theme, 'Final', _finalController,
+                        c.links.finalLink, 2),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        FilledButton(
+                          onPressed: () =>
+                              _saveLinks(participant.participantCode),
+                          child: const Text('Save links'),
+                        ),
+                        const SizedBox(width: 8),
+                        if (participant.questionnaireLinks != null)
+                          OutlinedButton(
+                            onPressed: () => _clearLinks(
+                                participant.participantCode),
+                            child: const Text('Clear custom links'),
+                          ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _linkField(
+    ThemeData theme,
+    String label,
+    TextEditingController controller,
+    String? sharedValue,
+    int day,
+  ) {
+    final helperText = controller.text.isEmpty && sharedValue != null
+        ? 'Falls back to shared: $sharedValue'
+        : null;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          helperText: helperText,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+    );
+  }
+
+  void _loadLinks(QuestionnaireLinks? override) {
+    _startController.text = override?.start ?? '';
+    _day1EndController.text = override?.day1End ?? '';
+    _day2EndController.text = override?.day2End ?? '';
+    _finalController.text = override?.finalLink ?? '';
+    _linksLoaded = true;
+  }
+
+  Future<void> _saveLinks(String participantCode) async {
+    for (final (label, controller) in [
+      ('start', _startController),
+      ('day 1 end', _day1EndController),
+      ('day 2 end', _day2EndController),
+      ('final', _finalController),
+    ]) {
+      final value = controller.text.trim();
+      if (value.isNotEmpty && !value.contains('{participantId}')) {
+        setState(() {
+          _message = 'The $label link is missing {participantId}.';
+        });
+        return;
+      }
+    }
+    String? orNull(TextEditingController c) =>
+        c.text.trim().isEmpty ? null : c.text.trim();
+
+    await ref.read(adminParticipantsProvider.notifier).saveParticipantQuestionnaireLinks(
+          participantCode,
+          QuestionnaireLinks(
+            start: orNull(_startController),
+            day1End: orNull(_day1EndController),
+            day2End: orNull(_day2EndController),
+            finalLink: orNull(_finalController),
+          ),
+        );
+    ref.invalidate(participantDetailProvider(participantCode));
+    setState(() {
+      _message = 'Links saved.';
+    });
+  }
+
+  Future<void> _clearLinks(String participantCode) async {
+    await ref
+        .read(adminParticipantsProvider.notifier)
+        .saveParticipantQuestionnaireLinks(participantCode, null);
+    ref.invalidate(participantDetailProvider(participantCode));
+    setState(() {
+      _linksLoaded = false;
+      _message = 'Custom links cleared — falls back to shared config.';
+    });
   }
 
   Widget _buildScheduleCard(ThemeData theme) {

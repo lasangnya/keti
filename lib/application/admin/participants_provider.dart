@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../domain/study/participant.dart';
+import '../../domain/study/study_config.dart';
 import '../../domain/study/scheduled_reminder.dart';
 import '../../domain/study/study_enums.dart';
 import '../../domain/study/study_session.dart';
@@ -52,6 +53,14 @@ class AdminParticipants extends _$AdminParticipants {
     await ref
         .read(adminRepositoryProvider)
         .saveSchedule(participantCode, dayNumber, reminders);
+  }
+
+  Future<void> saveParticipantQuestionnaireLinks(
+      String participantCode, QuestionnaireLinks? links) async {
+    await ref
+        .read(adminRepositoryProvider)
+        .saveParticipantQuestionnaireLinks(participantCode, links);
+    ref.invalidateSelf();
   }
 }
 

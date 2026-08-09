@@ -39,6 +39,11 @@ abstract class AdminRepository {
   Future<void> setStyleOrder(String participantCode, StyleOrder order,
       {required bool assignmentOverride});
 
+  /// Writes per-participant questionnaire link overrides to the participant
+  /// document. Pass null [links] to clear the override (fall back to config).
+  Future<void> saveParticipantQuestionnaireLinks(
+      String participantCode, QuestionnaireLinks? links);
+
   Future<List<ScheduledReminder>> getSchedule(
       String participantCode, int dayNumber);
 
@@ -172,6 +177,13 @@ class FirestoreAdminRepository implements AdminRepository {
         'styleOrder': order.wireName,
         'assignmentOverride': assignmentOverride,
       });
+
+  @override
+  Future<void> saveParticipantQuestionnaireLinks(
+          String participantCode, QuestionnaireLinks? links) =>
+      _participant(participantCode).update(links == null
+          ? {'questionnaireLinks': FieldValue.delete()}
+          : {'questionnaireLinks': links.toJson()});
 
   @override
   Future<List<ScheduledReminder>> getSchedule(

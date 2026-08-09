@@ -98,6 +98,8 @@ class SessionController extends _$SessionController {
     final config = entry.config!;
 
     final now = _now();
+    final resolvedLinks =
+        config.links.resolvedWith(participant.questionnaireLinks);
     final session = StudySession(
       participantCode: participant.participantCode,
       dayNumber: schedule.dayNumber,
@@ -105,7 +107,7 @@ class SessionController extends _$SessionController {
       status: StudySessionStatus.active,
       startedAtLocal: now,
       schedule: schedule,
-      links: config.links,
+      links: resolvedLinks,
     );
     final events = [
       for (final reminder in schedule.reminders)

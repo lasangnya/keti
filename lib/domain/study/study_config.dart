@@ -29,6 +29,19 @@ class QuestionnaireLinks {
   String? endLinkForDay(int dayNumber) =>
       dayNumber == 1 ? day1End : day2End;
 
+  /// Returns a new [QuestionnaireLinks] where each field that is non-null in
+  /// [override] wins over the corresponding field in `this`. This implements
+  /// per-field fallback: a null override field means "use the shared config".
+  QuestionnaireLinks resolvedWith(QuestionnaireLinks? override) {
+    if (override == null) return this;
+    return QuestionnaireLinks(
+      start: override.start ?? start,
+      day1End: override.day1End ?? day1End,
+      day2End: override.day2End ?? day2End,
+      finalLink: override.finalLink ?? finalLink,
+    );
+  }
+
   /// Substitutes `{participantId}` and `{day}` placeholders in [template].
   static String fill(
     String template, {

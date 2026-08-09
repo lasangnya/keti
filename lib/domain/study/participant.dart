@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'study_enums.dart';
+import 'study_config.dart';
 
 /// A pseudonymous study participant (plan §7.2 `participants/{code}`).
 ///
@@ -15,6 +18,7 @@ class Participant {
     required this.environment,
     required this.protocolVersion,
     this.resetDay1At,
+    this.questionnaireLinks,
   });
 
   /// Pseudonymous code, e.g. `P014`. Document key and the only identifier
@@ -41,6 +45,10 @@ class Participant {
   /// Server-signal to wipe local Day 1 data.
   final DateTime? resetDay1At;
 
+  /// Per-participant questionnaire link templates; null means fall back to
+  /// the shared [QuestionnaireLinks] in [StudyConfig]. Admin-written.
+  final QuestionnaireLinks? questionnaireLinks;
+
   /// Accepts codes like `P001`…`P9999` (case-insensitive).
   static bool isValidCode(String code) =>
       RegExp(r'^[Pp]\d{3,4}$').hasMatch(code.trim());
@@ -54,6 +62,8 @@ class Participant {
         'environment': environment,
         'protocolVersion': protocolVersion,
         'resetDay1At': resetDay1At?.toIso8601String(),
+        if (questionnaireLinks != null)
+          'questionnaireLinks': questionnaireLinks!.toJson(),
       };
 
   factory Participant.fromJson(Map<String, Object?> json) {
@@ -81,6 +91,10 @@ class Participant {
       environment: json['environment'] as String? ?? 'dev',
       protocolVersion: json['protocolVersion'] as String? ?? 'unknown',
       resetDay1At: parseDate('resetDay1At'),
+      questionnaireLinks: json['questionnaireLinks'] != null
+          ? QuestionnaireLinks.fromJson(
+              (json['questionnaireLinks'] as Map).cast<String, Object?>())
+          : null,
     );
   }
 
@@ -94,6 +108,7 @@ class Participant {
     'activeDay',
     'environment',
     'protocolVersion',
+    'questionnaireLinks',
   ];
 
   List<Object?> toCsvRow() => [
@@ -104,5 +119,8 @@ class Participant {
         activeDay,
         environment,
         protocolVersion,
+        questionnaireLinks != null
+            ? jsonEncode(questionnaireLinks!.toJson())
+            : null,
       ];
 }
