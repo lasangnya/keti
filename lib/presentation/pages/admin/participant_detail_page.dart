@@ -479,13 +479,6 @@ class _ParticipantDetailPageState
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${_rows.length} entr${_rows.length == 1 ? 'y' : 'ies'} '
-                      '(default template has 8). New entries default to '
-                      'hydration variant 1.',
-                      style: theme.textTheme.bodySmall,
-                    ),
                   ],
                 );
               },
