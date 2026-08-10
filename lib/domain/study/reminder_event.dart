@@ -43,11 +43,11 @@ class ReminderEvent {
   });
 
   // ── Identity & schedule (write-once) ─────────────────────────────
-  final String eventId; // "reminder01"…"reminder08"
+  final String eventId; // "reminder01"…"reminderNN" (padded, per schedule count)
   final String participantCode; // e.g. "P014"
   final String dayId; // "day1" | "day2"
   final int dayNumber; // 1 | 2
-  final int reminderNumber; // 1–8
+  final int reminderNumber; // 1-based, 1..schedule length
   final int scheduledOffsetSec;
   final DateTime scheduledAtLocal;
 

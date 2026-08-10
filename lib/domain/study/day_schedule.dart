@@ -23,7 +23,8 @@ class DaySchedule {
   /// The presentation style in effect for the whole day.
   final PresentationStyle style;
 
-  /// Exactly 8 rows, ordered by [ScheduledReminder.reminderNumber].
+  /// Reminders ordered by [ScheduledReminder.reminderNumber]. The admin can
+  /// configure any count; the default template has 8.
   final List<ScheduledReminder> reminders;
 
   String get dayId => 'day$dayNumber';

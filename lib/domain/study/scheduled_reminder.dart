@@ -13,7 +13,7 @@ class ScheduledReminder {
     required this.variantNumber,
   });
 
-  /// 1-based position within the day (1–8).
+  /// 1-based position within the day (renumbered 1..N by the admin editor).
   final int reminderNumber;
 
   /// Time after session start at which the reminder fires.

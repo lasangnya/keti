@@ -25,10 +25,15 @@ class ParticipantDetailPage extends ConsumerStatefulWidget {
 
 class _ParticipantDetailPageState
     extends ConsumerState<ParticipantDetailPage> {
-  late List<TextEditingController> _offsetControllers;
-  late List<Placement> _placements;
-  int _scheduleDay = 1;
+  /// Editable schedule rows, seeded from the fetched schedule (or the
+  /// 8-entry template when none exists). Rows can be added/removed freely;
+  /// [ScheduledReminder.reminderNumber] is renumbered 1..N on save.
+  final List<_ScheduleRow> _rows = [];
+  Future<List<ScheduledReminder>>? _scheduleFuture;
+  int? _futureDay;
+  String? _futureCode;
   bool _scheduleLoaded = false;
+  int _scheduleDay = 1;
   String? _message;
 
   // Links editor state.
@@ -39,18 +44,9 @@ class _ParticipantDetailPageState
   bool _linksLoaded = false;
 
   @override
-  void initState() {
-    super.initState();
-    _offsetControllers = [
-      for (var i = 0; i < 8; i++) TextEditingController(),
-    ];
-    _placements = [for (final r in kDefaultScheduleTemplate) r.placement];
-  }
-
-  @override
   void dispose() {
-    for (final c in _offsetControllers) {
-      c.dispose();
+    for (final r in _rows) {
+      r.offsetController.dispose();
     }
     _startController.dispose();
     _day1EndController.dispose();
@@ -408,6 +404,16 @@ class _ParticipantDetailPageState
   }
 
   Widget _buildScheduleCard(ThemeData theme) {
+    final future = _scheduleFuture;
+    if (future == null ||
+        _futureDay != _scheduleDay ||
+        _futureCode != widget.participantCode) {
+      _scheduleFuture = ref
+          .read(adminRepositoryProvider)
+          .getSchedule(widget.participantCode, _scheduleDay);
+      _futureDay = _scheduleDay;
+      _futureCode = widget.participantCode;
+    }
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -433,75 +439,52 @@ class _ParticipantDetailPageState
             ),
             const SizedBox(height: 8),
             FutureBuilder<List<ScheduledReminder>>(
-              future: ref
-                  .read(adminRepositoryProvider)
-                  .getSchedule(widget.participantCode, _scheduleDay),
+              future: _scheduleFuture,
               builder: (context, snapshot) {
                 final reminders = snapshot.data;
                 if (reminders == null) {
-                  return const Text('Loading schedule…');
-                }
-                if (!_scheduleLoaded ||
+                  // Waiting for data: show loading unless we already have
+                  // rows for this exact day/participant.
+                  if (_rows.isEmpty ||
+                      _loadedDay != _scheduleDay ||
+                      _loadedCode != widget.participantCode) {
+                    return const Text('Loading schedule…');
+                  }
+                } else if (!_scheduleLoaded ||
                     _loadedDay != _scheduleDay ||
                     _loadedCode != widget.participantCode) {
                   _loadRows(reminders);
                 }
                 return Column(
                   children: [
-                    for (var i = 0; i < reminders.length; i++)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                                width: 90,
-                                child: Text('No. ${reminders[i].reminderNumber}')),
-                            SizedBox(
-                              width: 110,
-                              child: TextField(
-                                controller: _offsetControllers[i],
-                                keyboardType: TextInputType.number,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly
-                                ],
-                                decoration: const InputDecoration(
-                                  labelText: 'Minute',
-                                  isDense: true,
-                                  border: OutlineInputBorder(),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            DropdownButton<Placement>(
-                              value: _placements[i],
-                              items: [
-                                for (final p in Placement.values)
-                                  DropdownMenuItem(
-                                      value: p, child: Text(p.wireName)),
-                              ],
-                              onChanged: (p) =>
-                                  setState(() => _placements[i] = p!),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(reminders[i].contentVariantId,
-                                style: theme.textTheme.bodySmall),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 12),
+                    for (var i = 0; i < _rows.length; i++)
+                      _buildScheduleRow(theme, i),
+                    const SizedBox(height: 8),
                     Row(
                       children: [
                         FilledButton(
-                          onPressed: () => _saveSchedule(reminders),
+                          onPressed: () => _saveSchedule(),
                           child: const Text('Save schedule'),
                         ),
                         const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('Add entry'),
+                          onPressed: _addRow,
+                        ),
+                        const SizedBox(width: 8),
                         TextButton(
-                          onPressed: () =>
-                              _loadRows(kDefaultScheduleTemplate),
+                          onPressed: () => _loadRows(kDefaultScheduleTemplate),
                           child: const Text('Reset to template'),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${_rows.length} entr${_rows.length == 1 ? 'y' : 'ies'} '
+                      '(default template has 8). New entries default to '
+                      'hydration variant 1.',
+                      style: theme.textTheme.bodySmall,
                     ),
                   ],
                 );
@@ -513,38 +496,158 @@ class _ParticipantDetailPageState
     );
   }
 
+  Widget _buildScheduleRow(ThemeData theme, int index) {
+    final row = _rows[index];
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          SizedBox(width: 90, child: Text('No. ${index + 1}')),
+          SizedBox(
+            width: 110,
+            child: TextField(
+              controller: row.offsetController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(
+                labelText: 'Minute',
+                isDense: true,
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          DropdownButton<Placement>(
+            value: row.placement,
+            items: [
+              for (final p in Placement.values)
+                DropdownMenuItem(value: p, child: Text(p.wireName)),
+            ],
+            onChanged: (p) => setState(() => row.placement = p!),
+          ),
+          const SizedBox(width: 12),
+          DropdownButton<ReminderKind>(
+            value: row.kind,
+            items: [
+              for (final k in ReminderKind.values)
+                DropdownMenuItem(value: k, child: Text(k.wireName)),
+            ],
+            onChanged: (k) {
+              setState(() {
+                row.kind = k!;
+                row.variantNumber = row.variantNumber.clamp(
+                    1, maxVariantFor(k)).toInt();
+              });
+            },
+          ),
+          const SizedBox(width: 12),
+          DropdownButton<int>(
+            value: row.variantNumber,
+            items: [
+              for (var v = 1; v <= maxVariantFor(row.kind); v++)
+                DropdownMenuItem(value: v, child: Text('v$v')),
+            ],
+            onChanged: (v) => setState(() => row.variantNumber = v!),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            tooltip: 'Remove entry',
+            icon: const Icon(Icons.remove_circle_outline, size: 18),
+            onPressed: _rows.length <= 1
+                ? null
+                : () => setState(() {
+                      row.offsetController.dispose();
+                      _rows.removeAt(index);
+                    }),
+          ),
+        ],
+      ),
+    );
+  }
+
   int? _loadedDay;
   String? _loadedCode;
 
   void _loadRows(List<ScheduledReminder> reminders) {
-    for (var i = 0; i < reminders.length; i++) {
-      _offsetControllers[i].text = '${reminders[i].offset.inMinutes}';
-      _placements[i] = reminders[i].placement;
+    for (final r in _rows) {
+      r.offsetController.dispose();
     }
+    _rows
+      ..clear()
+      ..addAll([
+        for (final r in reminders)
+          _ScheduleRow(
+            offsetController:
+                TextEditingController(text: '${r.offset.inMinutes}'),
+            placement: r.placement,
+            kind: r.kind,
+            variantNumber: r.variantNumber,
+          ),
+      ]);
     _scheduleLoaded = true;
     _loadedDay = _scheduleDay;
     _loadedCode = widget.participantCode;
   }
 
-  Future<void> _saveSchedule(List<ScheduledReminder> current) async {
+  void _addRow() {
+    final lastMinutes = _rows.isEmpty
+        ? 0
+        : int.tryParse(_rows.last.offsetController.text.trim()) ?? 0;
+    setState(() {
+      _rows.add(_ScheduleRow(
+        offsetController:
+            TextEditingController(text: '${lastMinutes + 10}'),
+        placement: Placement.cursorProximate,
+        kind: ReminderKind.hydration,
+        variantNumber: 1,
+      ));
+    });
+  }
+
+  Future<void> _saveSchedule() async {
+    if (_rows.isEmpty) {
+      setState(() => _message = 'Add at least one schedule entry.');
+      return;
+    }
     final updated = <ScheduledReminder>[];
-    for (var i = 0; i < current.length; i++) {
-      final minutes = int.tryParse(_offsetControllers[i].text.trim());
+    for (var i = 0; i < _rows.length; i++) {
+      final row = _rows[i];
+      final minutes = int.tryParse(row.offsetController.text.trim());
       if (minutes == null || minutes < 0) {
         setState(() => _message = 'Invalid minute in row ${i + 1}.');
         return;
       }
       updated.add(ScheduledReminder(
-        reminderNumber: current[i].reminderNumber,
+        reminderNumber: i + 1,
         offset: Duration(minutes: minutes),
-        placement: _placements[i],
-        kind: current[i].kind,
-        variantNumber: current[i].variantNumber,
+        placement: row.placement,
+        kind: row.kind,
+        variantNumber: row.variantNumber,
       ));
     }
     await ref.read(adminParticipantsProvider.notifier).saveSchedule(
         widget.participantCode, _scheduleDay, updated);
     ref.invalidate(participantDetailProvider(widget.participantCode));
-    setState(() => _message = 'Schedule saved for day $_scheduleDay.');
+    setState(() => _message =
+        'Schedule saved for day $_scheduleDay (${updated.length} entries).');
   }
+}
+
+/// Max content-variant counter per kind (hydration 1–5, micro break 1–3).
+int maxVariantFor(ReminderKind kind) =>
+    kind == ReminderKind.hydration ? 5 : 3;
+
+/// One editable schedule row in the admin editor.
+class _ScheduleRow {
+  _ScheduleRow({
+    required this.offsetController,
+    required this.placement,
+    required this.kind,
+    required this.variantNumber,
+  });
+
+  final TextEditingController offsetController;
+  Placement placement;
+  ReminderKind kind;
+  int variantNumber;
 }
