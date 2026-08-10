@@ -1,0 +1,646 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../application/admin/admin_providers.dart';
+import '../../../application/admin/participants_provider.dart';
+import '../../../application/admin/study_config_provider.dart';
+import '../../../domain/study/participant.dart';
+import '../../../domain/study/scheduled_reminder.dart';
+import '../../../domain/study/study_config.dart';
+import '../../../domain/study/study_enums.dart';
+import '../../../domain/study/study_session.dart';
+
+/// Per-participant admin: status per day, Activate Day 2, style-order edit
+/// (soft-locked once Day 1 started), schedule editor, CSV download.
+class ParticipantDetailPage extends ConsumerStatefulWidget {
+  const ParticipantDetailPage({super.key, required this.participantCode});
+
+  final String participantCode;
+
+  @override
+  ConsumerState<ParticipantDetailPage> createState() =>
+      _ParticipantDetailPageState();
+}
+
+class _ParticipantDetailPageState
+    extends ConsumerState<ParticipantDetailPage> {
+  /// Editable schedule rows, seeded from the fetched schedule (or the
+  /// 8-entry template when none exists). Rows can be added/removed freely;
+  /// [ScheduledReminder.reminderNumber] is renumbered 1..N on save.
+  final List<_ScheduleRow> _rows = [];
+  Future<List<ScheduledReminder>>? _scheduleFuture;
+  int? _futureDay;
+  String? _futureCode;
+  bool _scheduleLoaded = false;
+  int _scheduleDay = 1;
+  String? _message;
+
+  // Links editor state.
+  final _startController = TextEditingController();
+  final _day1EndController = TextEditingController();
+  final _day2EndController = TextEditingController();
+  final _finalController = TextEditingController();
+  bool _linksLoaded = false;
+
+  @override
+  void dispose() {
+    for (final r in _rows) {
+      r.offsetController.dispose();
+    }
+    _startController.dispose();
+    _day1EndController.dispose();
+    _day2EndController.dispose();
+    _finalController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final detail = ref.watch(participantDetailProvider(widget.participantCode));
+    final participants = ref.watch(adminParticipantsProvider);
+    final export = ref.watch(adminExportProvider);
+    final theme = Theme.of(context);
+
+    final participant = (participants.asData?.value ?? <Participant>[])
+        .where((p) => p.participantCode == widget.participantCode)
+        .firstOrNull;
+
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.participantCode)),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (participant != null)
+              _buildStatusCard(theme, participant, detail),
+            const SizedBox(height: 16),
+            if (participant != null)
+              _buildOrderCard(theme, participant, detail),
+            const SizedBox(height: 16),
+            if (participant != null) _buildLinksCard(theme, participant),
+            const SizedBox(height: 16),
+            _buildScheduleCard(theme),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                FilledButton.icon(
+                  icon: const Icon(Icons.download, size: 16),
+                  label: const Text('Download CSV'),
+                  onPressed: export.busy
+                      ? null
+                      : () => ref
+                          .read(adminExportProvider.notifier)
+                          .exportParticipant(widget.participantCode),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () =>
+                      ref.read(adminExportProvider.notifier).reveal(),
+                  child: const Text('Reveal exports'),
+                ),
+              ],
+            ),
+            if (export.lastMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(export.lastMessage!,
+                    style: theme.textTheme.bodySmall),
+              ),
+            if (_message != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(_message!, style: theme.textTheme.bodySmall),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusCard(ThemeData theme, Participant participant,
+      AsyncValue<ParticipantDetail> detail) {
+    final safe = detail.asData?.value;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Status',
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text('Style order: ${participant.styleOrder.wireName}'
+                '${participant.assignmentOverride ? ' (override)' : ''}'),
+            Text('Active day: ${participant.activeDay}'),
+            const SizedBox(height: 8),
+            detail.when(
+              loading: () => const Text('Loading sessions…'),
+              error: (e, _) => Text('Sessions failed to load: $e'),
+              data: (d) {
+                final day1 = d.sessions[0];
+                final day2 = d.sessions[1];
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final (i, session) in [day1, day2].indexed)
+                      Text(
+                        'Day ${i + 1}: ${session?.status.wireName ?? 'NOT STARTED'}'
+                        '${session == null ? '' : ' · ${d.eventCounts['day${i + 1}']!['total']} events'
+                            ' · ${d.eventCounts['day${i + 1}']!['completedOutcome']} completed'}',
+                      ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed:                       participant.activeDay == 1 &&
+                      safe?.sessions[0]?.status ==
+                          StudySessionStatus.completed
+                  ? () async {
+                      await ref
+                          .read(adminParticipantsProvider.notifier)
+                          .setActiveDay(widget.participantCode, 2);
+                      ref.invalidate(
+                          participantDetailProvider(widget.participantCode));
+                      setState(() => _message = 'Day 2 activated.');
+                    }
+                  : null,
+              child: const Text('Activate Day 2'),
+            ),
+            const SizedBox(height: 12),
+            if (safe?.sessions[0] != null)
+              OutlinedButton.icon(
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Reset Day 1'),
+                style: OutlinedButton.styleFrom(
+                    foregroundColor: theme.colorScheme.error),
+                onPressed: () => _confirmReset(context),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmReset(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset Day 1?'),
+        content: const Text(
+            'This will delete Day 1 from Firestore and trigger a local wipe '
+            'on the participant\'s device next time they enter their code. '
+            'This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Reset',
+                style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ref
+          .read(adminParticipantsProvider.notifier)
+          .resetDay1(widget.participantCode);
+      ref.invalidate(participantDetailProvider(widget.participantCode));
+      setState(() => _message = 'Day 1 reset signal sent.');
+    }
+  }
+
+  Widget _buildOrderCard(ThemeData theme, Participant participant,
+      AsyncValue<ParticipantDetail> detail) {
+    final safeDetail = detail.asData?.value;
+    final day1Started = safeDetail != null && safeDetail.sessions[0] != null;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Style order',
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                DropdownButton<StyleOrder>(
+                  value: participant.styleOrder,
+                  items: [
+                    for (final order in StyleOrder.values)
+                      DropdownMenuItem(
+                          value: order, child: Text(order.wireName)),
+                  ],
+                  onChanged: day1Started
+                      ? null
+                      : (order) async {
+                          if (order == null) return;
+                          await ref
+                              .read(adminParticipantsProvider.notifier)
+                              .setStyleOrder(widget.participantCode, order,
+                                  assignmentOverride: true);
+                          setState(() =>
+                              _message = 'Style order updated (override).');
+                        },
+                ),
+                const SizedBox(width: 12),
+                if (day1Started)
+                  Text('Locked — Day 1 already started',
+                      style: theme.textTheme.bodySmall),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLinksCard(ThemeData theme, Participant participant) {
+    final config = ref.watch(adminStudyConfigProvider);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Questionnaire links',
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(
+              'Override shared config links for this participant. '
+              'Leave empty to fall back to shared config.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            config.when(
+              loading: () => const Text('Loading shared config…'),
+              error: (e, _) => Text('Failed to load config: $e'),
+              data: (c) {
+                if (!_linksLoaded) {
+                  _loadLinks(participant.questionnaireLinks);
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _linkField(theme, 'Pre-study (start)', _startController,
+                        c.links.start, 1),
+                    _linkField(theme, 'End of Day 1', _day1EndController,
+                        c.links.day1End, 1),
+                    _linkField(theme, 'End of Day 2', _day2EndController,
+                        c.links.day2End, 2),
+                    _linkField(theme, 'Final', _finalController,
+                        c.links.finalLink, 2),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        FilledButton(
+                          onPressed: () =>
+                              _saveLinks(participant.participantCode),
+                          child: const Text('Save links'),
+                        ),
+                        const SizedBox(width: 8),
+                        if (participant.questionnaireLinks != null)
+                          OutlinedButton(
+                            onPressed: () => _clearLinks(
+                                participant.participantCode),
+                            child: const Text('Clear custom links'),
+                          ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _linkField(
+    ThemeData theme,
+    String label,
+    TextEditingController controller,
+    String? sharedValue,
+    int day,
+  ) {
+    final helperText = controller.text.isEmpty && sharedValue != null
+        ? 'Falls back to shared: $sharedValue'
+        : null;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          helperText: helperText,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+    );
+  }
+
+  void _loadLinks(QuestionnaireLinks? override) {
+    _startController.text = override?.start ?? '';
+    _day1EndController.text = override?.day1End ?? '';
+    _day2EndController.text = override?.day2End ?? '';
+    _finalController.text = override?.finalLink ?? '';
+    _linksLoaded = true;
+  }
+
+  Future<void> _saveLinks(String participantCode) async {
+    for (final (label, controller) in [
+      ('start', _startController),
+      ('day 1 end', _day1EndController),
+      ('day 2 end', _day2EndController),
+      ('final', _finalController),
+    ]) {
+      final value = controller.text.trim();
+      if (value.isNotEmpty && !value.contains('{participantId}')) {
+        setState(() {
+          _message = 'The $label link is missing {participantId}.';
+        });
+        return;
+      }
+    }
+    String? orNull(TextEditingController c) =>
+        c.text.trim().isEmpty ? null : c.text.trim();
+
+    await ref.read(adminParticipantsProvider.notifier).saveParticipantQuestionnaireLinks(
+          participantCode,
+          QuestionnaireLinks(
+            start: orNull(_startController),
+            day1End: orNull(_day1EndController),
+            day2End: orNull(_day2EndController),
+            finalLink: orNull(_finalController),
+          ),
+        );
+    ref.invalidate(participantDetailProvider(participantCode));
+    setState(() {
+      _message = 'Links saved.';
+    });
+  }
+
+  Future<void> _clearLinks(String participantCode) async {
+    await ref
+        .read(adminParticipantsProvider.notifier)
+        .saveParticipantQuestionnaireLinks(participantCode, null);
+    ref.invalidate(participantDetailProvider(participantCode));
+    setState(() {
+      _linksLoaded = false;
+      _message = 'Custom links cleared — falls back to shared config.';
+    });
+  }
+
+  Widget _buildScheduleCard(ThemeData theme) {
+    final future = _scheduleFuture;
+    if (future == null ||
+        _futureDay != _scheduleDay ||
+        _futureCode != widget.participantCode) {
+      _scheduleFuture = ref
+          .read(adminRepositoryProvider)
+          .getSchedule(widget.participantCode, _scheduleDay);
+      _futureDay = _scheduleDay;
+      _futureCode = widget.participantCode;
+    }
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text('Schedule',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(width: 16),
+                SegmentedButton<int>(
+                  segments: const [
+                    ButtonSegment(value: 1, label: Text('Day 1')),
+                    ButtonSegment(value: 2, label: Text('Day 2')),
+                  ],
+                  selected: {_scheduleDay},
+                  onSelectionChanged: (s) =>
+                      setState(() => _scheduleDay = s.first),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            FutureBuilder<List<ScheduledReminder>>(
+              future: _scheduleFuture,
+              builder: (context, snapshot) {
+                final reminders = snapshot.data;
+                if (reminders == null) {
+                  // Waiting for data: show loading unless we already have
+                  // rows for this exact day/participant.
+                  if (_rows.isEmpty ||
+                      _loadedDay != _scheduleDay ||
+                      _loadedCode != widget.participantCode) {
+                    return const Text('Loading schedule…');
+                  }
+                } else if (!_scheduleLoaded ||
+                    _loadedDay != _scheduleDay ||
+                    _loadedCode != widget.participantCode) {
+                  _loadRows(reminders);
+                }
+                return Column(
+                  children: [
+                    for (var i = 0; i < _rows.length; i++)
+                      _buildScheduleRow(theme, i),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        FilledButton(
+                          onPressed: () => _saveSchedule(),
+                          child: const Text('Save schedule'),
+                        ),
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('Add entry'),
+                          onPressed: _addRow,
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () => _loadRows(kDefaultScheduleTemplate),
+                          child: const Text('Reset to template'),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScheduleRow(ThemeData theme, int index) {
+    final row = _rows[index];
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          SizedBox(width: 90, child: Text('No. ${index + 1}')),
+          SizedBox(
+            width: 110,
+            child: TextField(
+              controller: row.offsetController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(
+                labelText: 'Minute',
+                isDense: true,
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          DropdownButton<Placement>(
+            value: row.placement,
+            items: [
+              for (final p in Placement.values)
+                DropdownMenuItem(value: p, child: Text(p.wireName)),
+            ],
+            onChanged: (p) => setState(() => row.placement = p!),
+          ),
+          const SizedBox(width: 12),
+          DropdownButton<ReminderKind>(
+            value: row.kind,
+            items: [
+              for (final k in ReminderKind.values)
+                DropdownMenuItem(value: k, child: Text(k.wireName)),
+            ],
+            onChanged: (k) {
+              setState(() {
+                row.kind = k!;
+                row.variantNumber = row.variantNumber.clamp(
+                    1, maxVariantFor(k)).toInt();
+              });
+            },
+          ),
+          const SizedBox(width: 12),
+          DropdownButton<int>(
+            value: row.variantNumber,
+            items: [
+              for (var v = 1; v <= maxVariantFor(row.kind); v++)
+                DropdownMenuItem(value: v, child: Text('v$v')),
+            ],
+            onChanged: (v) => setState(() => row.variantNumber = v!),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            tooltip: 'Remove entry',
+            icon: const Icon(Icons.remove_circle_outline, size: 18),
+            onPressed: _rows.length <= 1
+                ? null
+                : () => setState(() {
+                      row.offsetController.dispose();
+                      _rows.removeAt(index);
+                    }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  int? _loadedDay;
+  String? _loadedCode;
+
+  void _loadRows(List<ScheduledReminder> reminders) {
+    for (final r in _rows) {
+      r.offsetController.dispose();
+    }
+    _rows
+      ..clear()
+      ..addAll([
+        for (final r in reminders)
+          _ScheduleRow(
+            offsetController:
+                TextEditingController(text: '${r.offset.inMinutes}'),
+            placement: r.placement,
+            kind: r.kind,
+            variantNumber: r.variantNumber,
+          ),
+      ]);
+    _scheduleLoaded = true;
+    _loadedDay = _scheduleDay;
+    _loadedCode = widget.participantCode;
+  }
+
+  void _addRow() {
+    final lastMinutes = _rows.isEmpty
+        ? 0
+        : int.tryParse(_rows.last.offsetController.text.trim()) ?? 0;
+    setState(() {
+      _rows.add(_ScheduleRow(
+        offsetController:
+            TextEditingController(text: '${lastMinutes + 10}'),
+        placement: Placement.cursorProximate,
+        kind: ReminderKind.hydration,
+        variantNumber: 1,
+      ));
+    });
+  }
+
+  Future<void> _saveSchedule() async {
+    if (_rows.isEmpty) {
+      setState(() => _message = 'Add at least one schedule entry.');
+      return;
+    }
+    final updated = <ScheduledReminder>[];
+    for (var i = 0; i < _rows.length; i++) {
+      final row = _rows[i];
+      final minutes = int.tryParse(row.offsetController.text.trim());
+      if (minutes == null || minutes < 0) {
+        setState(() => _message = 'Invalid minute in row ${i + 1}.');
+        return;
+      }
+      updated.add(ScheduledReminder(
+        reminderNumber: i + 1,
+        offset: Duration(minutes: minutes),
+        placement: row.placement,
+        kind: row.kind,
+        variantNumber: row.variantNumber,
+      ));
+    }
+    await ref.read(adminParticipantsProvider.notifier).saveSchedule(
+        widget.participantCode, _scheduleDay, updated);
+    ref.invalidate(participantDetailProvider(widget.participantCode));
+    setState(() => _message =
+        'Schedule saved for day $_scheduleDay (${updated.length} entries).');
+  }
+}
+
+/// Max content-variant counter per kind (hydration 1–5, micro break 1–3).
+int maxVariantFor(ReminderKind kind) =>
+    kind == ReminderKind.hydration ? 5 : 3;
+
+/// One editable schedule row in the admin editor.
+class _ScheduleRow {
+  _ScheduleRow({
+    required this.offsetController,
+    required this.placement,
+    required this.kind,
+    required this.variantNumber,
+  });
+
+  final TextEditingController offsetController;
+  Placement placement;
+  ReminderKind kind;
+  int variantNumber;
+}

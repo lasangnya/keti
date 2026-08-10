@@ -107,6 +107,21 @@ unlinked_spec.ds
 # Coverage
 coverage/
 
+# Machine-local noise
+**/.DS_Store
+.artifacts/
+.omo/
+.idea/caches/
+
+# Firebase client config contains API keys — local-only, never commit.
+# Copy the committed .example templates and fill in values locally.
+lib/firebase_options.dart
+**/GoogleService-Info.plist
+.env.local
+
+# Lockfiles are ignored above via *.lock, but an app must version its lockfile
+!pubspec.lock
+
 # Symbols
 app.*.symbols
 
@@ -117,3 +132,5 @@ app.*.symbols
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 !/dev/ci/**/Gemfile.lock
+# Node tooling
+tooling/node_modules/

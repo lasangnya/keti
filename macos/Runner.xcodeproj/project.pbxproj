@@ -36,6 +36,10 @@
 		D5E7AB8C2FFE9800002D4660 /* TrayPillManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB8B2FFE9800002D4660 /* TrayPillManager.swift */; };
 		D5E7AB8E2FFE9900002D4660 /* ComplianceCardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB8D2FFE9900002D4660 /* ComplianceCardManager.swift */; };
 		D5E7AB902FFE9A00002D4660 /* ComplianceCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB8F2FFE9A00002D4660 /* ComplianceCardView.swift */; };
+		D5E7AB932FFEA700002D4660 /* MouseShakeDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB922FFEA700002D4660 /* MouseShakeDetector.swift */; };
+		D5E7AB952FFEA800002D4660 /* ShakeDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB942FFEA800002D4660 /* ShakeDetector.swift */; };
+		D5E7AB972FFEA900002D4660 /* ShakeDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E7AB942FFEA800002D4660 /* ShakeDetector.swift */; };
+		E26F6F753EDE8908DAB3C7C6 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = FED74C41328343E5440E85E6 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -96,6 +100,9 @@
 		D5E7AB8B2FFE9800002D4660 /* TrayPillManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrayPillManager.swift; sourceTree = "<group>"; };
 		D5E7AB8D2FFE9900002D4660 /* ComplianceCardManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComplianceCardManager.swift; sourceTree = "<group>"; };
 		D5E7AB8F2FFE9A00002D4660 /* ComplianceCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComplianceCardView.swift; sourceTree = "<group>"; };
+		D5E7AB922FFEA700002D4660 /* MouseShakeDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MouseShakeDetector.swift; sourceTree = "<group>"; };
+		D5E7AB942FFEA800002D4660 /* ShakeDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShakeDetector.swift; sourceTree = "<group>"; };
+		FED74C41328343E5440E85E6 /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "Runner/GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -144,6 +151,7 @@
 				331C80D6294CF71000263BE5 /* RunnerTests */,
 				33CC10EE2044A3C60003C045 /* Products */,
 				D73912EC22F37F3D000D13A0 /* Frameworks */,
+				FED74C41328343E5440E85E6 /* GoogleService-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -190,6 +198,8 @@
 				D5E7AB842FFE90A2002D4660 /* PlatformChannels.swift */,
 				D5E7AB892FFE9500002D4660 /* CursorPillManager.swift */,
 				D5E7AB8B2FFE9800002D4660 /* TrayPillManager.swift */,
+				D5E7AB922FFEA700002D4660 /* MouseShakeDetector.swift */,
+				D5E7AB942FFEA800002D4660 /* ShakeDetector.swift */,
 				33CC10F02044A3C60003C045 /* AppDelegate.swift */,
 				33CC11122044BFA00003C045 /* MainFlutterWindow.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
@@ -319,6 +329,7 @@
 			files = (
 				33CC10F32044A3C60003C045 /* Assets.xcassets in Resources */,
 				33CC10F62044A3C60003C045 /* MainMenu.xib in Resources */,
+				E26F6F753EDE8908DAB3C7C6 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -371,6 +382,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				331C80D8294CF71000263BE5 /* RunnerTests.swift in Sources */,
+				D5E7AB972FFEA900002D4660 /* ShakeDetector.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -387,6 +399,8 @@
 				D5E7AB8C2FFE9800002D4660 /* TrayPillManager.swift in Sources */,
 				D5E7AB8E2FFE9900002D4660 /* ComplianceCardManager.swift in Sources */,
 				D5E7AB902FFE9A00002D4660 /* ComplianceCardView.swift in Sources */,
+				D5E7AB932FFEA700002D4660 /* MouseShakeDetector.swift in Sources */,
+				D5E7AB952FFEA800002D4660 /* ShakeDetector.swift in Sources */,
 				33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */,
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
 			);
@@ -518,8 +532,21 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/DebugProfile.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = HSGB29ANBA;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -650,8 +677,21 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/DebugProfile.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = HSGB29ANBA;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -670,8 +710,21 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/Release.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = HSGB29ANBA;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

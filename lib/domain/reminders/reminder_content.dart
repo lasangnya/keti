@@ -38,6 +38,38 @@ class ReminderContent {
     required this.trayHeight,
     required this.totalFrames,
   });
+
+  ReminderContent copyWith({
+    String? message,
+    String? cursorResource,
+    String? notchResource,
+    String? trayResource,
+    double? cursorWidth,
+    double? cursorHeight,
+    double? cursorOffsetX,
+    double? cursorOffsetY,
+    double? notchWidth,
+    double? notchHeight,
+    double? trayWidth,
+    double? trayHeight,
+    int? totalFrames,
+  }) {
+    return ReminderContent(
+      message: message ?? this.message,
+      cursorResource: cursorResource ?? this.cursorResource,
+      notchResource: notchResource ?? this.notchResource,
+      trayResource: trayResource ?? this.trayResource,
+      cursorWidth: cursorWidth ?? this.cursorWidth,
+      cursorHeight: cursorHeight ?? this.cursorHeight,
+      cursorOffsetX: cursorOffsetX ?? this.cursorOffsetX,
+      cursorOffsetY: cursorOffsetY ?? this.cursorOffsetY,
+      notchWidth: notchWidth ?? this.notchWidth,
+      notchHeight: notchHeight ?? this.notchHeight,
+      trayWidth: trayWidth ?? this.trayWidth,
+      trayHeight: trayHeight ?? this.trayHeight,
+      totalFrames: totalFrames ?? this.totalFrames,
+    );
+  }
 }
 
 class ReminderRequest {

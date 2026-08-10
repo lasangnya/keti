@@ -1,61 +1,47 @@
-import 'package:flutter/gestures.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:keti/application/app_mode_provider.dart';
 import 'package:keti/application/theme/theme_provider.dart';
-import 'package:keti/application/user_activity/user_activity_provider.dart';
+import 'package:keti/core/constants/app_config.dart';
+import 'package:keti/core/services/firebase/auth_service.dart';
+import 'package:keti/firebase_options.dart';
+import 'package:keti/presentation/pages/admin/admin_root_page.dart';
 import 'package:keti/presentation/pages/home/home_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  if (AppConfig.useFirebaseEmulator) {
+    FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
+    await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
+  }
+  // Silent anonymous sign-in — participants never see a login screen.
+  try {
+    await AuthService().signInAnonymouslyIfNeeded();
+  } catch (e) {
+    debugPrint('Firebase Auth Error: $e');
+    // We continue so the app still launches, but Firestore may fail if rules require auth.
+  }
   runApp(const ProviderScope(child: KetiApp()));
 }
 
-class KetiApp extends ConsumerStatefulWidget {
+class KetiApp extends ConsumerWidget {
   const KetiApp({super.key});
 
   @override
-  ConsumerState<KetiApp> createState() => _KetiAppState();
-}
-
-class _KetiAppState extends ConsumerState<KetiApp> {
-  @override
-  void initState() {
-    super.initState();
-    HardwareKeyboard.instance.addHandler(_handleKeyEvent);
-  }
-
-  @override
-  void dispose() {
-    HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
-    super.dispose();
-  }
-
-  bool _handleKeyEvent(KeyEvent event) {
-    if (event is KeyDownEvent) {
-      ref.read(userActivityProvider.notifier).logKeyboardStroke(
-            event.logicalKey.debugName ?? 'Unknown Key',
-          );
-    }
-    return false; // Allow event to propagate
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = ref.watch(appThemeProvider);
+    final mode = ref.watch(appModeStateProvider);
 
-    return Listener(
-      onPointerMove: (_) => ref.read(userActivityProvider.notifier).logMouseMovement(),
-      onPointerDown: (_) => ref.read(userActivityProvider.notifier).logMouseClick(),
-      onPointerSignal: (signal) {
-        if (signal is PointerScrollEvent) {
-          ref.read(userActivityProvider.notifier).logMouseScroll();
-        }
-      },
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: theme,
-        home: const KetiHomePage(),
-      ),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: theme,
+      home: mode == AppMode.admin ? const AdminRootPage() : const KetiHomePage(),
     );
   }
 }

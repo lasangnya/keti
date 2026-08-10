@@ -1,0 +1,38 @@
+{
+  "flutter": {
+    "platforms": {
+      "macos": {
+        "default": {
+          "projectId": "keti-fcfd6",
+          "appId": "1:405786487800:ios:78022778aa62268a33840d",
+          "uploadDebugSymbols": false,
+          "fileOutput": "macos/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "keti-fcfd6",
+          "configurations": {
+            "macos": "1:405786487800:ios:78022778aa62268a33840d",
+            "windows": "1:405786487800:web:c00a1a23bd046bc033840d"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": true
+    },
+    "singleProjectMode": true
+  }
+}

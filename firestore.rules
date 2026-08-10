@@ -1,0 +1,64 @@
+rules_version = '2';
+
+// keti study prototype — Firestore security rules (plan §8).
+// MUST be validated with the Emulator Suite suite in tooling/rules_tests
+// before any real participant session.
+//
+// Model:
+//  - Participant app: anonymous auth only; may read config/participant docs
+//    and write sessions/events, constrained by shape and transition rules.
+//  - Admin: email account with custom claim {admin: true}; owns config,
+//    participants, schedules and the activeDay gate.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    // token.get() avoids "Property admin is undefined" errors for tokens
+    // without the claim (anonymous participant sessions).
+    function isAdmin()  { return signedIn() && request.auth.token.get('admin', false) == true; }
+
+    match /config/study {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /participants/{pid} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();   // styleOrder, activeDay: admin-owned
+
+      match /schedules/{dayId} {
+        allow read: if signedIn();
+        allow write: if isAdmin();
+      }
+
+      match /studySessions/{dayId} {
+        allow read: if signedIn();
+        // A participant app may start only the currently active day, once.
+        allow create: if signedIn()
+          && (dayId == 'day1' || dayId == 'day2')
+          && request.resource.data.dayNumber ==
+               get(/databases/$(database)/documents/participants/$(pid)).data.activeDay
+          && request.resource.data.status != 'voided';
+        allow update: if isAdmin() || (signedIn()
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['status','completedAt','resumedCount']));
+        allow delete: if isAdmin();
+
+        match /reminderEvents/{eventId} {
+          allow read: if signedIn();
+          allow create: if signedIn();
+          allow update: if signedIn()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+                 ['reminderShownAt','reminderShownAtLocal','reminderHiddenAtLocal',
+                  'deliveryLatenessMs','deliveryStatus','failureReason','suppressionReason',
+                  'usedFallback','cardShownAtLocal','outcome','answeredAt',
+                  'responseLatencyMs','sessionResumed','updatedAt']);
+          allow delete: if isAdmin();
+        }
+      }
+    }
+
+    match /{document=**} { allow read, write: if false; }
+  }
+}

@@ -40,7 +40,7 @@ final class NavigationProvider extends $NotifierProvider<Navigation, int> {
   }
 }
 
-String _$navigationHash() => r'7be2554c21232507e9375980737504ab3d9f5a07';
+String _$navigationHash() => r'ab9d61decf84929e95df2cfdb154340aad263b2e';
 
 abstract class _$Navigation extends $Notifier<int> {
   int build();

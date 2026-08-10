@@ -1,22 +1,25 @@
 import SwiftUI
 
+/// The compliance card itself: question + two buttons. Button 1 reports the
+/// `completed` action, button 2 reports `dismissed` — the labels shown to
+/// the participant never carry the outcome vocabulary.
 struct ComplianceCardView: View {
-    let title: String
+    let question: String
     let button1Text: String
     let button2Text: String
     let onAction: (String) -> Void
-    
+
     @State private var isVisible = false
-    
+
     var body: some View {
         VStack(spacing: 12) {
-            Text(title)
+            Text(question)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
-            
+
             HStack(spacing: 8) {
-                Button(action: { onAction(button1Text) }) {
+                Button(action: { onAction("completed") }) {
                     Text(button1Text)
                         .font(.system(size: 12, weight: .bold))
                         .padding(.vertical, 6)
@@ -26,8 +29,8 @@ struct ComplianceCardView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
-                
-                Button(action: { onAction(button2Text) }) {
+
+                Button(action: { onAction("dismissed") }) {
                     Text(button2Text)
                         .font(.system(size: 12, weight: .bold))
                         .padding(.vertical, 6)
@@ -41,7 +44,7 @@ struct ComplianceCardView: View {
         }
         .padding(16)
         .background(
-            VisualEffectView(material: .underWindowBackground, blendingMode: .withinWindow)
+            Color.black.opacity(0.9)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
@@ -57,19 +60,4 @@ struct ComplianceCardView: View {
             }
         }
     }
-}
-
-struct VisualEffectView: NSViewRepresentable {
-    let material: NSVisualEffectView.Material
-    let blendingMode: NSVisualEffectView.BlendingMode
-    
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        view.material = material
-        view.blendingMode = blendingMode
-        view.state = .active
-        return view
-    }
-    
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
 }

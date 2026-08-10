@@ -1,0 +1,19 @@
+{
+  "name": "keti-tooling",
+  "private": true,
+  "type": "commonjs",
+  "description": "Firebase tooling for keti: Firestore rules tests (Emulator Suite), later export/admin scripts.",
+  "scripts": {
+    "test": "node --test",
+    "test:rules": "firebase emulators:exec --only auth,firestore --project keti-rules-test \"npm test\""
+  },
+  "dependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.10.0",
+    "firebase-admin": "^14.2.0"
+  },
+  "overrides": {
+    "uuid": "^11.1.1",
+    "brace-expansion": "5.0.8"
+  }
+}

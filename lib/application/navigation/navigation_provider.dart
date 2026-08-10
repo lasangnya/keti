@@ -1,47 +1,43 @@
 import 'package:flutter/material.dart';
-import 'package:keti/presentation/pages/breaks/breaks_page.dart';
-import 'package:keti/presentation/pages/hydration/hydration_page.dart';
+import 'package:keti/presentation/pages/study/study_page.dart';
 import 'package:keti/presentation/pages/test_mode/test_mode_page.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../core/constants/app_strings.dart';
-import '../../presentation/pages/dashboard/dashboard_page.dart';
+import '../study/app_environment_provider.dart';
 import 'navigation_item.dart';
 part 'navigation_provider.g.dart';
 
 @riverpod
 class Navigation extends _$Navigation {
 
-  final List<NavigationItem> _items = [
+  /// The Study tab is always present. Test Mode exists only outside the
+  /// `study` environment — participant builds must not expose it.
+  List<NavigationItem> _items(String environment) => [
     NavigationItem(
-      icon: Icons.dashboard_outlined,
-      selectedIcon: Icons.dashboard,
-      label: AppStrings.dashboard,
-      page: const DashboardPage(),
+      icon: Icons.science_outlined,
+      selectedIcon: Icons.science,
+      label: AppStrings.study,
+      page: const StudyPage(),
     ),
-    NavigationItem(
-      icon: Icons.timer_outlined,
-      selectedIcon: Icons.timer,
-      label: AppStrings.breakReminders,
-      page: const BreaksPage(),
-    ),
-    NavigationItem(
-      icon: Icons.water_drop_outlined,
-      selectedIcon: Icons.water_drop,
-      label: AppStrings.hydrationReminders,
-      page: const HydrationPage(),
-    ),
-    NavigationItem(
-      icon: Icons.terminal_outlined,
-      selectedIcon: Icons.terminal,
-      label: AppStrings.testMode,
-      page: TestModePage(),
-    ),
-
+    if (environment != 'study')
+      NavigationItem(
+        icon: Icons.terminal_outlined,
+        selectedIcon: Icons.terminal,
+        label: AppStrings.testMode,
+        page: TestModePage(),
+      ),
   ];
+
   @override
-  int build() => 0; // Default to Dashboard
-  NavigationItem get currentItem => _items[state];
-  List<NavigationItem> get allItems => _items;
+  int build() => 0; // Default to Study
+
+  NavigationItem get currentItem {
+    final items = _items(ref.watch(appEnvironmentProvider));
+    return items[state.clamp(0, items.length - 1)];
+  }
+
+  List<NavigationItem> get allItems => _items(ref.watch(appEnvironmentProvider));
+
   void setIndex(int index) => state = index;
 }
