@@ -39,7 +39,10 @@ void main() {
     WidgetTester tester, {
     FakeReminderOrchestrator? orchestrator,
   }) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      'tutorial.seen.P001': true,
+      'tutorial.seen.P002': true,
+    });
     final store = LocalStore(await SharedPreferences.getInstance());
 
     final messenger =
@@ -90,6 +93,8 @@ void main() {
   }
 
   Future<void> enterCode(WidgetTester tester, String code) async {
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), code);
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
@@ -108,17 +113,20 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('day 1 completion shows and launches the end-of-day form',
+  testWidgets(
+      'day 1 completion shows end-of-session form, then Start Day 2 (locked until activated)',
       (tester) async {
     final container = await pumpStudyPage(tester);
     await enterCode(tester, 'P001');
     await driveDayToCompletion(tester, container, 'Start Day 1');
 
-    expect(find.text('Day 1 complete'), findsOneWidget);
-    expect(find.text('Complete end of day questionnaire'), findsOneWidget);
-    expect(find.text('Complete final questionnaire'), findsNothing);
+    // Completed view with the stored ID and the end-of-session form.
+    expect(find.text('Session complete'), findsOneWidget);
+    expect(find.text('Your Participant ID: P001'), findsOneWidget);
+    expect(find.text('Open End-of-Session Questionnaire'), findsOneWidget);
+    expect(find.text('Open End-of-Study Questionnaire'), findsNothing);
 
-    await tester.tap(find.text('Complete end of day questionnaire'));
+    await tester.tap(find.text('Open End-of-Session Questionnaire'));
     await tester.pumpAndSettle();
 
     expect(launchedUrls, hasLength(1));
@@ -127,19 +135,39 @@ void main() {
       'https://docs.google.com/forms/d/e/example/viewform'
       '?usp=pp_url&entry.10=P001&entry.11=day1',
     );
+
+    // Gating: Start Day 2 appears only after the questionnaire is declared done.
+    expect(find.text('Start Day 2'), findsNothing);
+    await tester.tap(find.text('I have completed the questionnaire'));
+    await tester.pumpAndSettle();
+    expect(find.text('Start Day 2'), findsOneWidget);
+
+    // P001 is not day-2 activated in the mock → button disabled + hint.
+    final startDay2 = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Start Day 2'),
+    );
+    expect(startDay2.onPressed, isNull);
+    expect(find.textContaining('has not been activated'), findsOneWidget);
   });
 
-  testWidgets('day 2 completion offers the final questionnaire too',
+  testWidgets('day 2 completion reveals the end-of-study questionnaire',
       (tester) async {
     final container = await pumpStudyPage(tester);
     await enterCode(tester, 'P002');
     await driveDayToCompletion(tester, container, 'Start Day 2');
 
-    expect(find.text('Day 2 complete'), findsOneWidget);
-    expect(find.text('Complete end of day questionnaire'), findsOneWidget);
-    expect(find.text('Complete final questionnaire'), findsOneWidget);
+    expect(find.text('Study complete'), findsOneWidget);
+    expect(find.text('Your Participant ID: P002'), findsOneWidget);
+    expect(find.text('Open End-of-Session Questionnaire'), findsOneWidget);
 
-    await tester.tap(find.text('Complete final questionnaire'));
+    // The final questionnaire is only offered after the end-of-session one
+    // has been declared done.
+    expect(find.text('Open End-of-Study Questionnaire'), findsNothing);
+    await tester.tap(find.text('I have completed the questionnaire'));
+    await tester.pumpAndSettle();
+    expect(find.text('Open End-of-Study Questionnaire'), findsOneWidget);
+
+    await tester.tap(find.text('Open End-of-Study Questionnaire'));
     await tester.pumpAndSettle();
 
     expect(launchedUrls, hasLength(1));
