@@ -48,13 +48,23 @@ class TestModePage extends ConsumerWidget {
                 subtitle: 'A dropdown card with interactive buttons from the system tray',
                 showButtons: true,
                 showRadio: false,
-                button1Text: 'Trigger Card',
+                button1Text: 'Trigger hydration card',
                 onButton1Pressed: () {
                   ComplianceCardService.show(
-                    reminderId: 'test-compliance-card',
-                    question: 'Did you take a short break?',
-                    button1Text: 'Done',
-                    button2Text: 'Not now',
+                    reminderId: 'test-compliance-hydration',
+                    question: AppStrings.complianceHydrationQuestion,
+                    button1Text: AppStrings.complianceButton1,
+                    button2Text: AppStrings.complianceButton2,
+                    timeoutMs: 120000,
+                  );
+                },
+                button2Text: 'Trigger break card',
+                onButton2Pressed: () {
+                  ComplianceCardService.show(
+                    reminderId: 'test-compliance-break',
+                    question: AppStrings.complianceBreakQuestion,
+                    button1Text: AppStrings.complianceButton1,
+                    button2Text: AppStrings.complianceButton2,
                     timeoutMs: 120000,
                   );
                 },

@@ -44,7 +44,7 @@ struct ComplianceCardView: View {
         }
         .padding(16)
         .background(
-            VisualEffectView(material: .underWindowBackground, blendingMode: .withinWindow)
+            Color.black.opacity(0.9)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
@@ -60,19 +60,4 @@ struct ComplianceCardView: View {
             }
         }
     }
-}
-
-struct VisualEffectView: NSViewRepresentable {
-    let material: NSVisualEffectView.Material
-    let blendingMode: NSVisualEffectView.BlendingMode
-
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        view.material = material
-        view.blendingMode = blendingMode
-        view.state = .active
-        return view
-    }
-
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
 }
