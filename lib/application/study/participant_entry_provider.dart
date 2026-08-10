@@ -87,7 +87,7 @@ class ParticipantEntry extends _$ParticipantEntry {
     final code = rawCode.trim().toUpperCase();
     if (!Participant.isValidCode(code)) {
       state = const ParticipantEntryState(
-          errorMessage: 'Enter a valid participant code (e.g. P014).');
+          errorMessage: 'Enter a valid participant ID (e.g. P014).');
       return;
     }
 
@@ -219,5 +219,22 @@ class ParticipantEntry extends _$ParticipantEntry {
   /// Clears the flow back to the bare ID-entry form.
   void reset() {
     state = const ParticipantEntryState();
+  }
+
+  /// Re-fetches the participant document (e.g. to pick up a Day-2 activation
+  /// from the researcher while the participant sits on the day-1 completion
+  /// screen). Non-destructive: only [ParticipantEntryState.participant] is
+  /// replaced.
+  Future<void> refreshParticipant() async {
+    final current = state.participant;
+    if (current == null) return;
+    try {
+      final fresh = await ref
+          .read(participantRepositoryProvider)
+          .fetchParticipant(current.participantCode);
+      state = state.copyWith(participant: fresh);
+    } catch (_) {
+      // Keep the cached participant on network failure.
+    }
   }
 }
