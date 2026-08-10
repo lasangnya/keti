@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../application/admin/admin_auth_provider.dart';
 import '../../../application/app_mode_provider.dart';
+import '../test_mode/test_mode_page.dart';
 import 'links_settings_page.dart';
 import 'participants_page.dart';
 
-/// Admin shell: participants management and questionnaire-link settings.
+/// Admin shell: participants management, questionnaire-link settings, and
+/// the developer test mode (researcher-only).
 class AdminHomePage extends ConsumerStatefulWidget {
   const AdminHomePage({super.key});
 
@@ -17,7 +19,11 @@ class AdminHomePage extends ConsumerStatefulWidget {
 class _AdminHomePageState extends ConsumerState<AdminHomePage> {
   int _index = 0;
 
-  static const _pages = [ParticipantsPage(), LinksSettingsPage()];
+  static const _pages = [
+    ParticipantsPage(),
+    LinksSettingsPage(),
+    TestModePage(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +46,11 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
                   icon: Icon(Icons.link_outlined),
                   selectedIcon: Icon(Icons.link),
                   label: Text('Links'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.science_outlined),
+                  selectedIcon: Icon(Icons.science),
+                  label: Text('Test Mode'),
                 ),
               ],
               trailing: Expanded(
