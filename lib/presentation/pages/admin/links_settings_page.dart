@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../application/admin/study_config_provider.dart';
 import '../../../core/services/link_launcher_service.dart';
-import '../../../domain/study/study_config.dart';
+import '../../../domain/study/study_links.dart';
 
-/// Questionnaire link templates (plan §3.1/§3.5): start, end-of-day-1,
-/// end-of-day-2, final. Templates must contain `{participantId}`; `{day}` is
-/// substituted where present.
+/// Questionnaire link templates (plan §3.1/§3.5), stored globally in
+/// `links/templates`: pre-study, end-of-day type 1 (ambient days),
+/// end-of-day type 2 (character days), final. Templates must contain
+/// `{participantId}`; `{day}` is substituted where present.
 class LinksSettingsPage extends ConsumerStatefulWidget {
   const LinksSettingsPage({super.key});
 
@@ -16,9 +17,9 @@ class LinksSettingsPage extends ConsumerStatefulWidget {
 }
 
 class _LinksSettingsPageState extends ConsumerState<LinksSettingsPage> {
-  final _start = TextEditingController();
-  final _day1End = TextEditingController();
-  final _day2End = TextEditingController();
+  final _preStudy = TextEditingController();
+  final _endOfDayType1 = TextEditingController();
+  final _endOfDayType2 = TextEditingController();
   final _final = TextEditingController();
   bool _loaded = false;
   bool _saving = false;
@@ -27,7 +28,7 @@ class _LinksSettingsPageState extends ConsumerState<LinksSettingsPage> {
 
   @override
   void dispose() {
-    for (final c in [_start, _day1End, _day2End, _final]) {
+    for (final c in [_preStudy, _endOfDayType1, _endOfDayType2, _final]) {
       c.dispose();
     }
     super.dispose();
@@ -35,7 +36,7 @@ class _LinksSettingsPageState extends ConsumerState<LinksSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final config = ref.watch(adminStudyConfigProvider);
+    final templates = ref.watch(adminLinkTemplatesProvider);
     final theme = Theme.of(context);
 
     return SingleChildScrollView(
@@ -48,22 +49,25 @@ class _LinksSettingsPageState extends ConsumerState<LinksSettingsPage> {
                   ?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           Text(
-            'Google Forms templates. {participantId} and {day} are substituted when opened.',
+            'Google Forms templates. {participantId} and {day} are substituted when opened. '
+            'End-of-day type 1 is used on ambient days, type 2 on character days.',
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: 16),
-          config.when(
+          templates.when(
             loading: () => const CircularProgressIndicator(),
-            error: (e, _) => Text('Failed to load config: $e'),
-            data: (c) {
-              if (!_loaded) _load(c.links);
+            error: (e, _) => Text('Failed to load templates: $e'),
+            data: (t) {
+              if (!_loaded) _load(t);
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _linkField(theme, 'Pre-study questionnaire (start)', _start, 1),
-                  _linkField(theme, 'End of Day 1 questionnaire', _day1End, 1),
-                  _linkField(theme, 'End of Day 2 questionnaire', _day2End, 2),
-                  _linkField(theme, 'Final questionnaire', _final, 2),
+                  _linkField(theme, 'Pre-study questionnaire', _preStudy),
+                  _linkField(
+                      theme, 'End-of-day questionnaire (Ambient days)', _endOfDayType1),
+                  _linkField(theme,
+                      'End-of-day questionnaire (Character days)', _endOfDayType2),
+                  _linkField(theme, 'Final questionnaire', _final),
                   const SizedBox(height: 12),
                   FilledButton(
                     onPressed: _saving ? null : _save,
@@ -107,7 +111,7 @@ class _LinksSettingsPageState extends ConsumerState<LinksSettingsPage> {
   }
 
   Widget _linkField(
-      ThemeData theme, String label, TextEditingController controller, int day) {
+      ThemeData theme, String label, TextEditingController controller) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -128,10 +132,9 @@ class _LinksSettingsPageState extends ConsumerState<LinksSettingsPage> {
             onPressed: () {
               final template = controller.text.trim();
               if (template.isEmpty) return;
-              LinkLauncherService.open(QuestionnaireLinks.fill(
+              LinkLauncherService.open(StudyLinkTemplates.fill(
                 template,
                 participantId: 'P000',
-                day: day,
               ));
             },
           ),
@@ -140,19 +143,19 @@ class _LinksSettingsPageState extends ConsumerState<LinksSettingsPage> {
     );
   }
 
-  void _load(QuestionnaireLinks links) {
-    _start.text = links.start ?? '';
-    _day1End.text = links.day1End ?? '';
-    _day2End.text = links.day2End ?? '';
-    _final.text = links.finalLink ?? '';
+  void _load(StudyLinkTemplates templates) {
+    _preStudy.text = templates.preStudy ?? '';
+    _endOfDayType1.text = templates.endOfDayType1 ?? '';
+    _endOfDayType2.text = templates.endOfDayType2 ?? '';
+    _final.text = templates.finalLink ?? '';
     _loaded = true;
   }
 
   Future<void> _save() async {
     for (final (label, controller) in [
-      ('start', _start),
-      ('day 1 end', _day1End),
-      ('day 2 end', _day2End),
+      ('pre-study', _preStudy),
+      ('end-of-day type 1', _endOfDayType1),
+      ('end-of-day type 2', _endOfDayType2),
       ('final', _final),
     ]) {
       final value = controller.text.trim();
@@ -173,17 +176,17 @@ class _LinksSettingsPageState extends ConsumerState<LinksSettingsPage> {
       _messageIsError = false;
     });
     try {
-      await ref.read(adminStudyConfigProvider.notifier).saveLinks(
-            QuestionnaireLinks(
-              start: orNull(_start),
-              day1End: orNull(_day1End),
-              day2End: orNull(_day2End),
+      await ref.read(adminLinkTemplatesEditorProvider.notifier).save(
+            StudyLinkTemplates(
+              preStudy: orNull(_preStudy),
+              endOfDayType1: orNull(_endOfDayType1),
+              endOfDayType2: orNull(_endOfDayType2),
               finalLink: orNull(_final),
             ),
           );
       if (!mounted) return;
       setState(() {
-        _message = 'Done — links saved to the shared config and all participants.';
+        _message = 'Done — link templates saved.';
         _messageIsError = false;
       });
     } catch (e) {

@@ -7,8 +7,8 @@ import '../../../application/admin/participants_provider.dart';
 import '../../../application/admin/study_config_provider.dart';
 import '../../../domain/study/participant.dart';
 import '../../../domain/study/scheduled_reminder.dart';
-import '../../../domain/study/study_config.dart';
 import '../../../domain/study/study_enums.dart';
+import '../../../domain/study/study_links.dart';
 import '../../../domain/study/study_session.dart';
 
 /// Per-participant admin: status per day, Activate Day 2, style-order edit
@@ -36,11 +36,11 @@ class _ParticipantDetailPageState
   int _scheduleDay = 1;
   String? _message;
 
-  // Links editor state.
-  final _startController = TextEditingController();
-  final _day1EndController = TextEditingController();
-  final _day2EndController = TextEditingController();
-  final _finalController = TextEditingController();
+  // Links editor state (per-participant on/off switches).
+  late bool _preStudyOn;
+  late bool _endOfDay1On;
+  late bool _endOfDay2On;
+  late bool _finalOn;
   bool _linksLoaded = false;
   bool _linksSaving = false;
   String? _linksDoneMessage;
@@ -50,10 +50,6 @@ class _ParticipantDetailPageState
     for (final r in _rows) {
       r.offsetController.dispose();
     }
-    _startController.dispose();
-    _day1EndController.dispose();
-    _day2EndController.dispose();
-    _finalController.dispose();
     super.dispose();
   }
 
@@ -268,7 +264,7 @@ class _ParticipantDetailPageState
   }
 
   Widget _buildLinksCard(ThemeData theme, Participant participant) {
-    final config = ref.watch(adminStudyConfigProvider);
+    if (!_linksLoaded) _loadLinks(participant.linkFlags);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -280,144 +276,115 @@ class _ParticipantDetailPageState
                     ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text(
-              'Override shared config links for this participant. '
-              'Leave empty to fall back to shared config.',
+              'Choose which questionnaires this participant is offered. '
+              'End-of-day type follows the day\'s presentation style '
+              '(ambient → type 1, character → type 2) and therefore '
+              'alternates between the two days automatically.',
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 12),
-            config.when(
-              loading: () => const Text('Loading shared config…'),
-              error: (e, _) => Text('Failed to load config: $e'),
-              data: (c) {
-                if (!_linksLoaded) {
-                  _loadLinks(participant.questionnaireLinks);
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _linkField(theme, 'Pre-study (start)', _startController,
-                        c.links.start, 1),
-                    _linkField(theme, 'End of Day 1', _day1EndController,
-                        c.links.day1End, 1),
-                    _linkField(theme, 'End of Day 2', _day2EndController,
-                        c.links.day2End, 2),
-                    _linkField(theme, 'Final', _finalController,
-                        c.links.finalLink, 2),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        FilledButton(
-                          onPressed: _linksSaving
-                              ? null
-                              : () => _saveLinks(participant.participantCode),
-                          child: _linksSaving
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Text('Save links'),
-                        ),
-                        const SizedBox(width: 8),
-                        if (participant.questionnaireLinks != null)
-                          OutlinedButton(
-                            onPressed: _linksSaving
-                                ? null
-                                : () => _clearLinks(participant.participantCode),
-                            child: const Text('Clear custom links'),
-                          ),
-                      ],
-                    ),
-                    if (_linksDoneMessage != null) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(Icons.check_circle,
-                              size: 16, color: theme.colorScheme.primary),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              _linksDoneMessage!,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                );
-              },
+            SwitchListTile(
+              title: const Text('Pre-study questionnaire'),
+              value: _preStudyOn,
+              onChanged: _linksSaving
+                  ? null
+                  : (v) => setState(() => _preStudyOn = v),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
             ),
+            SwitchListTile(
+              title: const Text('End-of-day questionnaire — Day 1'),
+              subtitle: Text(
+                  '${participant.styleOrder == StyleOrder.ambientFirst ? 'Ambient (type 1)' : 'Character (type 2)'} day'),
+              value: _endOfDay1On,
+              onChanged: _linksSaving
+                  ? null
+                  : (v) => setState(() => _endOfDay1On = v),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
+            SwitchListTile(
+              title: const Text('End-of-day questionnaire — Day 2'),
+              subtitle: Text(
+                  '${participant.styleOrder == StyleOrder.ambientFirst ? 'Character (type 2)' : 'Ambient (type 1)'} day'),
+              value: _endOfDay2On,
+              onChanged: _linksSaving
+                  ? null
+                  : (v) => setState(() => _endOfDay2On = v),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
+            SwitchListTile(
+              title: const Text('Final questionnaire'),
+              value: _finalOn,
+              onChanged: _linksSaving
+                  ? null
+                  : (v) => setState(() => _finalOn = v),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                FilledButton(
+                  onPressed: _linksSaving
+                      ? null
+                      : () => _saveLinks(participant.participantCode),
+                  child: _linksSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Save links'),
+                ),
+              ],
+            ),
+            if (_linksDoneMessage != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.check_circle,
+                      size: 16, color: theme.colorScheme.primary),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      _linksDoneMessage!,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _linkField(
-    ThemeData theme,
-    String label,
-    TextEditingController controller,
-    String? sharedValue,
-    int day,
-  ) {
-    final helperText = controller.text.isEmpty && sharedValue != null
-        ? 'Falls back to shared: $sharedValue'
-        : null;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          helperText: helperText,
-          border: const OutlineInputBorder(),
-        ),
-      ),
-    );
-  }
-
-  void _loadLinks(QuestionnaireLinks? override) {
-    _startController.text = override?.start ?? '';
-    _day1EndController.text = override?.day1End ?? '';
-    _day2EndController.text = override?.day2End ?? '';
-    _finalController.text = override?.finalLink ?? '';
+  void _loadLinks(ParticipantLinkFlags flags) {
+    _preStudyOn = flags.preStudy;
+    _endOfDay1On = flags.endOfDay1;
+    _endOfDay2On = flags.endOfDay2;
+    _finalOn = flags.finalQuestionnaire;
     _linksLoaded = true;
   }
 
   Future<void> _saveLinks(String participantCode) async {
-    for (final (label, controller) in [
-      ('start', _startController),
-      ('day 1 end', _day1EndController),
-      ('day 2 end', _day2EndController),
-      ('final', _finalController),
-    ]) {
-      final value = controller.text.trim();
-      if (value.isNotEmpty && !value.contains('{participantId}')) {
-        setState(() {
-          _message = 'The $label link is missing {participantId}.';
-        });
-        return;
-      }
-    }
-    String? orNull(TextEditingController c) =>
-        c.text.trim().isEmpty ? null : c.text.trim();
-
     setState(() {
       _linksSaving = true;
       _linksDoneMessage = null;
     });
     try {
-      await ref.read(adminParticipantsProvider.notifier).saveParticipantQuestionnaireLinks(
+      await ref.read(adminParticipantsProvider.notifier).saveParticipantLinkFlags(
             participantCode,
-            QuestionnaireLinks(
-              start: orNull(_startController),
-              day1End: orNull(_day1EndController),
-              day2End: orNull(_day2EndController),
-              finalLink: orNull(_finalController),
+            ParticipantLinkFlags(
+              preStudy: _preStudyOn,
+              endOfDay1: _endOfDay1On,
+              endOfDay2: _endOfDay2On,
+              finalQuestionnaire: _finalOn,
             ),
           );
       if (!mounted) return;
@@ -429,34 +396,6 @@ class _ParticipantDetailPageState
       if (!mounted) return;
       setState(() {
         _linksDoneMessage = 'Failed to save links: $e';
-      });
-    } finally {
-      if (mounted) {
-        setState(() => _linksSaving = false);
-      }
-    }
-  }
-
-  Future<void> _clearLinks(String participantCode) async {
-    setState(() {
-      _linksSaving = true;
-      _linksDoneMessage = null;
-    });
-    try {
-      await ref
-          .read(adminParticipantsProvider.notifier)
-          .saveParticipantQuestionnaireLinks(participantCode, null);
-      if (!mounted) return;
-      ref.invalidate(participantDetailProvider(participantCode));
-      setState(() {
-        _linksLoaded = false;
-        _linksDoneMessage =
-            'Done — custom links cleared, falls back to shared config.';
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _linksDoneMessage = 'Failed to clear links: $e';
       });
     } finally {
       if (mounted) {
