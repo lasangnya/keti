@@ -12,7 +12,12 @@ import 'package:keti/core/services/firebase/firestore_providers.dart';
 import 'package:keti/core/services/local/csv_store.dart';
 import 'package:keti/core/services/local/local_store.dart';
 import 'package:keti/core/services/study/mock_participant_repository.dart';
+import 'package:keti/domain/study/day_schedule.dart';
 import 'package:keti/domain/study/participant.dart';
+import 'package:keti/domain/study/scheduled_reminder.dart';
+import 'package:keti/domain/study/study_config.dart';
+import 'package:keti/domain/study/study_enums.dart';
+import 'package:keti/domain/study/study_session.dart';
 import 'package:keti/presentation/pages/study/study_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -200,6 +205,54 @@ void main() {
     expect(find.text('Day 2'), findsOneWidget);
     expect(find.text('Start Day 2'), findsOneWidget);
   });
+
+  testWidgets(
+      'day 2 reset signal wipes a stale completed day-2 session so it can be redone',
+      (tester) async {
+    // Simulates the real-world mess: a previous run completed Day 2 locally,
+    // so the CSV still has a completed day-2 session. The researcher then
+    // resets Day 2 (server signal) and re-activates it.
+    final csv = CsvStore(rootDir: csvRoot);
+    await csv.writeSession(
+      StudySession(
+        participantCode: 'P001',
+        dayNumber: 2,
+        style: PresentationStyle.characterBased,
+        status: StudySessionStatus.completed,
+        startedAtLocal: DateTime.parse('2026-08-04T09:00:00+02:00'),
+        completedAtLocal: DateTime.parse('2026-08-04T11:00:00+02:00'),
+        schedule: const DaySchedule(
+          dayNumber: 2,
+          style: PresentationStyle.characterBased,
+          reminders: kDefaultScheduleTemplate,
+        ),
+        links: const QuestionnaireLinks(),
+      ),
+    );
+
+    final repo = _ResettingDay2Repository();
+    final container = await pumpStudyPage(tester, repository: repo);
+    await enterCode(tester, 'P001');
+    await driveDayToCompletion(tester, container, 'Start Day 1');
+
+    // Researcher activates Day 2 and, on the same doc, stamps the day-2
+    // reset signal that wipes the stale local session.
+    repo.day2Activated = true;
+    await tester.ensureVisible(find.text('Check again'));
+    await tester.tap(find.text('Check again'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Start Day 2'));
+    await tester.tap(find.text('Start Day 2'));
+    await tester.pumpAndSettle();
+
+    // Without the reset wipe this would instantly show "Study complete".
+    // With it, we land on the Day 2 overview ready to start.
+    expect(find.text('Study complete'), findsNothing);
+    expect(find.text('P001'), findsOneWidget);
+    expect(find.text('Day 2'), findsOneWidget);
+    expect(find.text('Start Day 2'), findsOneWidget);
+  });
 }
 
 /// Mock repo whose participants flip to day 2 once the researcher activates
@@ -219,6 +272,27 @@ class _ActivatingRepository extends MockParticipantRepository {
       activeDay: 2,
       environment: p.environment,
       protocolVersion: p.protocolVersion,
+    );
+  }
+}
+
+/// Like [_ActivatingRepository] but the day-2 activation also carries a
+/// `resetDay2At` signal newer than the stale local session, mirroring the
+/// admin "Reset Day 2" action.
+class _ResettingDay2Repository extends _ActivatingRepository {
+  @override
+  Future<Participant> fetchParticipant(String code) async {
+    final p = await super.fetchParticipant(code);
+    if (p.participantCode != 'P001' || p.activeDay != 2) return p;
+    return Participant(
+      participantCode: p.participantCode,
+      serial: p.serial,
+      styleOrder: p.styleOrder,
+      assignmentOverride: p.assignmentOverride,
+      activeDay: p.activeDay,
+      environment: p.environment,
+      protocolVersion: p.protocolVersion,
+      resetDay2At: DateTime.parse('2026-08-11T10:00:00+02:00'),
     );
   }
 }

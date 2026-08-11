@@ -18,6 +18,7 @@ class Participant {
     required this.environment,
     required this.protocolVersion,
     this.resetDay1At,
+    this.resetDay2At,
     this.linkFlags = const ParticipantLinkFlags.allOn(),
   });
 
@@ -45,6 +46,10 @@ class Participant {
   /// Server-signal to wipe local Day 1 data.
   final DateTime? resetDay1At;
 
+  /// Server-signal to wipe local Day 2 data (same mechanism as
+  /// [resetDay1At], for the day-2 schedule).
+  final DateTime? resetDay2At;
+
   /// Per-participant switches deciding which questionnaires are offered
   /// (prestudy / end-of-day 1 / end-of-day 2 / final). Admin-written;
   /// defaults to all-on when absent.
@@ -63,6 +68,7 @@ class Participant {
         'environment': environment,
         'protocolVersion': protocolVersion,
         'resetDay1At': resetDay1At?.toIso8601String(),
+        'resetDay2At': resetDay2At?.toIso8601String(),
         'linkFlags': linkFlags.toJson(),
       };
 
@@ -91,6 +97,7 @@ class Participant {
       environment: json['environment'] as String? ?? 'dev',
       protocolVersion: json['protocolVersion'] as String? ?? 'unknown',
       resetDay1At: parseDate('resetDay1At'),
+      resetDay2At: parseDate('resetDay2At'),
       linkFlags: ParticipantLinkFlags.fromJson(
           (json['linkFlags'] as Map?)?.cast<String, Object?>()),
     );

@@ -139,25 +139,9 @@ class ParticipantEntry extends _$ParticipantEntry {
         styleOrder: participant.styleOrder,
       );
 
-      // --- NEW: Reset Day 1 signal detection ---
-      if (participant.resetDay1At != null) {
-        final localSession = await csv.readSession(participant.participantCode, 'day1');
-        debugPrint('Checking reset signal for ${participant.participantCode}. '
-            'Server resetDay1At: ${participant.resetDay1At}. '
-            'Local session start: ${localSession?.startedAtLocal}');
-            
-        if (localSession != null) {
-          if (localSession.startedAtLocal.isBefore(participant.resetDay1At!)) {
-            debugPrint('MATCH: Local session is older than reset signal. Wiping...');
-            await csv.deleteSessionDirectory(participant.participantCode, 'day1');
-            debugPrint('Local Day 1 session wiped (server reset signal).');
-          } else {
-            debugPrint('SKIP: Local session is newer than or equal to reset signal.');
-          }
-        } else {
-          debugPrint('SKIP: No local session found for day1.');
-        }
-      }
+      // Reset-signal detection: wipe any day whose server-side reset
+      // timestamp is newer than the local session start.
+      await _applyResetSignals(csv, participant);
 
       await store.setLastParticipantCode(participant.participantCode);
       await store.cacheParticipant(participant);
@@ -225,6 +209,34 @@ class ParticipantEntry extends _$ParticipantEntry {
       );
       state = await _readyState(csv, cached, cachedConfig, cachedSchedule,
           links, fromCache: true);
+    }
+  }
+
+  /// Wipes local CSV sessions for any day whose server-side reset timestamp
+  /// (`resetDay1At` / `resetDay2At`) is newer than the local session start.
+  ///
+  /// Called at ID entry and when starting Day 2, so a researcher's reset of
+  /// either day takes effect on the device (the local CSV is the source of
+  /// truth, but the server signal must be able to override it).
+  Future<void> _applyResetSignals(CsvStore csv, Participant participant) async {
+    final code = participant.participantCode;
+    for (final day in const [1, 2]) {
+      final resetAt = day == 1 ? participant.resetDay1At : participant.resetDay2At;
+      if (resetAt == null) continue;
+      final localSession = await csv.readSession(code, 'day$day');
+      debugPrint('Checking reset signal for $code day$day. '
+          'Server resetDay${day}At: $resetAt. '
+          'Local session start: ${localSession?.startedAtLocal}');
+      if (localSession != null &&
+          localSession.startedAtLocal.isBefore(resetAt)) {
+        debugPrint(
+            'MATCH: Local day $day session is older than reset signal. Wiping...');
+        await csv.deleteSessionDirectory(code, 'day$day');
+        debugPrint('Local Day $day session wiped (server reset signal).');
+      } else {
+        debugPrint(
+            'SKIP: No local day $day session or it is newer than the reset signal.');
+      }
     }
   }
 
@@ -310,6 +322,10 @@ class ParticipantEntry extends _$ParticipantEntry {
         );
         return;
       }
+      // A researcher "Reset Day 2" must wipe the stale local day-2 session
+      // before we resolve state — otherwise a previously completed day 2
+      // would instantly re-complete.
+      await _applyResetSignals(csv, fresh);
       final config = await repository.fetchStudyConfig();
       debugPrint('loadDay2: config ok (${config.protocolVersion})');
       final templates = await repository.fetchLinkTemplates();

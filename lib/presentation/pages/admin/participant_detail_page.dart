@@ -177,23 +177,33 @@ class _ParticipantDetailPageState
                 label: const Text('Reset Day 1'),
                 style: OutlinedButton.styleFrom(
                     foregroundColor: theme.colorScheme.error),
-                onPressed: () => _confirmReset(context),
+                onPressed: () => _confirmReset(context, 1),
               ),
+            if (safe?.sessions[1] != null) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Reset Day 2'),
+                style: OutlinedButton.styleFrom(
+                    foregroundColor: theme.colorScheme.error),
+                onPressed: () => _confirmReset(context, 2),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Future<void> _confirmReset(BuildContext context) async {
+  Future<void> _confirmReset(BuildContext context, int day) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Reset Day 1?'),
-        content: const Text(
-            'This will delete Day 1 from Firestore and trigger a local wipe '
-            'on the participant\'s device next time they enter their code. '
-            'This cannot be undone.'),
+        title: Text('Reset Day $day?'),
+        content: Text(
+            'This will delete Day $day from Firestore and trigger a local '
+            'wipe on the participant\'s device next time they enter their '
+            'code. This cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -211,9 +221,9 @@ class _ParticipantDetailPageState
     if (confirmed == true) {
       await ref
           .read(adminParticipantsProvider.notifier)
-          .resetDay1(widget.participantCode);
+          .resetDay(widget.participantCode, day);
       ref.invalidate(participantDetailProvider(widget.participantCode));
-      setState(() => _message = 'Day 1 reset signal sent.');
+      setState(() => _message = 'Day $day reset signal sent.');
     }
   }
 

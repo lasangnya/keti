@@ -35,9 +35,11 @@ abstract class AdminRepository {
   /// pilot corrections).
   Future<void> setActiveDay(String participantCode, int day);
 
-  /// Deletes the day1 session and its events, and marks the participant
-  /// for a local wipe.
-  Future<void> resetDay1(String participantCode);
+  /// Deletes the [day] session and its events (Firestore), stamps a
+  /// per-day reset signal (`resetDay{1,2}At`) that wipes the same day on the
+  /// participant device on its next code entry, and moves the active-day
+  /// gate back to [day] so the participant can redo it.
+  Future<void> resetDay(String participantCode, int day);
 
   /// Admin-only order change — the UI blocks it once Day 1 has started.
   Future<void> setStyleOrder(String participantCode, StyleOrder order,
@@ -158,26 +160,27 @@ class FirestoreAdminRepository implements AdminRepository {
       _participant(participantCode).update({'activeDay': day});
 
   @override
-  Future<void> resetDay1(String participantCode) async {
+  Future<void> resetDay(String participantCode, int day) async {
     final batch = _firestore.batch();
 
-    // 1. Delete Day 1 session.
+    // 1. Delete the day's session.
     final sessionRef = _participant(participantCode)
         .collection('studySessions')
-        .doc('day1');
+        .doc('day$day');
     batch.delete(sessionRef);
 
-    // 2. Delete all reminderEvents in Day 1.
+    // 2. Delete all reminderEvents for that day.
     final eventsRef = sessionRef.collection('reminderEvents');
     final eventsSnap = await eventsRef.get();
     for (final doc in eventsSnap.docs) {
       batch.delete(doc.reference);
     }
 
-    // 3. Mark the participant for local wipe and return to Day 1.
+    // 3. Stamp the per-day reset signal (wipes the same day locally on the
+    //    device) and move the active-day gate back so the day can be redone.
     batch.update(_participant(participantCode), {
-      'activeDay': 1,
-      'resetDay1At': FieldValue.serverTimestamp(),
+      'activeDay': day,
+      'resetDay$day' 'At': FieldValue.serverTimestamp(),
     });
 
     await batch.commit();

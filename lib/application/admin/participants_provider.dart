@@ -36,8 +36,8 @@ class AdminParticipants extends _$AdminParticipants {
     ref.invalidateSelf();
   }
 
-  Future<void> resetDay1(String participantCode) async {
-    await ref.read(adminRepositoryProvider).resetDay1(participantCode);
+  Future<void> resetDay(String participantCode, int day) async {
+    await ref.read(adminRepositoryProvider).resetDay(participantCode, day);
     ref.invalidateSelf();
   }
 
