@@ -5,6 +5,7 @@ import '../../../domain/study/reminder_event.dart';
 import '../../../domain/study/scheduled_reminder.dart';
 import '../../../domain/study/study_config.dart';
 import '../../../domain/study/study_enums.dart';
+import '../../../domain/study/study_links.dart';
 import '../../../domain/study/study_session.dart';
 import '../../constants/app_config.dart';
 
@@ -15,8 +16,11 @@ abstract class AdminRepository {
 
   Future<StudyConfig> getConfig();
 
-  /// Replaces the four questionnaire link templates in `config/study`.
-  Future<void> saveQuestionnaireLinks(QuestionnaireLinks links);
+  /// Reads the global questionnaire link templates (`links/templates`).
+  Future<StudyLinkTemplates> getLinkTemplates();
+
+  /// Replaces the four questionnaire link templates in `links/templates`.
+  Future<void> saveLinkTemplates(StudyLinkTemplates templates);
 
   /// Creates the participant document plus both per-day schedule documents
   /// (copied from the config's default schedule template). The code is
@@ -39,10 +43,10 @@ abstract class AdminRepository {
   Future<void> setStyleOrder(String participantCode, StyleOrder order,
       {required bool assignmentOverride});
 
-  /// Writes per-participant questionnaire link overrides to the participant
-  /// document. Pass null [links] to clear the override (fall back to config).
-  Future<void> saveParticipantQuestionnaireLinks(
-      String participantCode, QuestionnaireLinks? links);
+  /// Writes the per-participant questionnaire switches to the participant
+  /// document (`linkFlags`), deciding which links the app offers.
+  Future<void> saveParticipantLinkFlags(
+      String participantCode, ParticipantLinkFlags flags);
 
   Future<List<ScheduledReminder>> getSchedule(
       String participantCode, int dayNumber);
@@ -83,7 +87,6 @@ class FirestoreAdminRepository implements AdminRepository {
     if (!snap.exists) {
       return const StudyConfig(
         protocolVersion: AppConfig.protocolVersion,
-        links: QuestionnaireLinks(),
         defaultSchedule: kDefaultScheduleTemplate,
       );
     }
@@ -91,29 +94,18 @@ class FirestoreAdminRepository implements AdminRepository {
   }
 
   @override
-  Future<void> saveQuestionnaireLinks(QuestionnaireLinks links) async {
-    // 1. Shared config remains the source of truth for new participants.
-    await _firestore.collection('config').doc('study').set({
-      'protocolVersion': AppConfig.protocolVersion,
-      'questionnaireLinks': links.toJson(),
-      'defaultSchedule':
-          kDefaultScheduleTemplate.map((r) => r.toJson()).toList(),
+  Future<StudyLinkTemplates> getLinkTemplates() async {
+    final snap = await _firestore.collection('links').doc('templates').get();
+    if (!snap.exists) return const StudyLinkTemplates();
+    return StudyLinkTemplates.fromJson(snap.data()!);
+  }
+
+  @override
+  Future<void> saveLinkTemplates(StudyLinkTemplates templates) async {
+    await _firestore.collection('links').doc('templates').set({
+      ...templates.toJson(),
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
-
-    // 2. Materialize the links on every existing participant document
-    //    (overwrite semantics: the stored links are fully replaced).
-    final participants = await _firestore.collection('participants').get();
-    const chunkSize = 400; // Firestore batch limit is 500 writes.
-    for (var i = 0; i < participants.docs.length; i += chunkSize) {
-      final batch = _firestore.batch();
-      for (final doc in participants.docs.skip(i).take(chunkSize)) {
-        batch.set(doc.reference, {
-          'questionnaireLinks': links.toJson(),
-        }, SetOptions(merge: true));
-      }
-      await batch.commit();
-    }
   }
 
   @override
@@ -142,7 +134,6 @@ class FirestoreAdminRepository implements AdminRepository {
     final batch = _firestore.batch();
     batch.set(_participant(code), {
       ...participant.toJson(),
-      'questionnaireLinks': config.links.toJson(),
       'createdAt': FieldValue.serverTimestamp(),
     });
     for (final day in [1, 2]) {
@@ -196,11 +187,9 @@ class FirestoreAdminRepository implements AdminRepository {
       });
 
   @override
-  Future<void> saveParticipantQuestionnaireLinks(
-          String participantCode, QuestionnaireLinks? links) =>
-      _participant(participantCode).update(links == null
-          ? {'questionnaireLinks': FieldValue.delete()}
-          : {'questionnaireLinks': links.toJson()});
+  Future<void> saveParticipantLinkFlags(
+          String participantCode, ParticipantLinkFlags flags) =>
+      _participant(participantCode).update({'linkFlags': flags.toJson()});
 
   @override
   Future<List<ScheduledReminder>> getSchedule(

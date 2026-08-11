@@ -23,6 +23,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /links/{doc} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
     match /participants/{pid} {
       allow read: if signedIn();
       allow create, update, delete: if isAdmin();   // styleOrder, activeDay: admin-owned

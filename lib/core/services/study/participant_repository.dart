@@ -2,6 +2,7 @@ import '../../../domain/study/day_schedule.dart';
 import '../../../domain/study/participant.dart';
 import '../../../domain/study/study_config.dart';
 import '../../../domain/study/study_enums.dart';
+import '../../../domain/study/study_links.dart';
 
 /// Thrown when no participant document exists for the entered code.
 class ParticipantNotFoundException implements Exception {
@@ -30,4 +31,7 @@ abstract class ParticipantRepository {
     int dayNumber, {
     required PresentationStyle style,
   });
+
+  /// The global questionnaire link templates (`links/templates`).
+  Future<StudyLinkTemplates> fetchLinkTemplates();
 }

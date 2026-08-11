@@ -6,6 +6,7 @@ import '../../../domain/study/day_schedule.dart';
 import '../../../domain/study/participant.dart';
 import '../../../domain/study/study_config.dart';
 import '../../../domain/study/study_enums.dart';
+import '../../../domain/study/study_links.dart';
 
 /// Key-value local store (plan §6.1 `local_store.dart`).
 ///
@@ -90,6 +91,20 @@ class LocalStore {
     if (raw == null) return null;
     return DaySchedule.fromJson((jsonDecode(raw) as Map).cast<String, Object?>(),
         style: style);
+  }
+
+  // ── Cached link templates (offline ID entry) ─────────────────────
+
+  static const _keyLinkTemplates = 'cache.linkTemplates';
+
+  Future<void> cacheLinkTemplates(StudyLinkTemplates templates) =>
+      _prefs.setString(_keyLinkTemplates, jsonEncode(templates.toJson()));
+
+  StudyLinkTemplates readCachedLinkTemplates() {
+    final raw = _prefs.getString(_keyLinkTemplates);
+    if (raw == null) return const StudyLinkTemplates();
+    return StudyLinkTemplates.fromJson(
+        (jsonDecode(raw) as Map).cast<String, Object?>());
   }
 
   // ── Active session pointer (resume after accidental quit) ────────
