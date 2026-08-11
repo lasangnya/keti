@@ -344,28 +344,22 @@ class _StudyPageState extends ConsumerState<StudyPage> {
         FilledButton.icon(
           icon: const Icon(Icons.play_arrow),
           label: const Text(AppStrings.startDay2),
-          onPressed: day2Activated
-              ? () async {
-                  // Clear the finished day-1 session and load the day-2
-                  // schedule without dropping back to the tutorial.
-                  ref
-                      .read(sessionControllerProvider.notifier)
-                      .resetForNewDay();
-                  await ref
-                      .read(participantEntryProvider.notifier)
-                      .loadDay2();
-                  if (!mounted) return;
-                  // If loadDay2 could not proceed, tell the researcher why.
-                  final msg = ref
-                      .read(participantEntryProvider)
-                      .errorMessage;
-                  if (msg != null && mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(msg)),
-                    );
-                  }
-                }
-              : null,
+          // Always tappable: clicking re-checks activation and always gives
+          // visible feedback (snackbar) instead of a silent no-op.
+          onPressed: () async {
+            // Clear the finished day-1 session and load the day-2
+            // schedule without dropping back to the tutorial.
+            ref.read(sessionControllerProvider.notifier).resetForNewDay();
+            await ref.read(participantEntryProvider.notifier).loadDay2();
+            if (!mounted) return;
+            // If loadDay2 could not proceed, tell the researcher why.
+            final msg = ref.read(participantEntryProvider).errorMessage;
+            if (msg != null && mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(msg)),
+              );
+            }
+          },
         ),
         if (!day2Activated) ...[
           const SizedBox(height: 8),

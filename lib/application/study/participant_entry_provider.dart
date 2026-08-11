@@ -282,8 +282,11 @@ class ParticipantEntry extends _$ParticipantEntry {
 
     try {
       final fresh = await repository.fetchParticipant(current.participantCode);
+      debugPrint('loadDay2: fresh activeDay=${fresh.activeDay} '
+          '(current was ${current.activeDay})');
       if (fresh.activeDay != 2) {
         // Not activated yet — keep showing the day-1 completion screen.
+        debugPrint('loadDay2: day 2 not activated yet');
         state = state.copyWith(
           participant: fresh,
           errorMessage:

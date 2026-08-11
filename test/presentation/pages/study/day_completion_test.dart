@@ -141,14 +141,16 @@ void main() {
       '?usp=pp_url&entry.10=P001&entry.11=ambient',
     );
 
-    // Start Day 2 is offered immediately; P001 is not day-2 activated in the
-    // mock → button disabled + hint.
+    // Start Day 2 is offered immediately and always tappable; P001 is not
+    // day-2 activated in the mock → tapping shows the not-activated snackbar.
     expect(find.text('Start Day 2'), findsOneWidget);
     final startDay2 = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, 'Start Day 2'),
     );
-    expect(startDay2.onPressed, isNull);
-    expect(find.textContaining('has not been activated'), findsOneWidget);
+    expect(startDay2.onPressed, isNotNull);
+    await tester.tap(find.text('Start Day 2'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('has not been activated'), findsWidgets);
   });
 
   testWidgets('day 2 completion reveals the end-of-study questionnaire',
