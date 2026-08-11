@@ -141,6 +141,12 @@ describe('anonymous participant app', () => {
       await setDoc(doc(context.firestore(), 'config', 'study'), {
         protocolVersion: '2026-08-v1',
       });
+      await setDoc(doc(context.firestore(), 'links', 'templates'), {
+        preStudy: 'https://forms.example/pre?pid={participantId}',
+        endOfDayType1: 'https://forms.example/ambient?pid={participantId}',
+        endOfDayType2: 'https://forms.example/character?pid={participantId}',
+        final: 'https://forms.example/final?pid={participantId}',
+      });
       await setDoc(
         doc(context.firestore(), 'participants', 'P014', 'schedules', 'day1'),
         { dayId: 'day1', dayNumber: 1, reminders: [] }
@@ -150,6 +156,7 @@ describe('anonymous participant app', () => {
     const db = anonDb();
     await assertSucceeds(getDoc(doc(db, 'participants', 'P014')));
     await assertSucceeds(getDoc(doc(db, 'config', 'study')));
+    await assertSucceeds(getDoc(doc(db, 'links', 'templates')));
     await assertSucceeds(
       getDoc(doc(db, 'participants', 'P014', 'schedules', 'day1'))
     );
@@ -169,6 +176,11 @@ describe('anonymous participant app', () => {
     );
     await assertFails(
       setDoc(doc(db, 'config', 'study'), { protocolVersion: 'hacked' })
+    );
+    await assertFails(
+      setDoc(doc(db, 'links', 'templates'), {
+        preStudy: 'https://evil.example',
+      })
     );
     await assertFails(
       setDoc(
@@ -318,6 +330,19 @@ describe('admin (researcher) access', () => {
     );
     await assertSucceeds(
       setDoc(doc(db, 'config', 'study'), { protocolVersion: '2026-08-v1' })
+    );
+    await assertSucceeds(
+      setDoc(doc(db, 'links', 'templates'), {
+        preStudy: 'https://forms.example/pre?pid={participantId}',
+        endOfDayType1: 'https://forms.example/ambient?pid={participantId}',
+        endOfDayType2: 'https://forms.example/character?pid={participantId}',
+        final: 'https://forms.example/final?pid={participantId}',
+      })
+    );
+    await assertSucceeds(
+      updateDoc(doc(db, 'links', 'templates'), {
+        final: 'https://forms.example/final-v2?pid={participantId}',
+      })
     );
   });
 });
