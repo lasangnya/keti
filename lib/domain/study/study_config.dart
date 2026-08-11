@@ -29,7 +29,11 @@ class QuestionnaireLinks {
   String? endLinkForDay(int dayNumber) =>
       dayNumber == 1 ? day1End : day2End;
 
-  /// Substitutes `{participantId}` and `{day}` placeholders in [template].
+  /// Substitutes placeholders in [template]:
+  ///  - `{participantId}` → the participant code (e.g. `P014`)
+  ///  - `{day}` → the day number (e.g. `1`)
+  ///  - `{session}` → `Session 1` / `Session 2` from [day] (for Google Forms
+  ///    multiple-choice prefill; the value is URL-encoded)
   static String fill(
     String template, {
     required String participantId,
@@ -37,7 +41,10 @@ class QuestionnaireLinks {
   }) =>
       template
           .replaceAll('{participantId}', participantId)
-          .replaceAll('{day}', day?.toString() ?? '');
+          .replaceAll('{day}', day?.toString() ?? '')
+          .replaceAll(
+              '{session}',
+              day == null ? '' : Uri.encodeQueryComponent('Session $day'));
 
   Map<String, Object?> toJson() => {
         'start': start,

@@ -31,6 +31,24 @@ void main() {
       expect(filled, 'https://forms.example/end?pid=P014&day=1');
     });
 
+    test('fill substitutes the session placeholder from the day', () {
+      final template = 'https://forms.example/end?entry.1={participantId}'
+          '&entry.2={session}';
+      expect(
+        QuestionnaireLinks.fill(template, participantId: 'P014', day: 1),
+        'https://forms.example/end?entry.1=P014&entry.2=Session+1',
+      );
+      expect(
+        QuestionnaireLinks.fill(template, participantId: 'P014', day: 2),
+        'https://forms.example/end?entry.1=P014&entry.2=Session+2',
+      );
+      // No day → placeholder removed, nothing substituted.
+      expect(
+        QuestionnaireLinks.fill(template, participantId: 'P014'),
+        'https://forms.example/end?entry.1=P014&entry.2=',
+      );
+    });
+
     test('fill leaves templates without placeholders untouched', () {
       expect(
         QuestionnaireLinks.fill('https://forms.example/x', participantId: 'P014'),

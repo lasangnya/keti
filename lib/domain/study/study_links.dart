@@ -35,11 +35,18 @@ class StudyLinkTemplates {
   /// Final questionnaire (offered after Day 2 completes).
   final String? finalLink;
 
-  /// Substitutes `{participantId}` (and `{day}` if present) in [template].
+  /// Substitutes placeholders in [template]:
+  ///  - `{participantId}` → the participant code (e.g. `P014`)
+  ///  - `{day}` → the day number (e.g. `1`)
+  ///  - `{session}` → `Session 1` / `Session 2` from [day] (for Google Forms
+  ///    multiple-choice prefill; the value is URL-encoded)
   static String fill(String template, {required String participantId, int? day}) =>
       template
           .replaceAll('{participantId}', participantId)
-          .replaceAll('{day}', day?.toString() ?? '');
+          .replaceAll('{day}', day?.toString() ?? '')
+          .replaceAll(
+              '{session}',
+              day == null ? '' : Uri.encodeQueryComponent('Session $day'));
 
   Map<String, Object?> toJson() => {
         'preStudy': preStudy,
