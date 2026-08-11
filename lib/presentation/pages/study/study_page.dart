@@ -347,6 +347,7 @@ class _StudyPageState extends ConsumerState<StudyPage> {
           // Always tappable: clicking re-checks activation and always gives
           // visible feedback (snackbar) instead of a silent no-op.
           onPressed: () async {
+            debugPrint('Start Day 2 tapped');
             // Clear the finished day-1 session and load the day-2
             // schedule without dropping back to the tutorial.
             ref.read(sessionControllerProvider.notifier).resetForNewDay();
@@ -354,6 +355,7 @@ class _StudyPageState extends ConsumerState<StudyPage> {
             if (!mounted) return;
             // If loadDay2 could not proceed, tell the researcher why.
             final msg = ref.read(participantEntryProvider).errorMessage;
+            debugPrint('Start Day 2 after load: errorMessage=$msg');
             if (msg != null && mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(msg)),

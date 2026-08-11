@@ -295,13 +295,17 @@ class ParticipantEntry extends _$ParticipantEntry {
         return;
       }
       final config = await repository.fetchStudyConfig();
+      debugPrint('loadDay2: config ok (${config.protocolVersion})');
       final templates = await repository.fetchLinkTemplates();
+      debugPrint('loadDay2: templates ok');
       final style = styleForDay(fresh.styleOrder, fresh.activeDay);
       final schedule = await repository.fetchSchedule(
         fresh.participantCode,
         fresh.activeDay,
         style: style,
       );
+      debugPrint('loadDay2: schedule ok (day ${schedule.dayNumber}, '
+          '${schedule.reminders.length} reminders)');
       final links = resolveQuestionnaireLinks(
         templates: templates,
         flags: fresh.linkFlags,
@@ -313,9 +317,12 @@ class ParticipantEntry extends _$ParticipantEntry {
       await store.cacheStudyConfig(config);
       await store.cacheScheduleFor(fresh.participantCode, schedule);
       await store.cacheLinkTemplates(templates);
+      debugPrint('loadDay2: cached');
 
       state = await _readyState(csv, fresh, config, schedule, links,
           fromCache: false);
+      debugPrint('loadDay2: state updated, dayAlreadyCompleted='
+          '${state.dayAlreadyCompleted}, day=${state.daySchedule?.dayNumber}');
     } catch (e) {
       // Surface the failure instead of silently doing nothing.
       debugPrint('loadDay2 error: $e');
