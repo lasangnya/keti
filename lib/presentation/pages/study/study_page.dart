@@ -219,8 +219,7 @@ class _StudyPageState extends ConsumerState<StudyPage> {
     final s = session.session;
     final dayNumber = s?.dayNumber ?? entry.daySchedule?.dayNumber ?? 1;
     final code = s?.participantCode ?? entry.participant?.participantCode ?? '';
-    final links = s?.links ??
-        entry.config?.links.resolvedWith(entry.participant!.questionnaireLinks);
+    final links = s?.links ?? entry.links;
     final store = ref.watch(localStoreProvider).asData?.value;
     final endLink = links?.endLinkForDay(dayNumber);
     final finalLink = dayNumber == 2 ? links?.finalLink : null;

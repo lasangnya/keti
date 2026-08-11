@@ -150,13 +150,13 @@ class _ParticipantTutorialState extends ConsumerState<ParticipantTutorial> {
         return [
           Text(AppStrings.tutorialPrepareBody, style: theme.textTheme.bodyMedium),
           const SizedBox(height: 16),
-          if (entry.config?.links.start != null) ...[
+          if (entry.links?.start != null) ...[
             FilledButton.tonalIcon(
               icon: const Icon(Icons.open_in_new, size: 16),
               label: const Text(AppStrings.tutorialOpenPreStudy),
               onPressed: () => LinkLauncherService.open(
                 QuestionnaireLinks.fill(
-                  entry.config!.links.start!,
+                  entry.links!.start!,
                   participantId: entry.participant!.participantCode,
                 ),
               ),

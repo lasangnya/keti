@@ -12,6 +12,7 @@ import '../../domain/study/condition_assignment.dart';
 import '../../domain/study/day_schedule.dart';
 import '../../domain/study/participant.dart';
 import '../../domain/study/study_config.dart';
+import '../../domain/study/study_links.dart';
 import '../../domain/study/study_session.dart';
 import 'participant_providers.dart';
 
@@ -25,6 +26,7 @@ class ParticipantEntryState {
     this.participant,
     this.config,
     this.daySchedule,
+    this.links,
     this.fromCache = false,
     this.resumableDayId,
     this.dayAlreadyCompleted = false,
@@ -39,6 +41,10 @@ class ParticipantEntryState {
 
   /// The schedule for the participant's currently active day.
   final DaySchedule? daySchedule;
+
+  /// The participant's resolved questionnaire links (templates × linkFlags
+  /// × style order), fetched together with the schedule at ID entry.
+  final QuestionnaireLinks? links;
 
   /// True when data came from the local cache because the network failed.
   final bool fromCache;
@@ -57,6 +63,7 @@ class ParticipantEntryState {
     Participant? participant,
     StudyConfig? config,
     DaySchedule? daySchedule,
+    QuestionnaireLinks? links,
     bool? fromCache,
     String? resumableDayId,
     bool? dayAlreadyCompleted,
@@ -67,6 +74,7 @@ class ParticipantEntryState {
         participant: participant ?? this.participant,
         config: config ?? this.config,
         daySchedule: daySchedule ?? this.daySchedule,
+        links: links ?? this.links,
         fromCache: fromCache ?? this.fromCache,
         resumableDayId: resumableDayId ?? this.resumableDayId,
         dayAlreadyCompleted: dayAlreadyCompleted ?? this.dayAlreadyCompleted,
@@ -108,11 +116,17 @@ class ParticipantEntry extends _$ParticipantEntry {
     try {
       final participant = await repository.fetchParticipant(code);
       final config = await repository.fetchStudyConfig();
+      final templates = await repository.fetchLinkTemplates();
       final style = styleForDay(participant.styleOrder, participant.activeDay);
       final schedule = await repository.fetchSchedule(
         participant.participantCode,
         participant.activeDay,
         style: style,
+      );
+      final links = resolveQuestionnaireLinks(
+        templates: templates,
+        flags: participant.linkFlags,
+        styleOrder: participant.styleOrder,
       );
 
       // --- NEW: Reset Day 1 signal detection ---
@@ -139,13 +153,14 @@ class ParticipantEntry extends _$ParticipantEntry {
       await store.cacheParticipant(participant);
       await store.cacheStudyConfig(config);
       await store.cacheScheduleFor(participant.participantCode, schedule);
+      await store.cacheLinkTemplates(templates);
 
       // Best-effort background reconciliation of any offline sessions.
       unawaited(ref
           .read(syncServiceProvider)
           .reconcileParticipant(participant.participantCode));
 
-      state = await _readyState(csv, participant, config, schedule,
+      state = await _readyState(csv, participant, config, schedule, links,
           fromCache: false);
     } on ParticipantNotFoundException {
       state = ParticipantEntryState(
@@ -186,8 +201,14 @@ class ParticipantEntry extends _$ParticipantEntry {
                 'Could not load the schedule for $code (offline and no cached schedule).');
         return;
       }
+      final cachedTemplates = store.readCachedLinkTemplates();
+      final links = resolveQuestionnaireLinks(
+        templates: cachedTemplates,
+        flags: cached.linkFlags,
+        styleOrder: cached.styleOrder,
+      );
       state = await _readyState(csv, cached, cachedConfig, cachedSchedule,
-          fromCache: true);
+          links, fromCache: true);
     }
   }
 
@@ -195,7 +216,8 @@ class ParticipantEntry extends _$ParticipantEntry {
     CsvStore csv,
     Participant participant,
     StudyConfig config,
-    DaySchedule schedule, {
+    DaySchedule schedule,
+    QuestionnaireLinks links, {
     required bool fromCache,
   }) async {
     final session =
@@ -207,6 +229,7 @@ class ParticipantEntry extends _$ParticipantEntry {
       participant: participant,
       config: config,
       daySchedule: schedule,
+      links: links,
       fromCache: fromCache,
       resumableDayId: resumable ? schedule.dayId : null,
       dayAlreadyCompleted: completed,

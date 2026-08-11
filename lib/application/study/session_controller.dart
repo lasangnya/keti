@@ -11,6 +11,7 @@ import '../../domain/study/reminder_content_resolver.dart';
 import '../../domain/study/reminder_event.dart';
 import '../../domain/study/schedule_evaluator.dart';
 import '../../domain/study/scheduled_reminder.dart';
+import '../../domain/study/study_config.dart';
 import '../../domain/study/study_enums.dart';
 import '../../domain/study/study_session.dart';
 import '../reminders/reminder_orchestrator.dart';
@@ -95,11 +96,9 @@ class SessionController extends _$SessionController {
     if (!entry.isReady || state.active) return;
     final participant = entry.participant!;
     final schedule = entry.daySchedule!;
-    final config = entry.config!;
 
     final now = _now();
-    final resolvedLinks =
-        config.links.resolvedWith(participant.questionnaireLinks);
+    final resolvedLinks = entry.links ?? const QuestionnaireLinks();
     final session = StudySession(
       participantCode: participant.participantCode,
       dayNumber: schedule.dayNumber,

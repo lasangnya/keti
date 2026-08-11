@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../domain/study/study_config.dart';
+import '../../domain/study/study_links.dart';
 import 'admin_providers.dart';
 
 part 'study_config_provider.g.dart';
@@ -10,9 +11,21 @@ class AdminStudyConfig extends _$AdminStudyConfig {
   @override
   Future<StudyConfig> build() =>
       ref.watch(adminRepositoryProvider).getConfig();
+}
 
-  Future<void> saveLinks(QuestionnaireLinks links) async {
-    await ref.read(adminRepositoryProvider).saveQuestionnaireLinks(links);
+/// The global questionnaire link templates (`links/templates`).
+@riverpod
+Future<StudyLinkTemplates> adminLinkTemplates(Ref ref) =>
+    ref.watch(adminRepositoryProvider).getLinkTemplates();
+
+@riverpod
+class AdminLinkTemplatesEditor extends _$AdminLinkTemplatesEditor {
+  @override
+  Future<StudyLinkTemplates> build() =>
+      ref.watch(adminRepositoryProvider).getLinkTemplates();
+
+  Future<void> save(StudyLinkTemplates templates) async {
+    await ref.read(adminRepositoryProvider).saveLinkTemplates(templates);
     ref.invalidateSelf();
   }
 }
