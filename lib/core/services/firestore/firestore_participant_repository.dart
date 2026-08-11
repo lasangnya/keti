@@ -44,8 +44,7 @@ class FirestoreParticipantRepository implements ParticipantRepository {
         .doc('day$dayNumber')
         .get();
     if (!snap.exists) {
-      throw StateError(
-          'No schedule document for $participantCode day$dayNumber.');
+      throw ScheduleNotFoundException(participantCode, dayNumber);
     }
     return DaySchedule.fromJson(snap.data()!, style: style);
   }

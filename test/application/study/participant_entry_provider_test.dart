@@ -69,4 +69,48 @@ void main() {
     // leaks into unrelated UI (e.g. the Start Day 2 snackbar).
     expect(state.errorMessage, isNull);
   });
+
+  test('enterCode forces the requested day number on a corrupt schedule doc',
+      () async {
+    // Simulates the real-world bug: the day-2 schedule document exists but
+    // carries dayNumber 1 (fromJson would otherwise resolve it as day 1).
+    container = ProviderContainer(overrides: [
+      participantRepositoryProvider
+          .overrideWithValue(_CorruptDayNumberRepository()),
+      localStoreProvider.overrideWith(
+          (ref) async => LocalStore(await SharedPreferences.getInstance())),
+      csvStoreProvider.overrideWithValue(CsvStore(rootDir: csvRoot)),
+    ]);
+    addTearDown(container.dispose);
+
+    await container
+        .read(participantEntryProvider.notifier)
+        .enterCode('P002'); // activeDay 2 in the mock
+
+    final state = container.read(participantEntryProvider);
+    expect(state.isReady, isTrue);
+    expect(state.daySchedule!.dayNumber, 2);
+    expect(state.daySchedule!.dayId, 'day2');
+    expect(state.dayAlreadyCompleted, isFalse);
+  });
+}
+
+/// Mock repo whose day-2 schedule document carries `dayNumber: 1` — the
+/// corrupted-doc scenario that used to break the day-2 flow.
+class _CorruptDayNumberRepository extends MockParticipantRepository {
+  @override
+  Future<DaySchedule> fetchSchedule(
+    String participantCode,
+    int dayNumber, {
+    required PresentationStyle style,
+  }) async {
+    final base = await super.fetchSchedule(participantCode, dayNumber,
+        style: style);
+    // Day-2 doc incorrectly stored as day 1.
+    return DaySchedule(
+      dayNumber: 1,
+      style: base.style,
+      reminders: base.reminders,
+    );
+  }
 }

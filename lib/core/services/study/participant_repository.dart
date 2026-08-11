@@ -14,6 +14,20 @@ class ParticipantNotFoundException implements Exception {
   String toString() => 'ParticipantNotFoundException: $code';
 }
 
+/// Thrown when a per-day schedule document is missing in Firestore
+/// (`participants/{code}/schedules/day{N}`). The researcher must create it
+/// (admin → participant → Schedule → Save).
+class ScheduleNotFoundException implements Exception {
+  const ScheduleNotFoundException(this.participantCode, this.dayNumber);
+
+  final String participantCode;
+  final int dayNumber;
+
+  @override
+  String toString() =>
+      'ScheduleNotFoundException: $participantCode day$dayNumber';
+}
+
 /// Read-side contract for everything the ID-entry flow needs (plan §3.2).
 ///
 /// M2 ships an in-memory [MockParticipantRepository]; M3 swaps in the

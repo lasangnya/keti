@@ -29,10 +29,11 @@ class _ParticipantDetailPageState
   /// 8-entry template when none exists). Rows can be added/removed freely;
   /// [ScheduledReminder.reminderNumber] is renumbered 1..N on save.
   final List<_ScheduleRow> _rows = [];
-  Future<List<ScheduledReminder>>? _scheduleFuture;
+  Future<({List<ScheduledReminder> reminders, bool saved})>? _scheduleFuture;
   int? _futureDay;
   String? _futureCode;
   bool _scheduleLoaded = false;
+  bool _scheduleWasSaved = false;
   int _scheduleDay = 1;
   String? _message;
 
@@ -409,9 +410,14 @@ class _ParticipantDetailPageState
     if (future == null ||
         _futureDay != _scheduleDay ||
         _futureCode != widget.participantCode) {
-      _scheduleFuture = ref
-          .read(adminRepositoryProvider)
-          .getSchedule(widget.participantCode, _scheduleDay);
+      final repo = ref.read(adminRepositoryProvider);
+      _scheduleFuture = () async {
+        final reminders =
+            await repo.getSchedule(widget.participantCode, _scheduleDay);
+        final saved =
+            await repo.hasSavedSchedule(widget.participantCode, _scheduleDay);
+        return (reminders: reminders, saved: saved);
+      }();
       _futureDay = _scheduleDay;
       _futureCode = widget.participantCode;
     }
@@ -439,11 +445,11 @@ class _ParticipantDetailPageState
               ],
             ),
             const SizedBox(height: 8),
-            FutureBuilder<List<ScheduledReminder>>(
+            FutureBuilder<({List<ScheduledReminder> reminders, bool saved})>(
               future: _scheduleFuture,
               builder: (context, snapshot) {
-                final reminders = snapshot.data;
-                if (reminders == null) {
+                final data = snapshot.data;
+                if (data == null) {
                   // Waiting for data: show loading unless we already have
                   // rows for this exact day/participant.
                   if (_rows.isEmpty ||
@@ -454,10 +460,30 @@ class _ParticipantDetailPageState
                 } else if (!_scheduleLoaded ||
                     _loadedDay != _scheduleDay ||
                     _loadedCode != widget.participantCode) {
-                  _loadRows(reminders);
+                  _loadRows(data.reminders);
+                  _scheduleWasSaved = data.saved;
                 }
                 return Column(
                   children: [
+                    if (!_scheduleWasSaved) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(8),
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.errorContainer,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'No saved schedule for Day $_scheduleDay yet — '
+                          'this participant cannot start it. '
+                          'Press "Save schedule" to create it.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onErrorContainer,
+                          ),
+                        ),
+                      ),
+                    ],
                     for (var i = 0; i < _rows.length; i++)
                       _buildScheduleRow(theme, i),
                     const SizedBox(height: 8),
@@ -622,8 +648,11 @@ class _ParticipantDetailPageState
     await ref.read(adminParticipantsProvider.notifier).saveSchedule(
         widget.participantCode, _scheduleDay, updated);
     ref.invalidate(participantDetailProvider(widget.participantCode));
-    setState(() => _message =
-        'Schedule saved for day $_scheduleDay (${updated.length} entries).');
+    setState(() {
+      _scheduleWasSaved = true;
+      _message =
+          'Schedule saved for day $_scheduleDay (${updated.length} entries).';
+    });
   }
 }
 

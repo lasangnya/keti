@@ -118,11 +118,21 @@ class ParticipantEntry extends _$ParticipantEntry {
       final config = await repository.fetchStudyConfig();
       final templates = await repository.fetchLinkTemplates();
       final style = styleForDay(participant.styleOrder, participant.activeDay);
-      final schedule = await repository.fetchSchedule(
+      final fetched = await repository.fetchSchedule(
         participant.participantCode,
         participant.activeDay,
         style: style,
       );
+      // Force the requested day number (see loadDay2): the stored schedule
+      // document may carry a wrong/missing dayNumber (fromJson defaults to 1),
+      // which would resolve against the wrong day's session.
+      final schedule = fetched.dayNumber == participant.activeDay
+          ? fetched
+          : DaySchedule(
+              dayNumber: participant.activeDay,
+              style: fetched.style,
+              reminders: fetched.reminders,
+            );
       final links = resolveQuestionnaireLinks(
         templates: templates,
         flags: participant.linkFlags,
@@ -165,6 +175,12 @@ class ParticipantEntry extends _$ParticipantEntry {
     } on ParticipantNotFoundException {
       state = ParticipantEntryState(
           errorMessage: 'Unknown participant code $code.');
+    } on ScheduleNotFoundException catch (e) {
+      debugPrint('ParticipantEntry: schedule missing for $code');
+      state = ParticipantEntryState(
+          errorMessage:
+              'No schedule is set up for $code (day ${e.dayNumber}). '
+              'Please ask the researcher to save the schedule in the admin app.');
     } catch (e) {
       debugPrint('ParticipantEntry error: $e');
 
@@ -323,6 +339,13 @@ class ParticipantEntry extends _$ParticipantEntry {
           fromCache: false);
       debugPrint('loadDay2: state updated, dayAlreadyCompleted='
           '${state.dayAlreadyCompleted}, day=${state.daySchedule?.dayNumber}');
+    } on ScheduleNotFoundException {
+      debugPrint('loadDay2: schedule document missing');
+      state = state.copyWith(
+        errorMessage:
+            'Day 2 schedule is not set up yet. Please ask the researcher '
+            'to save the Day 2 schedule in the admin app.',
+      );
     } catch (e) {
       // Surface the failure instead of silently doing nothing.
       debugPrint('loadDay2 error: $e');

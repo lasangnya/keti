@@ -85,13 +85,13 @@ void main() {
     expect(schedule.reminders, kDefaultScheduleTemplate);
   });
 
-  test('fetchSchedule throws StateError when the day doc is missing',
+  test('fetchSchedule throws ScheduleNotFoundException when the day doc is missing',
       () async {
     await seed();
     expect(
       () => repository.fetchSchedule('P014', 2,
           style: PresentationStyle.ambient),
-      throwsStateError,
+      throwsA(isA<ScheduleNotFoundException>()),
     );
   });
 }

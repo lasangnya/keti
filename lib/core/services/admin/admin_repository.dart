@@ -51,6 +51,11 @@ abstract class AdminRepository {
   Future<List<ScheduledReminder>> getSchedule(
       String participantCode, int dayNumber);
 
+  /// True when a schedule document exists for the participant/day (i.e. the
+  /// researcher has actually saved it — a missing doc silently falls back to
+  /// the template in [getSchedule]).
+  Future<bool> hasSavedSchedule(String participantCode, int dayNumber);
+
   Future<void> saveSchedule(String participantCode, int dayNumber,
       List<ScheduledReminder> reminders);
 
@@ -201,6 +206,10 @@ class FirestoreAdminRepository implements AdminRepository {
         ScheduledReminder.fromJson((r as Map).cast<String, Object?>()),
     ];
   }
+
+  @override
+  Future<bool> hasSavedSchedule(String participantCode, int dayNumber) async =>
+      (await _scheduleDoc(participantCode, dayNumber).get()).exists;
 
   @override
   Future<void> saveSchedule(String participantCode, int dayNumber,
