@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../core/services/compliance_card_service.dart';
@@ -25,9 +23,9 @@ typedef ReminderOutcomeCallback = Future<void> Function(String action);
 ///
 /// ```
 /// show reminder (placement)      → onDelivered  (native onShown confirmed)
-/// cardDelayMs after shown        → onCardShown (card appears top-right)
+/// reminder hides (~10s anim)     → onReminderHidden
+/// compliance card top-right      → onCardShown (after reminder disappears)
 /// button press / card timeout    → onCardAnswered(action) | onCardTimedOut
-/// reminder hides independently   → onReminderHidden
 /// any technical failure          → onFailed(reason) — sequence aborts
 /// ```
 ///
@@ -42,7 +40,6 @@ class ReminderOrchestrator {
     required String button1Text,
     required String button2Text,
     required int visibilityMs,
-    required int cardDelayMs,
     required int cardTimeoutMs,
     required ReminderCallback onDelivered,
     required ReminderCallback onReminderHidden,
@@ -71,16 +68,16 @@ class ReminderOrchestrator {
       }
       await onDelivered();
 
-      // The card appears cardDelayMs after the reminder is SHOWN (not after
-      // it hides). The reminder hide is recorded independently — it can
-      // happen before or after the card flow.
-      final hiddenFuture = ReminderChannels.waitForHidden(
+      // The compliance card appears only AFTER the reminder has disappeared
+      // (the reminder animation is ~10s, after which the native side reports
+      // hidden). The card then auto-dismisses after cardTimeoutMs without a
+      // response.
+      await ReminderChannels.waitForHidden(
         reminderId,
         window: Duration(milliseconds: visibilityMs),
       );
-      unawaited(hiddenFuture.then((_) => onReminderHidden()));
+      await onReminderHidden();
 
-      await Future.delayed(Duration(milliseconds: cardDelayMs));
       await ComplianceCardService.show(
         reminderId: reminderId,
         question: question,

@@ -27,9 +27,6 @@ class AppConfig {
   // ── Protocol timing constants (plan §10) ─────────────────────────
   static const reminderVisibilityMs = 45000;
 
-  /// Compliance card appears this long after the reminder is shown.
-  static const complianceCardDelayMs = 15000;
-
   /// Compliance card auto-dismisses after this long without a response;
   /// an auto-dismissed card is recorded as `Ignored`.
   static const complianceCardTimeoutMs = 15000;

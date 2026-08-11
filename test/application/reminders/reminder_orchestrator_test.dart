@@ -65,13 +65,7 @@ void main() {
       .resolve(ReminderKind.hydration, PresentationStyle.ambient)
       .content;
 
-  // Short timings so the real-timer test completes quickly: the card
-  // appears 10ms after shown and auto-dismisses after 30ms without a
-  // response.
-  const cardDelayMs = 10;
-  const cardTimeoutMs = 30;
-
-  Future<void> startSequence(List<String> stages) =>
+  Future<void> startSequence(List<String> stages, {int cardTimeoutMs = 30}) =>
       ReminderOrchestrator().runReminderSequence(
         reminderId: 'reminder01',
         content: content,
@@ -80,7 +74,6 @@ void main() {
         button1Text: 'Done',
         button2Text: 'Not now',
         visibilityMs: 45000,
-        cardDelayMs: cardDelayMs,
         cardTimeoutMs: cardTimeoutMs,
         onDelivered: () async => stages.add('delivered'),
         onReminderHidden: () async => stages.add('hidden'),
@@ -90,7 +83,7 @@ void main() {
         onFailed: (reason) async => stages.add('failed:$reason'),
       );
 
-  test('card appears cardDelayMs after shown and carries correct args',
+  test('card appears only after the reminder hides, with correct args',
       () async {
     final stages = <String>[];
     final sequence = startSequence(stages);
@@ -102,28 +95,23 @@ void main() {
     expect(showArgs[PlatformChannels.keyReminderId], 'reminder01');
     expect(showArgs[PlatformChannels.keyVisibilityMs], 45000);
 
-    // Native confirms shown → delivered. Card NOT shown yet (delay pending).
+    // Native confirms shown → delivered. Card NOT shown yet (reminder up).
     await emitNative(
         PlatformChannels.cursorPill, PlatformChannels.methodOnShown, 'reminder01');
     await pumpEventQueue();
     expect(stages, ['delivered']);
     expect(capturedCard, isEmpty);
 
-    // After the delay the compliance card appears.
-    await Future.delayed(Duration(milliseconds: cardDelayMs + 5));
+    // Reminder disappears → hidden, then the compliance card appears.
+    await emitNative(PlatformChannels.cursorPill,
+        PlatformChannels.methodOnHidden, 'reminder01');
     await pumpEventQueue();
-    expect(stages, ['delivered', 'cardShown']);
+    expect(stages, ['delivered', 'hidden', 'cardShown']);
     expect(capturedCard, hasLength(1));
     final cardArgs = capturedCard.single.arguments as Map;
     expect(cardArgs[PlatformChannels.keyReminderId], 'reminder01');
     expect(cardArgs[PlatformChannels.keyQuestion], 'Did you drink some water?');
-    expect(cardArgs[PlatformChannels.keyTimeoutMs], cardTimeoutMs);
-
-    // Reminder hides independently (before the card times out here).
-    await emitNative(
-        PlatformChannels.cursorPill, PlatformChannels.methodOnHidden, 'reminder01');
-    await pumpEventQueue();
-    expect(stages, contains('hidden'));
+    expect(cardArgs[PlatformChannels.keyTimeoutMs], 30);
 
     // Participant taps "Done" → completed.
     await emitNative(PlatformChannels.complianceCard,
@@ -132,7 +120,7 @@ void main() {
       PlatformChannels.keyAction: 'completed',
     });
     await sequence;
-    expect(stages, ['delivered', 'cardShown', 'hidden', 'answered:completed']);
+    expect(stages, ['delivered', 'hidden', 'cardShown', 'answered:completed']);
   });
 
   test('dismiss action maps to dismissed outcome', () async {
@@ -142,7 +130,8 @@ void main() {
     await emitNative(
         PlatformChannels.cursorPill, PlatformChannels.methodOnShown, 'reminder01');
     await pumpEventQueue();
-    await Future.delayed(Duration(milliseconds: cardDelayMs + 5));
+    await emitNative(PlatformChannels.cursorPill,
+        PlatformChannels.methodOnHidden, 'reminder01');
     await pumpEventQueue();
     await emitNative(PlatformChannels.complianceCard,
         PlatformChannels.methodOnCardAction, {
@@ -160,11 +149,12 @@ void main() {
     await emitNative(
         PlatformChannels.cursorPill, PlatformChannels.methodOnShown, 'reminder01');
     await pumpEventQueue();
-    await Future.delayed(Duration(milliseconds: cardDelayMs + 5));
+    await emitNative(PlatformChannels.cursorPill,
+        PlatformChannels.methodOnHidden, 'reminder01');
     await pumpEventQueue();
     expect(stages, contains('cardShown'));
 
-    // No response: the card times out after cardTimeoutMs.
+    // No response: the card times out.
     await emitNative(PlatformChannels.complianceCard,
         PlatformChannels.methodOnCardTimeout, 'reminder01');
     await sequence;

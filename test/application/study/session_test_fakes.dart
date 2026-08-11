@@ -82,7 +82,6 @@ class FakeReminderOrchestrator extends ReminderOrchestrator {
     required String button1Text,
     required String button2Text,
     required int visibilityMs,
-    required int cardDelayMs,
     required int cardTimeoutMs,
     required Future<void> Function() onDelivered,
     required Future<void> Function() onReminderHidden,
