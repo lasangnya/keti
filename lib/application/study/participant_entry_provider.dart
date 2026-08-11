@@ -279,7 +279,11 @@ class ParticipantEntry extends _$ParticipantEntry {
       final fresh = await repository.fetchParticipant(current.participantCode);
       if (fresh.activeDay != 2) {
         // Not activated yet — keep showing the day-1 completion screen.
-        state = state.copyWith(participant: fresh);
+        state = state.copyWith(
+          participant: fresh,
+          errorMessage:
+              'Day 2 has not been activated yet by the researcher.',
+        );
         return;
       }
       final config = await repository.fetchStudyConfig();
@@ -304,9 +308,12 @@ class ParticipantEntry extends _$ParticipantEntry {
 
       state = await _readyState(csv, fresh, config, schedule, links,
           fromCache: false);
-    } catch (_) {
-      // Keep the current (day-1) state on failure; the button is simply a
-      // no-op until the researcher has activated Day 2.
+    } catch (e) {
+      // Surface the failure instead of silently doing nothing.
+      debugPrint('loadDay2 error: $e');
+      state = state.copyWith(
+        errorMessage: 'Could not start Day 2: $e',
+      );
     }
   }
 }

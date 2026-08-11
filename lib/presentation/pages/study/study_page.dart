@@ -295,6 +295,14 @@ class _StudyPageState extends ConsumerState<StudyPage> {
               ),
             ),
           ],
+          if (entry.errorMessage != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              entry.errorMessage!,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: theme.colorScheme.error),
+            ),
+          ],
           const SizedBox(height: 16),
           TextButton(
             onPressed: () {
