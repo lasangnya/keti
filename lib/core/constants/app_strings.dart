@@ -145,8 +145,6 @@ class AppStrings {
       'Thank you! All reminders for today are recorded.';
   static const String openEndOfSessionQuestionnaire =
       'Open End-of-Session Questionnaire';
-  static const String endOfSessionDone =
-      'I have completed the questionnaire';
   static const String startDay2 = 'Start Day 2';
   static const String day2NotActivated =
       'Day 2 has not been activated yet. The researcher will enable it — '

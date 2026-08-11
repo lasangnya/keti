@@ -114,19 +114,22 @@ void main() {
   }
 
   testWidgets(
-      'day 1 completion shows end-of-session form, then Start Day 2 (locked until activated)',
+      'day 1 completion shows session 1 form and Start Day 2 (locked until activated)',
       (tester) async {
     final container = await pumpStudyPage(tester);
     await enterCode(tester, 'P001');
     await driveDayToCompletion(tester, container, 'Start Day 1');
 
-    // Completed view with the stored ID and the end-of-session form.
+    // Completed view with the stored ID and the session-1 end-of-session form.
     expect(find.text('Session complete'), findsOneWidget);
     expect(find.text('Your Participant ID: P001'), findsOneWidget);
-    expect(find.text('Open End-of-Session Questionnaire'), findsOneWidget);
+    expect(find.text('Open Session 1 End-of-Session Questionnaire'),
+        findsOneWidget);
+    expect(find.text('Open Session 2 End-of-Session Questionnaire'),
+        findsNothing);
     expect(find.text('Open End-of-Study Questionnaire'), findsNothing);
 
-    await tester.tap(find.text('Open End-of-Session Questionnaire'));
+    await tester.tap(find.text('Open Session 1 End-of-Session Questionnaire'));
     await tester.pumpAndSettle();
 
     expect(launchedUrls, hasLength(1));
@@ -136,13 +139,9 @@ void main() {
       '?usp=pp_url&entry.10=P001&entry.11=ambient',
     );
 
-    // Gating: Start Day 2 appears only after the questionnaire is declared done.
-    expect(find.text('Start Day 2'), findsNothing);
-    await tester.tap(find.text('I have completed the questionnaire'));
-    await tester.pumpAndSettle();
+    // Start Day 2 is offered immediately; P001 is not day-2 activated in the
+    // mock → button disabled + hint.
     expect(find.text('Start Day 2'), findsOneWidget);
-
-    // P001 is not day-2 activated in the mock → button disabled + hint.
     final startDay2 = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, 'Start Day 2'),
     );
@@ -158,13 +157,10 @@ void main() {
 
     expect(find.text('Study complete'), findsOneWidget);
     expect(find.text('Your Participant ID: P002'), findsOneWidget);
-    expect(find.text('Open End-of-Session Questionnaire'), findsOneWidget);
+    expect(find.text('Open Session 2 End-of-Session Questionnaire'),
+        findsOneWidget);
 
-    // The final questionnaire is only offered after the end-of-session one
-    // has been declared done.
-    expect(find.text('Open End-of-Study Questionnaire'), findsNothing);
-    await tester.tap(find.text('I have completed the questionnaire'));
-    await tester.pumpAndSettle();
+    // With both sessions complete the final questionnaire is offered right away.
     expect(find.text('Open End-of-Study Questionnaire'), findsOneWidget);
 
     await tester.tap(find.text('Open End-of-Study Questionnaire'));

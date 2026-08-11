@@ -220,13 +220,8 @@ class _StudyPageState extends ConsumerState<StudyPage> {
     final dayNumber = s?.dayNumber ?? entry.daySchedule?.dayNumber ?? 1;
     final code = s?.participantCode ?? entry.participant?.participantCode ?? '';
     final links = s?.links ?? entry.links;
-    final store = ref.watch(localStoreProvider).asData?.value;
     final endLink = links?.endLinkForDay(dayNumber);
     final finalLink = dayNumber == 2 ? links?.finalLink : null;
-
-    final dayId = 'day$dayNumber';
-    final questionnaireDone =
-        store?.isQuestionnaireCompleted(code, dayId) ?? false;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -264,10 +259,11 @@ class _StudyPageState extends ConsumerState<StudyPage> {
             ),
           ),
           const SizedBox(height: 16),
-          if (endLink != null)
+          if (endLink != null) ...[
             FilledButton.icon(
               icon: const Icon(Icons.open_in_new),
-              label: const Text(AppStrings.openEndOfSessionQuestionnaire),
+              label: Text(
+                  'Open Session $dayNumber End-of-Session Questionnaire'),
               onPressed: () => LinkLauncherService.open(
                 QuestionnaireLinks.fill(
                   endLink,
@@ -276,39 +272,28 @@ class _StudyPageState extends ConsumerState<StudyPage> {
                 ),
               ),
             ),
+          ],
           if (endLink == null)
             Text(
               'No questionnaire links are configured yet.',
               style: theme.textTheme.bodySmall,
             ),
-          if (!questionnaireDone) ...[
-            const SizedBox(height: 8),
-            FilledButton.tonal(
-              onPressed: () async {
-                final store = await ref.read(localStoreProvider.future);
-                await store.setQuestionnaireCompleted(code, dayId);
-                setState(() {});
-              },
-              child: const Text(AppStrings.endOfSessionDone),
-            ),
-          ],
-          if (questionnaireDone && dayNumber == 1) ...[
+          if (dayNumber == 1) ...[
             const SizedBox(height: 16),
             _buildStartDay2(theme, code),
           ],
-          if (questionnaireDone && dayNumber == 2) ...[
+          if (dayNumber == 2 && finalLink != null) ...[
             const SizedBox(height: 16),
-            if (finalLink != null)
-              FilledButton.icon(
-                icon: const Icon(Icons.open_in_new),
-                label: const Text(AppStrings.openEndOfStudyQuestionnaire),
-                onPressed: () => LinkLauncherService.open(
-                  QuestionnaireLinks.fill(
-                    finalLink,
-                    participantId: code,
-                  ),
+            FilledButton.icon(
+              icon: const Icon(Icons.open_in_new),
+              label: const Text(AppStrings.openEndOfStudyQuestionnaire),
+              onPressed: () => LinkLauncherService.open(
+                QuestionnaireLinks.fill(
+                  finalLink,
+                  participantId: code,
                 ),
               ),
+            ),
           ],
           const SizedBox(height: 16),
           TextButton(

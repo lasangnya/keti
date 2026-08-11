@@ -233,7 +233,8 @@ void main() {
       await enterCodeAndContinue(tester, 'P002');
       expect(find.text('Study complete'), findsOneWidget);
       expect(find.text('Your Participant ID: P002'), findsOneWidget);
-      expect(find.text('Open End-of-Session Questionnaire'), findsOneWidget);
+      expect(find.text('Open Session 2 End-of-Session Questionnaire'),
+          findsOneWidget);
     });
 
     testWidgets('unfinished local session surfaces the resume banner',

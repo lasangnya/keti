@@ -26,8 +26,6 @@ class LocalStore {
       'cache.schedule.$code.$dayId';
   static String _keyActiveSession(String code) => 'session.active.$code';
   static String _keyTutorialSeen(String code) => 'tutorial.seen.$code';
-  static String _keyQuestionnaire(String code, String dayId) =>
-      'questionnaire.completed.$code.$dayId';
 
   // ── Last entered participant code (ID-entry pre-fill) ────────────
 
@@ -42,14 +40,6 @@ class LocalStore {
 
   Future<void> setTutorialSeen(String code) =>
       _prefs.setBool(_keyTutorialSeen(code), true);
-
-  // ── Questionnaire completion (participant self-declared) ─────────
-
-  bool isQuestionnaireCompleted(String code, String dayId) =>
-      _prefs.getBool(_keyQuestionnaire(code, dayId)) ?? false;
-
-  Future<void> setQuestionnaireCompleted(String code, String dayId) =>
-      _prefs.setBool(_keyQuestionnaire(code, dayId), true);
 
   // ── Cached Firestore documents (offline fallback) ────────────────
 
