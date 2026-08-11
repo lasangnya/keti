@@ -260,4 +260,53 @@ class ParticipantEntry extends _$ParticipantEntry {
       // Keep the cached participant on network failure.
     }
   }
+
+  /// Loads the Day-2 schedule for the already-entered participant (pressed
+  /// from the day-1 completion screen after the researcher activates Day 2).
+  ///
+  /// Unlike [enterCode], this does NOT reset the state to loading — the
+  /// participant stays loaded the whole time, so the UI never falls back to
+  /// the tutorial. Uses the fresh participant document (activeDay must be 2).
+  Future<void> loadDay2() async {
+    final current = state.participant;
+    if (current == null) return;
+
+    final repository = ref.read(participantRepositoryProvider);
+    final store = await ref.read(localStoreProvider.future);
+    final csv = ref.read(csvStoreProvider);
+
+    try {
+      final fresh = await repository.fetchParticipant(current.participantCode);
+      if (fresh.activeDay != 2) {
+        // Not activated yet — keep showing the day-1 completion screen.
+        state = state.copyWith(participant: fresh);
+        return;
+      }
+      final config = await repository.fetchStudyConfig();
+      final templates = await repository.fetchLinkTemplates();
+      final style = styleForDay(fresh.styleOrder, fresh.activeDay);
+      final schedule = await repository.fetchSchedule(
+        fresh.participantCode,
+        fresh.activeDay,
+        style: style,
+      );
+      final links = resolveQuestionnaireLinks(
+        templates: templates,
+        flags: fresh.linkFlags,
+        styleOrder: fresh.styleOrder,
+      );
+
+      await store.setLastParticipantCode(fresh.participantCode);
+      await store.cacheParticipant(fresh);
+      await store.cacheStudyConfig(config);
+      await store.cacheScheduleFor(fresh.participantCode, schedule);
+      await store.cacheLinkTemplates(templates);
+
+      state = await _readyState(csv, fresh, config, schedule, links,
+          fromCache: false);
+    } catch (_) {
+      // Keep the current (day-1) state on failure; the button is simply a
+      // no-op until the researcher has activated Day 2.
+    }
+  }
 }

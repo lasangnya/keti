@@ -12,6 +12,7 @@ import 'package:keti/core/services/firebase/firestore_providers.dart';
 import 'package:keti/core/services/local/csv_store.dart';
 import 'package:keti/core/services/local/local_store.dart';
 import 'package:keti/core/services/study/mock_participant_repository.dart';
+import 'package:keti/domain/study/participant.dart';
 import 'package:keti/presentation/pages/study/study_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -38,6 +39,7 @@ void main() {
   Future<ProviderContainer> pumpStudyPage(
     WidgetTester tester, {
     FakeReminderOrchestrator? orchestrator,
+    MockParticipantRepository? repository,
   }) async {
     SharedPreferences.setMockInitialValues({
       'tutorial.seen.P001': true,
@@ -66,7 +68,7 @@ void main() {
       ProviderScope(
         overrides: [
           participantRepositoryProvider
-              .overrideWithValue(MockParticipantRepository()),
+              .overrideWithValue(repository ?? MockParticipantRepository()),
           localStoreProvider.overrideWith((ref) async => store),
           csvStoreProvider.overrideWithValue(CsvStore(rootDir: csvRoot)),
           sessionRepositoryProvider.overrideWithValue(FakeSessionRepository()),
@@ -170,4 +172,51 @@ void main() {
     expect(launchedUrls.single, contains('entry.10=P002'));
   });
 
+  testWidgets('Start Day 2 loads the day-2 overview, not the tutorial',
+      (tester) async {
+    // Repository that starts on day 1 and flips to day 2 when the
+    // researcher "activates" it.
+    final repo = _ActivatingRepository();
+    final container = await pumpStudyPage(tester, repository: repo);
+    await enterCode(tester, 'P001');
+    await driveDayToCompletion(tester, container, 'Start Day 1');
+
+    // Researcher activates Day 2 → participant re-checks and the button
+    // becomes enabled.
+    repo.day2Activated = true;
+    await tester.ensureVisible(find.text('Check again'));
+    await tester.tap(find.text('Check again'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Start Day 2'));
+    await tester.tap(find.text('Start Day 2'));
+    await tester.pumpAndSettle();
+
+    // Lands on the Day 2 overview — never the tutorial welcome.
+    expect(find.text('Welcome to the health-reminder study'), findsNothing);
+    expect(find.text('P001'), findsOneWidget);
+    expect(find.text('Day 2'), findsOneWidget);
+    expect(find.text('Start Day 2'), findsOneWidget);
+  });
+}
+
+/// Mock repo whose participants flip to day 2 once the researcher activates
+/// it (mirrors the admin "Activate Day 2" action).
+class _ActivatingRepository extends MockParticipantRepository {
+  bool day2Activated = false;
+
+  @override
+  Future<Participant> fetchParticipant(String code) async {
+    final p = await super.fetchParticipant(code);
+    if (!day2Activated || p.participantCode != 'P001') return p;
+    return Participant(
+      participantCode: p.participantCode,
+      serial: p.serial,
+      styleOrder: p.styleOrder,
+      assignmentOverride: p.assignmentOverride,
+      activeDay: 2,
+      environment: p.environment,
+      protocolVersion: p.protocolVersion,
+    );
+  }
 }

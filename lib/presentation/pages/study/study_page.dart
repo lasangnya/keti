@@ -322,12 +322,14 @@ class _StudyPageState extends ConsumerState<StudyPage> {
           label: const Text(AppStrings.startDay2),
           onPressed: day2Activated
               ? () async {
-                  // Re-runs the entry flow: refetches the participant
-                  // (now activeDay 2) and its day-2 schedule, landing on
-                  // the Day 2 overview.
+                  // Clear the finished day-1 session and load the day-2
+                  // schedule without dropping back to the tutorial.
+                  ref
+                      .read(sessionControllerProvider.notifier)
+                      .resetForNewDay();
                   await ref
                       .read(participantEntryProvider.notifier)
-                      .enterCode(code);
+                      .loadDay2();
                 }
               : null,
         ),

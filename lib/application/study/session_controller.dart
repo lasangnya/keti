@@ -223,6 +223,13 @@ class SessionController extends _$SessionController {
   /// Test seam: drive one scheduler tick with the (fake) injected clock.
   Future<void> debugTick() async => _scheduler?.tickOnce();
 
+  /// Clears the finished day-1 session state so the participant can start
+  /// Day 2. Called by the completed view's "Start Day 2" action.
+  void resetForNewDay() {
+    _scheduler?.stop();
+    state = const StudySessionState();
+  }
+
   /// Test seam: wait until all in-flight reminder sequences have finished.
   Future<void> debugAwaitIdle() => Future.wait(_inFlight.toList());
 
