@@ -42,6 +42,12 @@ class _StudyPageState extends ConsumerState<StudyPage> {
     final tutorialSeen = entry.participant != null &&
         (store?.isTutorialSeen(entry.participant!.participantCode) ?? false);
 
+    // Reset the auto-check flag whenever a new participant is entered, so
+    // each day-1 completion screen triggers a fresh activation check.
+    if (entry.participant == null) {
+      _autoCheckedDay2 = false;
+    }
+
     // When the day-1 completion screen shows, refresh the participant once
     // so the Start Day 2 button reflects a fresh researcher activation
     // without requiring a manual "Check again" tap. Manual re-checks are

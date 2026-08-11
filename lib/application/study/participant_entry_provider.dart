@@ -233,9 +233,10 @@ class ParticipantEntry extends _$ParticipantEntry {
       fromCache: fromCache,
       resumableDayId: resumable ? schedule.dayId : null,
       dayAlreadyCompleted: completed,
-      errorMessage:
-          completed ? 'Day ${schedule.dayNumber} is already completed for '
-              '${participant.participantCode}.' : null,
+      // No errorMessage here: a completed day is a normal state shown via
+      // the completed view, not an error. Setting one here leaks stale
+      // "Day N is already completed" text into unrelated UI (e.g. the
+      // Start Day 2 snackbar).
     );
   }
 
@@ -274,6 +275,10 @@ class ParticipantEntry extends _$ParticipantEntry {
     final repository = ref.read(participantRepositoryProvider);
     final store = await ref.read(localStoreProvider.future);
     final csv = ref.read(csvStoreProvider);
+
+    // Clear any stale message from the day-1 entry flow (e.g. "Day 1 is
+    // already completed") before we start.
+    state = state.copyWith(errorMessage: null);
 
     try {
       final fresh = await repository.fetchParticipant(current.participantCode);

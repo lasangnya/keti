@@ -64,6 +64,9 @@ void main() {
     final state = container.read(participantEntryProvider);
     expect(state.isReady, isTrue);
     expect(state.dayAlreadyCompleted, isTrue);
-    expect(state.errorMessage, 'Day 2 is already completed for P002.');
+    // A completed day is a normal state (shown via the completed view),
+    // not an error message — errorMessage stays null so stale text never
+    // leaks into unrelated UI (e.g. the Start Day 2 snackbar).
+    expect(state.errorMessage, isNull);
   });
 }
