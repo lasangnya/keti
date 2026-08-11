@@ -2,18 +2,17 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keti/domain/study/participant.dart';
-import 'package:keti/domain/study/study_config.dart';
 import 'package:keti/domain/study/study_enums.dart';
+import 'package:keti/domain/study/study_links.dart';
 
-const overrideLinks = QuestionnaireLinks(
-  start: 'https://override/start?p={participantId}',
-  day1End: null,
-  day2End: 'https://override/day2?p={participantId}',
-  finalLink: null,
+const customFlags = ParticipantLinkFlags(
+  preStudy: false,
+  endOfDay1: true,
+  endOfDay2: false,
+  finalQuestionnaire: true,
 );
 
-Participant buildParticipant({QuestionnaireLinks? questionnaireLinks}) =>
-    Participant(
+Participant buildParticipant({ParticipantLinkFlags? linkFlags}) => Participant(
       participantCode: 'P014',
       serial: 14,
       styleOrder: StyleOrder.characterFirst,
@@ -21,7 +20,7 @@ Participant buildParticipant({QuestionnaireLinks? questionnaireLinks}) =>
       activeDay: 1,
       environment: 'study',
       protocolVersion: '2026-08-v1',
-      questionnaireLinks: questionnaireLinks,
+      linkFlags: linkFlags ?? const ParticipantLinkFlags.allOn(),
     );
 
 void main() {
@@ -56,44 +55,49 @@ void main() {
       expect(json['activeDay'], 1);
     });
 
-    test('round-trips with questionnaireLinks override', () {
-      final participant = buildParticipant(questionnaireLinks: overrideLinks);
+    test('round-trips with linkFlags', () {
+      final participant = buildParticipant(linkFlags: customFlags);
       final restored = Participant.fromJson(participant.toJson());
-      expect(restored.questionnaireLinks?.toJson(), overrideLinks.toJson());
+      expect(restored.linkFlags.preStudy, false);
+      expect(restored.linkFlags.endOfDay1, true);
+      expect(restored.linkFlags.endOfDay2, false);
+      expect(restored.linkFlags.finalQuestionnaire, true);
     });
 
-    test('fromJson tolerates missing questionnaireLinks field', () {
-      final json = buildParticipant().toJson()
-        ..remove('questionnaireLinks');
+    test('fromJson defaults missing linkFlags to all-on', () {
+      final json = buildParticipant().toJson()..remove('linkFlags');
       final restored = Participant.fromJson(json);
-      expect(restored.questionnaireLinks, isNull);
+      expect(restored.linkFlags.preStudy, isTrue);
+      expect(restored.linkFlags.endOfDay1, isTrue);
+      expect(restored.linkFlags.endOfDay2, isTrue);
+      expect(restored.linkFlags.finalQuestionnaire, isTrue);
     });
 
-    test('fromJson tolerates null questionnaireLinks field', () {
-      final json = buildParticipant().toJson()
-        ..['questionnaireLinks'] = null;
+    test('fromJson tolerates null linkFlags field', () {
+      final json = buildParticipant().toJson()..['linkFlags'] = null;
       final restored = Participant.fromJson(json);
-      expect(restored.questionnaireLinks, isNull);
+      expect(restored.linkFlags.finalQuestionnaire, isTrue);
     });
   });
 
   group('Participant CSV', () {
-    test('header includes questionnaireLinks column', () {
-      expect(Participant.csvHeader, contains('questionnaireLinks'));
+    test('header includes linkFlags column', () {
+      expect(Participant.csvHeader, contains('linkFlags'));
     });
 
-    test('toCsvRow serialises questionnaireLinks as JSON', () {
-      final participant = buildParticipant(questionnaireLinks: overrideLinks);
+    test('toCsvRow serialises linkFlags as JSON', () {
+      final participant = buildParticipant(linkFlags: customFlags);
       final row = participant.toCsvRow();
-      final linksIndex = Participant.csvHeader.indexOf('questionnaireLinks');
-      expect(row[linksIndex], jsonEncode(overrideLinks.toJson()));
+      final index = Participant.csvHeader.indexOf('linkFlags');
+      expect(row[index], jsonEncode(customFlags.toJson()));
     });
 
-    test('toCsvRow includes null when no override', () {
+    test('toCsvRow includes all-on flags by default', () {
       final participant = buildParticipant();
       final row = participant.toCsvRow();
-      final linksIndex = Participant.csvHeader.indexOf('questionnaireLinks');
-      expect(row[linksIndex], isNull);
+      final index = Participant.csvHeader.indexOf('linkFlags');
+      expect(jsonDecode(row[index] as String),
+          const ParticipantLinkFlags.allOn().toJson());
     });
   });
 }

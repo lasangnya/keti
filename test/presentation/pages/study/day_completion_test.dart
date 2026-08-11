@@ -133,7 +133,7 @@ void main() {
     expect(
       launchedUrls.single,
       'https://docs.google.com/forms/d/e/example/viewform'
-      '?usp=pp_url&entry.10=P001&entry.11=day1',
+      '?usp=pp_url&entry.10=P001&entry.11=ambient',
     );
 
     // Gating: Start Day 2 appears only after the questionnaire is declared done.

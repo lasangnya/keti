@@ -5,6 +5,7 @@ import 'package:keti/domain/study/participant.dart';
 import 'package:keti/domain/study/scheduled_reminder.dart';
 import 'package:keti/domain/study/study_config.dart';
 import 'package:keti/domain/study/study_enums.dart';
+import 'package:keti/domain/study/study_links.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -27,7 +28,6 @@ void main() {
 
   const config = StudyConfig(
     protocolVersion: '2026-08-v1',
-    links: QuestionnaireLinks(day1End: 'https://forms.example/end'),
     defaultSchedule: kDefaultScheduleTemplate,
   );
 
@@ -35,6 +35,10 @@ void main() {
     dayNumber: 1,
     style: PresentationStyle.characterBased,
     reminders: kDefaultScheduleTemplate,
+  );
+
+  const linkTemplates = StudyLinkTemplates(
+    endOfDayType1: 'https://forms.example/ambient?pid={participantId}',
   );
 
   test('last participant code round-trips and defaults to null', () async {
@@ -57,6 +61,14 @@ void main() {
     final restored = store.readCachedStudyConfig();
     expect(restored!.protocolVersion, config.protocolVersion);
     expect(restored.defaultSchedule, kDefaultScheduleTemplate);
+  });
+
+  test('link templates cache round-trips', () async {
+    expect(store.readCachedLinkTemplates().endOfDayType1, isNull);
+    await store.cacheLinkTemplates(linkTemplates);
+    final restored = store.readCachedLinkTemplates();
+    expect(restored.endOfDayType1, linkTemplates.endOfDayType1);
+    expect(restored.endOfDayType2, isNull);
   });
 
   test('schedule cache is keyed per participant and day', () async {

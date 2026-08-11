@@ -26,14 +26,14 @@ void main() {
     });
     await firestore.collection('config').doc('study').set({
       'protocolVersion': '2026-08-v1',
-      'questionnaireLinks': {
-        'start': null,
-        'day1End': 'https://forms.example/end?pid={participantId}',
-        'day2End': null,
-        'final': null,
-      },
       'defaultSchedule':
           kDefaultScheduleTemplate.map((r) => r.toJson()).toList(),
+    });
+    await firestore.collection('links').doc('templates').set({
+      'preStudy': null,
+      'endOfDayType1': 'https://forms.example/ambient?pid={participantId}',
+      'endOfDayType2': null,
+      'final': null,
     });
     await firestore
         .collection('participants')
@@ -61,12 +61,18 @@ void main() {
         throwsA(isA<ParticipantNotFoundException>()));
   });
 
-  test('fetchStudyConfig parses links and default schedule', () async {
+  test('fetchStudyConfig parses protocol and default schedule', () async {
     await seed();
     final config = await repository.fetchStudyConfig();
     expect(config.protocolVersion, '2026-08-v1');
-    expect(config.links.day1End, contains('{participantId}'));
     expect(config.defaultSchedule.length, 8);
+  });
+
+  test('fetchLinkTemplates returns the global templates', () async {
+    await seed();
+    final templates = await repository.fetchLinkTemplates();
+    expect(templates.endOfDayType1, contains('{participantId}'));
+    expect(templates.endOfDayType2, isNull);
   });
 
   test('fetchSchedule returns the day schedule with the supplied style',
