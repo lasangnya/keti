@@ -91,14 +91,30 @@ class FirestoreAdminRepository implements AdminRepository {
   }
 
   @override
-  Future<void> saveQuestionnaireLinks(QuestionnaireLinks links) =>
-      _firestore.collection('config').doc('study').set({
-        'protocolVersion': AppConfig.protocolVersion,
-        'questionnaireLinks': links.toJson(),
-        'defaultSchedule':
-            kDefaultScheduleTemplate.map((r) => r.toJson()).toList(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+  Future<void> saveQuestionnaireLinks(QuestionnaireLinks links) async {
+    // 1. Shared config remains the source of truth for new participants.
+    await _firestore.collection('config').doc('study').set({
+      'protocolVersion': AppConfig.protocolVersion,
+      'questionnaireLinks': links.toJson(),
+      'defaultSchedule':
+          kDefaultScheduleTemplate.map((r) => r.toJson()).toList(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    // 2. Materialize the links on every existing participant document
+    //    (overwrite semantics: the stored links are fully replaced).
+    final participants = await _firestore.collection('participants').get();
+    const chunkSize = 400; // Firestore batch limit is 500 writes.
+    for (var i = 0; i < participants.docs.length; i += chunkSize) {
+      final batch = _firestore.batch();
+      for (final doc in participants.docs.skip(i).take(chunkSize)) {
+        batch.set(doc.reference, {
+          'questionnaireLinks': links.toJson(),
+        }, SetOptions(merge: true));
+      }
+      await batch.commit();
+    }
+  }
 
   @override
   Future<Participant> createParticipant({
@@ -126,6 +142,7 @@ class FirestoreAdminRepository implements AdminRepository {
     final batch = _firestore.batch();
     batch.set(_participant(code), {
       ...participant.toJson(),
+      'questionnaireLinks': config.links.toJson(),
       'createdAt': FieldValue.serverTimestamp(),
     });
     for (final day in [1, 2]) {

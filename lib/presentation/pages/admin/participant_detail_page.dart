@@ -42,6 +42,8 @@ class _ParticipantDetailPageState
   final _day2EndController = TextEditingController();
   final _finalController = TextEditingController();
   bool _linksLoaded = false;
+  bool _linksSaving = false;
+  String? _linksDoneMessage;
 
   @override
   void dispose() {
@@ -305,19 +307,46 @@ class _ParticipantDetailPageState
                     Row(
                       children: [
                         FilledButton(
-                          onPressed: () =>
-                              _saveLinks(participant.participantCode),
-                          child: const Text('Save links'),
+                          onPressed: _linksSaving
+                              ? null
+                              : () => _saveLinks(participant.participantCode),
+                          child: _linksSaving
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Text('Save links'),
                         ),
                         const SizedBox(width: 8),
                         if (participant.questionnaireLinks != null)
                           OutlinedButton(
-                            onPressed: () => _clearLinks(
-                                participant.participantCode),
+                            onPressed: _linksSaving
+                                ? null
+                                : () => _clearLinks(participant.participantCode),
                             child: const Text('Clear custom links'),
                           ),
                       ],
                     ),
+                    if (_linksDoneMessage != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.check_circle,
+                              size: 16, color: theme.colorScheme.primary),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              _linksDoneMessage!,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 );
               },
@@ -377,30 +406,63 @@ class _ParticipantDetailPageState
     String? orNull(TextEditingController c) =>
         c.text.trim().isEmpty ? null : c.text.trim();
 
-    await ref.read(adminParticipantsProvider.notifier).saveParticipantQuestionnaireLinks(
-          participantCode,
-          QuestionnaireLinks(
-            start: orNull(_startController),
-            day1End: orNull(_day1EndController),
-            day2End: orNull(_day2EndController),
-            finalLink: orNull(_finalController),
-          ),
-        );
-    ref.invalidate(participantDetailProvider(participantCode));
     setState(() {
-      _message = 'Links saved.';
+      _linksSaving = true;
+      _linksDoneMessage = null;
     });
+    try {
+      await ref.read(adminParticipantsProvider.notifier).saveParticipantQuestionnaireLinks(
+            participantCode,
+            QuestionnaireLinks(
+              start: orNull(_startController),
+              day1End: orNull(_day1EndController),
+              day2End: orNull(_day2EndController),
+              finalLink: orNull(_finalController),
+            ),
+          );
+      if (!mounted) return;
+      ref.invalidate(participantDetailProvider(participantCode));
+      setState(() {
+        _linksDoneMessage = 'Done — links saved for $participantCode.';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _linksDoneMessage = 'Failed to save links: $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _linksSaving = false);
+      }
+    }
   }
 
   Future<void> _clearLinks(String participantCode) async {
-    await ref
-        .read(adminParticipantsProvider.notifier)
-        .saveParticipantQuestionnaireLinks(participantCode, null);
-    ref.invalidate(participantDetailProvider(participantCode));
     setState(() {
-      _linksLoaded = false;
-      _message = 'Custom links cleared — falls back to shared config.';
+      _linksSaving = true;
+      _linksDoneMessage = null;
     });
+    try {
+      await ref
+          .read(adminParticipantsProvider.notifier)
+          .saveParticipantQuestionnaireLinks(participantCode, null);
+      if (!mounted) return;
+      ref.invalidate(participantDetailProvider(participantCode));
+      setState(() {
+        _linksLoaded = false;
+        _linksDoneMessage =
+            'Done — custom links cleared, falls back to shared config.';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _linksDoneMessage = 'Failed to clear links: $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _linksSaving = false);
+      }
+    }
   }
 
   Widget _buildScheduleCard(ThemeData theme) {

@@ -21,6 +21,7 @@ class _LinksSettingsPageState extends ConsumerState<LinksSettingsPage> {
   final _day2End = TextEditingController();
   final _final = TextEditingController();
   bool _loaded = false;
+  bool _saving = false;
   String? _message;
   bool _messageIsError = false;
 
@@ -65,18 +66,35 @@ class _LinksSettingsPageState extends ConsumerState<LinksSettingsPage> {
                   _linkField(theme, 'Final questionnaire', _final, 2),
                   const SizedBox(height: 12),
                   FilledButton(
-                    onPressed: _save,
-                    child: const Text('Save links'),
+                    onPressed: _saving ? null : _save,
+                    child: _saving
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Save links'),
                   ),
                   if (_message != null) ...[
                     const SizedBox(height: 8),
-                    Text(
-                      _message!,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: _messageIsError
-                            ? theme.colorScheme.error
-                            : theme.colorScheme.primary,
-                      ),
+                    Row(
+                      children: [
+                        if (!_messageIsError) ...[
+                          Icon(Icons.check_circle,
+                              size: 16, color: theme.colorScheme.primary),
+                          const SizedBox(width: 4),
+                        ],
+                        Expanded(
+                          child: Text(
+                            _message!,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: _messageIsError
+                                  ? theme.colorScheme.error
+                                  : theme.colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ],
@@ -149,17 +167,35 @@ class _LinksSettingsPageState extends ConsumerState<LinksSettingsPage> {
     String? orNull(TextEditingController c) =>
         c.text.trim().isEmpty ? null : c.text.trim();
 
-    await ref.read(adminStudyConfigProvider.notifier).saveLinks(
-          QuestionnaireLinks(
-            start: orNull(_start),
-            day1End: orNull(_day1End),
-            day2End: orNull(_day2End),
-            finalLink: orNull(_final),
-          ),
-        );
     setState(() {
-      _message = 'Links saved.';
+      _saving = true;
+      _message = null;
       _messageIsError = false;
     });
+    try {
+      await ref.read(adminStudyConfigProvider.notifier).saveLinks(
+            QuestionnaireLinks(
+              start: orNull(_start),
+              day1End: orNull(_day1End),
+              day2End: orNull(_day2End),
+              finalLink: orNull(_final),
+            ),
+          );
+      if (!mounted) return;
+      setState(() {
+        _message = 'Done — links saved to the shared config and all participants.';
+        _messageIsError = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _message = 'Failed to save links: $e';
+        _messageIsError = true;
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
   }
 }
