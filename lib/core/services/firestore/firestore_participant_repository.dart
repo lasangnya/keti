@@ -55,4 +55,15 @@ class FirestoreParticipantRepository implements ParticipantRepository {
     if (!snap.exists) return const StudyLinkTemplates();
     return StudyLinkTemplates.fromJson(snap.data()!);
   }
+
+  @override
+  Future<bool> hasSession(String participantCode, int dayNumber) async {
+    final snap = await _firestore
+        .collection('participants')
+        .doc(participantCode)
+        .collection('studySessions')
+        .doc('day$dayNumber')
+        .get();
+    return snap.exists;
+  }
 }

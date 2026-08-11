@@ -114,7 +114,29 @@ class ParticipantEntry extends _$ParticipantEntry {
     final csv = ref.read(csvStoreProvider);
 
     try {
-      final participant = await repository.fetchParticipant(code);
+      final fetchedParticipant = await repository.fetchParticipant(code);
+      // Sanity-check the active-day gate: Day 2 must not be offered before
+      // Day 1 was started. This heals stale docs where an old reset left
+      // activeDay=2 without a day-1 session.
+      var participant = fetchedParticipant;
+      if (participant.activeDay == 2 &&
+          !await repository.hasSession(participant.participantCode, 1)) {
+        debugPrint(
+            'ParticipantEntry: activeDay=2 but no day-1 session — '
+            'falling back to day 1');
+        participant = Participant(
+          participantCode: participant.participantCode,
+          serial: participant.serial,
+          styleOrder: participant.styleOrder,
+          assignmentOverride: participant.assignmentOverride,
+          activeDay: 1,
+          environment: participant.environment,
+          protocolVersion: participant.protocolVersion,
+          resetDay1At: participant.resetDay1At,
+          resetDay2At: participant.resetDay2At,
+          linkFlags: participant.linkFlags,
+        );
+      }
       final config = await repository.fetchStudyConfig();
       final templates = await repository.fetchLinkTemplates();
       final style = styleForDay(participant.styleOrder, participant.activeDay);
@@ -312,6 +334,19 @@ class ParticipantEntry extends _$ParticipantEntry {
       final fresh = await repository.fetchParticipant(current.participantCode);
       debugPrint('loadDay2: fresh activeDay=${fresh.activeDay} '
           '(current was ${current.activeDay})');
+      if (fresh.activeDay == 2 &&
+          !await repository.hasSession(fresh.participantCode, 1)) {
+        // Stale gate: activeDay=2 without a day-1 session (e.g. old reset).
+        // Refuse to start Day 2 and fall back to the day-1 flow.
+        debugPrint('loadDay2: activeDay=2 but no day-1 session — '
+            'refusing day 2');
+        state = state.copyWith(
+          participant: fresh,
+          errorMessage:
+              'Day 2 has not been activated yet by the researcher.',
+        );
+        return;
+      }
       if (fresh.activeDay != 2) {
         // Not activated yet — keep showing the day-1 completion screen.
         debugPrint('loadDay2: day 2 not activated yet');

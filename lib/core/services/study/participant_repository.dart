@@ -48,4 +48,9 @@ abstract class ParticipantRepository {
 
   /// The global questionnaire link templates (`links/templates`).
   Future<StudyLinkTemplates> fetchLinkTemplates();
+
+  /// True when a session document exists for [participantCode]/[dayNumber].
+  /// Used by the participant app to sanity-check the active-day gate (Day 2
+  /// must not be offered before Day 1 was started).
+  Future<bool> hasSession(String participantCode, int dayNumber);
 }

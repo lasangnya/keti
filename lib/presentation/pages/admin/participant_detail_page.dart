@@ -171,24 +171,24 @@ class _ParticipantDetailPageState
               child: const Text('Activate Day 2'),
             ),
             const SizedBox(height: 12),
-            if (safe?.sessions[0] != null)
-              OutlinedButton.icon(
-                icon: const Icon(Icons.refresh, size: 16),
-                label: const Text('Reset Day 1'),
-                style: OutlinedButton.styleFrom(
-                    foregroundColor: theme.colorScheme.error),
-                onPressed: () => _confirmReset(context, 1),
-              ),
-            if (safe?.sessions[1] != null) ...[
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.refresh, size: 16),
-                label: const Text('Reset Day 2'),
-                style: OutlinedButton.styleFrom(
-                    foregroundColor: theme.colorScheme.error),
-                onPressed: () => _confirmReset(context, 2),
-              ),
-            ],
+            // Reset buttons are always available — even when a day has no
+            // session yet (e.g. after a previous reset), so the researcher
+            // can always re-align the active-day gate.
+            OutlinedButton.icon(
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('Reset Day 1'),
+              style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error),
+              onPressed: () => _confirmReset(context, 1),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('Reset Day 2'),
+              style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error),
+              onPressed: () => _confirmReset(context, 2),
+            ),
           ],
         ),
       ),

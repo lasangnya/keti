@@ -184,6 +184,7 @@ void main() {
     // Repository that starts on day 1 and flips to day 2 when the
     // researcher "activates" it.
     final repo = _ActivatingRepository();
+    repo.day1StartedCodes.add('P001');
     final container = await pumpStudyPage(tester, repository: repo);
     await enterCode(tester, 'P001');
     await driveDayToCompletion(tester, container, 'Start Day 1');
@@ -231,6 +232,7 @@ void main() {
     );
 
     final repo = _ResettingDay2Repository();
+    repo.day1StartedCodes.add('P001');
     final container = await pumpStudyPage(tester, repository: repo);
     await enterCode(tester, 'P001');
     await driveDayToCompletion(tester, container, 'Start Day 1');

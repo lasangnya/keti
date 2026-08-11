@@ -15,6 +15,11 @@ class MockParticipantRepository implements ParticipantRepository {
 
   final Map<String, Participant> _participants;
 
+  /// Participants that have a day-1 session (so Day 2 is legitimate).
+  /// Tests that drive day 1 to completion add their code here, or override
+  /// [hasSession] entirely.
+  final Set<String> day1StartedCodes = {'P002'};
+
   static final defaultParticipants = <String, Participant>{
     'P001': const Participant(
       participantCode: 'P001',
@@ -87,4 +92,8 @@ class MockParticipantRepository implements ParticipantRepository {
 
   @override
   Future<StudyLinkTemplates> fetchLinkTemplates() async => linkTemplates;
+
+  @override
+  Future<bool> hasSession(String participantCode, int dayNumber) async =>
+      day1StartedCodes.contains(participantCode) && dayNumber == 1;
 }
