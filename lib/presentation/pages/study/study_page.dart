@@ -31,6 +31,8 @@ class StudyPage extends ConsumerStatefulWidget {
 }
 
 class _StudyPageState extends ConsumerState<StudyPage> {
+  bool _autoCheckedDay2 = false;
+
   @override
   Widget build(BuildContext context) {
     final entry = ref.watch(participantEntryProvider);
@@ -39,6 +41,22 @@ class _StudyPageState extends ConsumerState<StudyPage> {
 
     final tutorialSeen = entry.participant != null &&
         (store?.isTutorialSeen(entry.participant!.participantCode) ?? false);
+
+    // When the day-1 completion screen shows, refresh the participant once
+    // so the Start Day 2 button reflects a fresh researcher activation
+    // without requiring a manual "Check again" tap. Manual re-checks are
+    // still available via the "Check again" button.
+    if (entry.dayAlreadyCompleted &&
+        entry.daySchedule?.dayNumber == 1 &&
+        !session.active &&
+        !_autoCheckedDay2) {
+      _autoCheckedDay2 = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(participantEntryProvider.notifier).refreshParticipant();
+        }
+      });
+    }
 
     return SingleChildScrollView(
       child: Column(
@@ -295,14 +313,6 @@ class _StudyPageState extends ConsumerState<StudyPage> {
               ),
             ),
           ],
-          if (entry.errorMessage != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              entry.errorMessage!,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: theme.colorScheme.error),
-            ),
-          ],
           const SizedBox(height: 16),
           TextButton(
             onPressed: () {
@@ -338,6 +348,16 @@ class _StudyPageState extends ConsumerState<StudyPage> {
                   await ref
                       .read(participantEntryProvider.notifier)
                       .loadDay2();
+                  if (!mounted) return;
+                  // If loadDay2 could not proceed, tell the researcher why.
+                  final msg = ref
+                      .read(participantEntryProvider)
+                      .errorMessage;
+                  if (msg != null && mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(msg)),
+                    );
+                  }
                 }
               : null,
         ),
