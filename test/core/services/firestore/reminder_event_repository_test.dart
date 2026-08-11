@@ -63,6 +63,7 @@ void main() {
         .markAnswered(
           outcome: ResponseOutcome.completed,
           answeredAtLocal: DateTime.parse('2026-08-03T10:03:05+02:00'),
+          cardResponse: 'Done',
         );
     await repository.updateEventLifecycle('P014', 'day1', answered);
 

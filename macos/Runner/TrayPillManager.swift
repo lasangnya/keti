@@ -59,7 +59,6 @@ class TrayPillManager {
 
         // 2. Show the "Dropped" Card — the card handles its own exit animation.
         showCard(
-            message: message,
             resourceName: resourceName,
             totalFrames: totalFrames,
             visibilityMs: visibilityMs,
@@ -91,9 +90,8 @@ class TrayPillManager {
         print("[TrayPillManager] show() complete. t=\(String(format: "%.3f", CFAbsoluteTimeGetCurrent() - t0))s")
     }
 
-    private static func showCard(message: String, resourceName: String, totalFrames: Int, visibilityMs: Int, anchoredTo button: NSStatusBarButton, onAnimationDone: @escaping () -> Void) {
+    private static func showCard(resourceName: String, totalFrames: Int, visibilityMs: Int, anchoredTo button: NSStatusBarButton, onAnimationDone: @escaping () -> Void) {
         let contentView = TrayCardView(
-            message: message,
             resourceName: resourceName,
             totalFrames: totalFrames,
             visibilityMs: visibilityMs,

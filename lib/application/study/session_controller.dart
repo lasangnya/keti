@@ -318,6 +318,7 @@ class SessionController extends _$SessionController {
         button1Text: AppStrings.complianceButton1,
         button2Text: AppStrings.complianceButton2,
         visibilityMs: AppConfig.reminderVisibilityMs,
+        cardDelayMs: AppConfig.complianceCardDelayMs,
         cardTimeoutMs: AppConfig.complianceCardTimeoutMs,
         onDelivered: () async {
           if (!ref.mounted) return;
@@ -356,14 +357,19 @@ class SessionController extends _$SessionController {
         onCardAnswered: (action) async {
           if (!ref.mounted) return;
           final current = _eventById(event.eventId);
+          final isCompleted = action == 'completed';
           await _persistEvent(
             code,
             session.dayId,
             current.markAnswered(
-              outcome: action == 'completed'
+              outcome: isCompleted
                   ? ResponseOutcome.completed
                   : ResponseOutcome.dismissed,
               answeredAtLocal: _now(),
+              // The actual label the participant saw and pressed.
+              cardResponse: isCompleted
+                  ? AppStrings.complianceButton1
+                  : AppStrings.complianceButton2,
             ),
             'answered',
           );

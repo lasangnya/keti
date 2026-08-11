@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../core/services/compliance_card_service.dart';
@@ -23,9 +25,9 @@ typedef ReminderOutcomeCallback = Future<void> Function(String action);
 ///
 /// ```
 /// show reminder (placement)      → onDelivered  (native onShown confirmed)
-/// hold for visibilityMs          → onReminderHidden
-/// show compliance card top-right → onCardShown
+/// cardDelayMs after shown        → onCardShown (card appears top-right)
 /// button press / card timeout    → onCardAnswered(action) | onCardTimedOut
+/// reminder hides independently   → onReminderHidden
 /// any technical failure          → onFailed(reason) — sequence aborts
 /// ```
 ///
@@ -40,6 +42,7 @@ class ReminderOrchestrator {
     required String button1Text,
     required String button2Text,
     required int visibilityMs,
+    required int cardDelayMs,
     required int cardTimeoutMs,
     required ReminderCallback onDelivered,
     required ReminderCallback onReminderHidden,
@@ -68,12 +71,16 @@ class ReminderOrchestrator {
       }
       await onDelivered();
 
-      await ReminderChannels.waitForHidden(
+      // The card appears cardDelayMs after the reminder is SHOWN (not after
+      // it hides). The reminder hide is recorded independently — it can
+      // happen before or after the card flow.
+      final hiddenFuture = ReminderChannels.waitForHidden(
         reminderId,
         window: Duration(milliseconds: visibilityMs),
       );
-      await onReminderHidden();
+      unawaited(hiddenFuture.then((_) => onReminderHidden()));
 
+      await Future.delayed(Duration(milliseconds: cardDelayMs));
       await ComplianceCardService.show(
         reminderId: reminderId,
         question: question,

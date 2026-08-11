@@ -35,7 +35,7 @@ const E_HEADER = [
   'reminderKind','contentVariantId','deliveryStatus','failureReason',
   'suppressionReason','usedFallback','cardShownAtLocal','outcome',
   'answeredAtLocal','responseLatencyMs','sessionResumed','environment',
-  'appVersion','protocolVersion',
+  'appVersion','protocolVersion','cardResponse',
 ];
 
 function csvRow(fields) {
@@ -86,7 +86,7 @@ async function main() {
           d.failureReason, d.suppressionReason, d.usedFallback,
           d.cardShownAtLocal, d.outcome, d.answeredAtLocal,
           d.responseLatencyMs, d.sessionResumed, d.environment,
-          d.appVersion, d.protocolVersion,
+          d.appVersion, d.protocolVersion, d.cardResponse,
         ]));
       }
     }
