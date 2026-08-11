@@ -54,23 +54,23 @@ abstract class _$AdminStudyConfig extends $AsyncNotifier<StudyConfig> {
 }
 
 /// The global questionnaire link templates (`links/templates`).
+///
+/// Watched by the Links page, so the notifier stays alive and
+/// [AdminLinkTemplates.save] can safely invalidate itself after the await.
 
-@ProviderFor(adminLinkTemplates)
+@ProviderFor(AdminLinkTemplates)
 final adminLinkTemplatesProvider = AdminLinkTemplatesProvider._();
 
 /// The global questionnaire link templates (`links/templates`).
-
+///
+/// Watched by the Links page, so the notifier stays alive and
+/// [AdminLinkTemplates.save] can safely invalidate itself after the await.
 final class AdminLinkTemplatesProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<StudyLinkTemplates>,
-          StudyLinkTemplates,
-          FutureOr<StudyLinkTemplates>
-        >
-    with
-        $FutureModifier<StudyLinkTemplates>,
-        $FutureProvider<StudyLinkTemplates> {
+    extends $AsyncNotifierProvider<AdminLinkTemplates, StudyLinkTemplates> {
   /// The global questionnaire link templates (`links/templates`).
+  ///
+  /// Watched by the Links page, so the notifier stays alive and
+  /// [AdminLinkTemplates.save] can safely invalidate itself after the await.
   AdminLinkTemplatesProvider._()
     : super(
         from: null,
@@ -87,49 +87,18 @@ final class AdminLinkTemplatesProvider
 
   @$internal
   @override
-  $FutureProviderElement<StudyLinkTemplates> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<StudyLinkTemplates> create(Ref ref) {
-    return adminLinkTemplates(ref);
-  }
+  AdminLinkTemplates create() => AdminLinkTemplates();
 }
 
 String _$adminLinkTemplatesHash() =>
-    r'fe08a3e4793f9b95be914961f48dd2d1cc1514a3';
+    r'a27cf668ccd667ebb083a6a871b63ec8fb174ec2';
 
-@ProviderFor(AdminLinkTemplatesEditor)
-final adminLinkTemplatesEditorProvider = AdminLinkTemplatesEditorProvider._();
+/// The global questionnaire link templates (`links/templates`).
+///
+/// Watched by the Links page, so the notifier stays alive and
+/// [AdminLinkTemplates.save] can safely invalidate itself after the await.
 
-final class AdminLinkTemplatesEditorProvider
-    extends
-        $AsyncNotifierProvider<AdminLinkTemplatesEditor, StudyLinkTemplates> {
-  AdminLinkTemplatesEditorProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'adminLinkTemplatesEditorProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$adminLinkTemplatesEditorHash();
-
-  @$internal
-  @override
-  AdminLinkTemplatesEditor create() => AdminLinkTemplatesEditor();
-}
-
-String _$adminLinkTemplatesEditorHash() =>
-    r'64dd23af613cc966610a56987e8f2a57af5aeb6b';
-
-abstract class _$AdminLinkTemplatesEditor
-    extends $AsyncNotifier<StudyLinkTemplates> {
+abstract class _$AdminLinkTemplates extends $AsyncNotifier<StudyLinkTemplates> {
   FutureOr<StudyLinkTemplates> build();
   @$mustCallSuper
   @override

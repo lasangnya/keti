@@ -176,7 +176,7 @@ class _LinksSettingsPageState extends ConsumerState<LinksSettingsPage> {
       _messageIsError = false;
     });
     try {
-      await ref.read(adminLinkTemplatesEditorProvider.notifier).save(
+      await ref.read(adminLinkTemplatesProvider.notifier).save(
             StudyLinkTemplates(
               preStudy: orNull(_preStudy),
               endOfDayType1: orNull(_endOfDayType1),

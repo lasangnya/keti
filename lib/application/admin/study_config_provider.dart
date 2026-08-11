@@ -14,12 +14,11 @@ class AdminStudyConfig extends _$AdminStudyConfig {
 }
 
 /// The global questionnaire link templates (`links/templates`).
+///
+/// Watched by the Links page, so the notifier stays alive and
+/// [AdminLinkTemplates.save] can safely invalidate itself after the await.
 @riverpod
-Future<StudyLinkTemplates> adminLinkTemplates(Ref ref) =>
-    ref.watch(adminRepositoryProvider).getLinkTemplates();
-
-@riverpod
-class AdminLinkTemplatesEditor extends _$AdminLinkTemplatesEditor {
+class AdminLinkTemplates extends _$AdminLinkTemplates {
   @override
   Future<StudyLinkTemplates> build() =>
       ref.watch(adminRepositoryProvider).getLinkTemplates();
