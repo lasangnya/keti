@@ -176,10 +176,29 @@ class FirestoreAdminRepository implements AdminRepository {
       batch.delete(doc.reference);
     }
 
-    // 3. Stamp the per-day reset signal (wipes the same day locally on the
-    //    device) and move the active-day gate back so the day can be redone.
+    // 3. The active-day gate points at the first day that still needs to be
+    //    done: resetting Day 1 always returns to Day 1; resetting Day 2 only
+    //    stays on Day 2 when Day 1 is still completed — otherwise (e.g. both
+    //    days reset) it falls back to Day 1 so the participant restarts from
+    //    the beginning.
+    var nextActiveDay = 1;
+    if (day == 2) {
+      final day1Snap = await _participant(participantCode)
+          .collection('studySessions')
+          .doc('day1')
+          .get();
+      final Map<String, dynamic>? day1Data = day1Snap.exists ? day1Snap.data() : null;
+      final Object? rawStatus = day1Data?['status'];
+      final day1Status = rawStatus as String?;
+      if (day1Status == StudySessionStatus.completed.wireName) {
+        nextActiveDay = 2;
+      }
+    }
+
+    // 4. Stamp the per-day reset signal (wipes the same day locally on the
+    //    device) and move the active-day gate.
     batch.update(_participant(participantCode), {
-      'activeDay': day,
+      'activeDay': nextActiveDay,
       'resetDay$day' 'At': FieldValue.serverTimestamp(),
     });
 
