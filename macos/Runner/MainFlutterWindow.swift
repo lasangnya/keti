@@ -103,6 +103,8 @@ class MainFlutterWindow: NSWindow {
         sessionChannel.setMethodCallHandler { (call, result) in
             if call.method == PlatformChannels.methodSetSessionActive, let active = call.arguments as? Bool {
                 (NSApp.delegate as? AppDelegate)?.setSessionActive(active)
+            } else if call.method == PlatformChannels.methodCloseWindow {
+                self.performClose(nil)
             }
             result(nil)
         }

@@ -102,7 +102,7 @@ class ParticipantEntry extends _$ParticipantEntry {
     state = const ParticipantEntryState(isLoading: true);
 
     // Safety: ensure we have an anonymous session before making Firestore calls.
-    // Usually handled by AppModeState, but this provides a retry/wait if needed.
+    // Usually handled at startup, but this provides a retry/wait if needed.
     try {
       await AuthService().signInAnonymouslyIfNeeded();
     } catch (e) {

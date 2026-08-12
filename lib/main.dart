@@ -3,10 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:keti/application/app_mode_provider.dart';
 import 'package:keti/application/theme/theme_provider.dart';
 import 'package:keti/core/constants/app_config.dart';
 import 'package:keti/core/services/firebase/auth_service.dart';
+import 'package:keti/core/services/researcher_launcher.dart';
 import 'package:keti/firebase_options.dart';
 import 'package:keti/presentation/pages/admin/admin_root_page.dart';
 import 'package:keti/presentation/pages/home/home_page.dart';
@@ -36,12 +36,16 @@ class KetiApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = ref.watch(appThemeProvider);
-    final mode = ref.watch(appModeStateProvider);
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: theme,
-      home: mode == AppMode.admin ? const AdminRootPage() : const KetiHomePage(),
+      // A second instance launched with the KETI_RESEARCHER flag (from the
+      // participant app's "Researcher Access" button) boots straight into
+      // the admin console — participant and researcher run in parallel.
+      home: ResearcherLauncher.isResearcherWindow
+          ? const AdminRootPage()
+          : const KetiHomePage(),
     );
   }
 }

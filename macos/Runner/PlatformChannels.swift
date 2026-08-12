@@ -30,6 +30,7 @@ enum PlatformChannels {
 
     // ── Method names (session_lifecycle) ─────────────────────────
     static let methodSetSessionActive = "setSessionActive"
+    static let methodCloseWindow = "closeWindow"
 
     // ── Argument keys ─────────────────────────────────────────────
     static let keyMessage = "message"

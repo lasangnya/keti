@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../application/admin/admin_auth_provider.dart';
-import '../../../application/app_mode_provider.dart';
 import '../test_mode/test_mode_page.dart';
 import 'links_settings_page.dart';
 import 'participants_page.dart';
@@ -64,9 +63,10 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
                           style: const TextStyle(fontSize: 12)),
                       onPressed: () async {
                         await ref.read(adminAuthProvider.notifier).signOut();
-                        await ref
-                            .read(appModeStateProvider.notifier)
-                            .setMode(AppMode.participant);
+                        // Sign-out returns to the login screen automatically
+                        // (AdminRootPage gates on auth state). This window is
+                        // the dedicated researcher instance, so there is no
+                        // in-window participant mode to return to.
                       },
                     ),
                   ),

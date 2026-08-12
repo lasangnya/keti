@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../application/app_mode_provider.dart';
+import '../../../core/services/researcher_launcher.dart';
 import '../study/study_page.dart';
 
 /// Participant shell (study build): the Study flow is the only content —
-/// no side panel. The Researcher Access entry stays pinned bottom-right.
+/// no side panel. The Researcher Access entry stays pinned bottom-right and
+/// opens the admin console in a SEPARATE app window/process so participant
+/// and researcher run in parallel.
 class KetiHomePage extends ConsumerStatefulWidget {
   const KetiHomePage({super.key});
 
@@ -13,6 +15,25 @@ class KetiHomePage extends ConsumerStatefulWidget {
 }
 
 class _KetiHomePageState extends ConsumerState<KetiHomePage> {
+  bool _launching = false;
+
+  Future<void> _openResearcherWindow() async {
+    if (_launching) return;
+    setState(() => _launching = true);
+    final ok = await ResearcherLauncher.launch();
+    if (!mounted) return;
+    setState(() => _launching = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          ok
+              ? 'Researcher window opened.'
+              : 'Could not open the researcher window.',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -25,13 +46,9 @@ class _KetiHomePageState extends ConsumerState<KetiHomePage> {
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: TextButton(
-                  onPressed: () {
-                    ref
-                        .read(appModeStateProvider.notifier)
-                        .setMode(AppMode.admin);
-                  },
+                  onPressed: _launching ? null : _openResearcherWindow,
                   child: Text(
-                    'Researcher Access',
+                    _launching ? 'Opening…' : 'Researcher Access',
                     style: TextStyle(
                       color: Theme.of(context)
                           .colorScheme
