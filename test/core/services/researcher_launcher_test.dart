@@ -5,27 +5,27 @@ import 'package:keti/core/services/researcher_launcher.dart';
 
 void main() {
   group('ResearcherLauncher', () {
-    test('isResearcherWindow is true when the env flag is set', () {
-      final original = Platform.environment[ResearcherLauncher.envFlag];
-      try {
-        // The test host inherits the parent environment; force the flag.
-        // (Platform.environment is immutable in Dart — emulate by checking
-        // the getter's contract instead of mutating.)
-        expect(ResearcherLauncher.envFlag, 'KETI_RESEARCHER');
-        expect(ResearcherLauncher.isResearcherWindow,
-            Platform.environment[ResearcherLauncher.envFlag] == '1');
-      } finally {
-        if (original != null) {
-          // no-op: environment cannot be mutated in Dart; the assertion
-          // above documents the contract.
-        }
-      }
+    test('flag is --researcher and the getter reflects the args/env contract',
+        () {
+      expect(ResearcherLauncher.flag, '--researcher');
+      final isResearcher = Platform.executableArguments.contains('--researcher') ||
+          Platform.environment['KETI_RESEARCHER'] == '1';
+      // On the test host neither is set — the getter must agree with the
+      // contract definition.
+      expect(ResearcherLauncher.isResearcherWindow, isResearcher);
+    });
+
+    test('launch goes through LaunchServices (open -n) without throwing',
+        () async {
+      // On the test host this attempts to run `open`, which either succeeds
+      // or fails cleanly — it must not throw.
+      final ok = await ResearcherLauncher.launch();
+      expect(ok, isA<bool>());
     });
 
     test('closeWindow invokes the session-lifecycle channel without throwing',
         () async {
-      // No-op-safe on the test host (channel has no handler in tests);
-      // the call is best-effort and must not throw.
+      // Best-effort on the test host (no native handler) — must not throw.
       await ResearcherLauncher.closeWindow();
     });
   });

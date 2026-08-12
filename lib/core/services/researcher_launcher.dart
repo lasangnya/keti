@@ -8,31 +8,42 @@ import '../constants/platform_channels.dart';
 /// participant and researcher can run in parallel windows/processes.
 ///
 /// The new process boots into the admin UI because [main] checks the
-/// `KETI_RESEARCHER` environment variable (see `main.dart`). Both instances
+/// `--researcher` command-line argument (see `main.dart`). Both instances
 /// share the same Firestore project, so admin actions (e.g. Activate Day 2)
 /// are picked up by the participant window's auto-check.
 class ResearcherLauncher {
-  /// Environment flag the second instance checks at startup.
+  /// Command-line flag the second instance checks at startup.
+  static const flag = '--researcher';
+
+  /// Legacy environment-flag fallback (set only when launched directly).
   static const envFlag = 'KETI_RESEARCHER';
 
   /// True when the current process IS the researcher window.
-  static bool get isResearcherWindow =>
-      !kIsWeb && Platform.environment[envFlag] == '1';
+  static bool get isResearcherWindow => !kIsWeb &&
+      (Platform.executableArguments.contains(flag) ||
+          Platform.environment[envFlag] == '1');
 
-  /// Spawns a detached second instance of this app with [envFlag] set.
+  /// Launches a second instance of this app through LaunchServices
+  /// (`open -n`), which forces a new instance and — unlike spawning the raw
+  /// executable — properly activates the window so the Flutter surface
+  /// renders (spawning directly produces a black window on macOS).
+  ///
   /// Returns false (and logs) when the launch fails.
   static Future<bool> launch() async {
     if (kIsWeb) return false;
     try {
-      await Process.start(
-        Platform.resolvedExecutable,
-        const <String>[],
-        environment: {
-          ...Platform.environment,
-          envFlag: '1',
-        },
-        mode: ProcessStartMode.detached,
+      // resolvedExecutable is …/keti.app/Contents/MacOS/keti — the .app
+      // bundle is two levels up.
+      final executable = File(Platform.resolvedExecutable);
+      final bundle = executable.parent.parent.path;
+      final result = await Process.run(
+        'open',
+        ['-n', bundle, '--args', flag],
       );
+      if (result.exitCode != 0) {
+        debugPrint('ResearcherLauncher: open failed: ${result.stderr}');
+        return false;
+      }
       return true;
     } catch (e) {
       debugPrint('ResearcherLauncher: failed to launch: $e');
