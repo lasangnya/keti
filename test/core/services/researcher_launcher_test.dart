@@ -22,7 +22,6 @@ void main() {
       final ok = await ResearcherLauncher.launch();
       expect(ok, isA<bool>());
     });
-
     test('closeWindow invokes the session-lifecycle channel without throwing',
         () async {
       // Best-effort on the test host (no native handler) — must not throw.

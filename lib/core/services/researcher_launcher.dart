@@ -32,16 +32,17 @@ class ResearcherLauncher {
   static Future<bool> launch() async {
     if (kIsWeb) return false;
     try {
-      // resolvedExecutable is …/keti.app/Contents/MacOS/keti — the .app
-      // bundle is two levels up.
-      final executable = File(Platform.resolvedExecutable);
-      final bundle = executable.parent.parent.path;
-      final result = await Process.run(
-        'open',
-        ['-n', bundle, '--args', flag],
-      );
+      final bundle = _appBundlePath(Platform.resolvedExecutable);
+      if (bundle == null) {
+        debugPrint(
+            'ResearcherLauncher: could not locate the .app bundle for '
+            '${Platform.resolvedExecutable}');
+        return false;
+      }
+      final result = await Process.run('open', ['-n', bundle, '--args', flag]);
       if (result.exitCode != 0) {
-        debugPrint('ResearcherLauncher: open failed: ${result.stderr}');
+        debugPrint('ResearcherLauncher: open failed (${result.exitCode}): '
+            '${result.stderr}');
         return false;
       }
       return true;
@@ -49,6 +50,18 @@ class ResearcherLauncher {
       debugPrint('ResearcherLauncher: failed to launch: $e');
       return false;
     }
+  }
+
+  /// Walks up from the executable to the enclosing `*.app` bundle.
+  /// `resolvedExecutable` is `…/keti.app/Contents/MacOS/keti`, so the bundle
+  /// is three levels up.
+  static String? _appBundlePath(String executablePath) {
+    var dir = File(executablePath).parent;
+    for (var i = 0; i < 6; i++) {
+      if (dir.path.endsWith('.app') && dir.existsSync()) return dir.path;
+      dir = dir.parent;
+    }
+    return null;
   }
 
   /// Closes the current window (used by the researcher instance's
