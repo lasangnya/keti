@@ -147,7 +147,8 @@ void main() {
     );
 
     // Start Day 2 is offered immediately and always tappable; P001 is not
-    // day-2 activated in the mock → tapping shows the not-activated snackbar.
+    // day-2 activated in the mock → tapping shows the not-activated snackbar
+    // AND keeps the day-1 completion screen (never falls back to day 1).
     expect(find.text('Start Day 2'), findsOneWidget);
     final startDay2 = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, 'Start Day 2'),
@@ -156,6 +157,9 @@ void main() {
     await tester.tap(find.text('Start Day 2'));
     await tester.pumpAndSettle();
     expect(find.textContaining('has not been activated'), findsWidgets);
+    expect(find.text('Session complete'), findsOneWidget);
+    expect(find.text('Start Day 1'), findsNothing);
+    expect(find.text('Day 2'), findsNothing);
   });
 
   testWidgets('day 2 completion reveals the end-of-study questionnaire',

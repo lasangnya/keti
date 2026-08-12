@@ -348,19 +348,27 @@ class _StudyPageState extends ConsumerState<StudyPage> {
           // visible feedback (snackbar) instead of a silent no-op.
           onPressed: () async {
             debugPrint('Start Day 2 tapped');
-            // Clear the finished day-1 session and load the day-2
-            // schedule without dropping back to the tutorial.
-            ref.read(sessionControllerProvider.notifier).resetForNewDay();
-            await ref.read(participantEntryProvider.notifier).loadDay2();
+            // Check activation FIRST. The finished day-1 session must not be
+            // cleared unless day 2 actually loads — otherwise a not-activated
+            // press wipes the only "day 1 completed" flag (session state) and
+            // the page falls back to the day-1 overview/start flow.
+            await ref
+                .read(participantEntryProvider.notifier)
+                .loadDay2();
             if (!mounted) return;
-            // If loadDay2 could not proceed, tell the researcher why.
+            // If loadDay2 could not proceed, tell the researcher why and
+            // stay on the day-1 completion screen.
             final msg = ref.read(participantEntryProvider).errorMessage;
             debugPrint('Start Day 2 after load: errorMessage=$msg');
-            if (msg != null && mounted) {
+            if (msg != null) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(msg)),
               );
+              return;
             }
+            // Day 2 is loaded: clear the finished day-1 session so the
+            // day-2 overview shows instead of the day-1 completion screen.
+            ref.read(sessionControllerProvider.notifier).resetForNewDay();
           },
         ),
         if (!day2Activated) ...[
