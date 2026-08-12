@@ -13,6 +13,11 @@ class AppDelegate: FlutterAppDelegate {
         // Calling setup here ensures we are the first 3rd-party app to request a slot.
         TrayPillManager.setup()
         super.applicationDidFinishLaunching(notification)
+
+        // Directly-spawned instances (researcher window) arrive inactive,
+        // leaving the Flutter surface black until activated.
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     override func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

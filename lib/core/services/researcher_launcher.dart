@@ -44,48 +44,34 @@ class ResearcherLauncher {
     return false;
   }
 
-  /// Writes the marker and opens a second instance via LaunchServices
-  /// (`open -n`), which forces a new instance and properly activates the
-  /// window so the Flutter surface renders (spawning the raw executable
-  /// directly produces a black window on macOS).
+  /// Spawns a second instance directly with the researcher env flag.
+  ///
+  /// `open -n` (LaunchServices) is NOT used: when the app is hosted by
+  /// `flutter run`, LaunchServices does not reliably start a second process
+  /// with our flags. Direct spawn always passes env reliably; the black
+  /// window that direct spawn used to cause is fixed by the native
+  /// `NSApp.activate` in `AppDelegate.applicationDidFinishLaunching`.
   ///
   /// Returns false (and logs) when the launch fails.
   static Future<bool> launch() async {
     if (kIsWeb) return false;
     try {
-      final bundle = _appBundlePath(Platform.resolvedExecutable);
-      if (bundle == null) {
-        debugPrint(
-            'ResearcherLauncher: could not locate the .app bundle for '
-            '${Platform.resolvedExecutable}');
-        return false;
-      }
-      // Marker first — the new instance reads it before/independent of any
-      // env/argv quirks of the launch mechanism.
+      // Marker as well — belt and braces with the env flag.
       File(markerPath).writeAsStringSync('1');
-      final result = await Process.run('open', ['-n', bundle]);
-      if (result.exitCode != 0) {
-        debugPrint('ResearcherLauncher: open failed (${result.exitCode}): '
-            '${result.stderr}');
-        return false;
-      }
+      await Process.start(
+        Platform.resolvedExecutable,
+        const <String>[],
+        environment: {
+          ...Platform.environment,
+          envFlag: '1',
+        },
+        mode: ProcessStartMode.detached,
+      );
       return true;
     } catch (e) {
       debugPrint('ResearcherLauncher: failed to launch: $e');
       return false;
     }
-  }
-
-  /// Walks up from the executable to the enclosing `*.app` bundle.
-  /// `resolvedExecutable` is `…/keti.app/Contents/MacOS/keti`, so the bundle
-  /// is three levels up.
-  static String? _appBundlePath(String executablePath) {
-    var dir = File(executablePath).parent;
-    for (var i = 0; i < 6; i++) {
-      if (dir.path.endsWith('.app') && dir.existsSync()) return dir.path;
-      dir = dir.parent;
-    }
-    return null;
   }
 
   /// Closes the current window (used by the researcher instance's
