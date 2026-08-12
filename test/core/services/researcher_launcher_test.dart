@@ -6,17 +6,20 @@ import 'package:keti/core/services/researcher_launcher.dart';
 void main() {
   group('ResearcherLauncher', () {
     setUp(() {
-      // Ensure a clean marker state between tests.
+      // Ensure a clean marker state and cached flag between tests.
+      ResearcherLauncher.resetCachedFlag();
       final marker = File(ResearcherLauncher.markerPath);
       if (marker.existsSync()) marker.deleteSync();
     });
 
-    test('isResearcherWindow consumes a pending marker file', () {
+    test('isResearcherWindow consumes a pending marker file exactly once',
+        () {
       File(ResearcherLauncher.markerPath).writeAsStringSync('1');
       expect(ResearcherLauncher.isResearcherWindow, isTrue);
-      // Marker is consumed exactly once.
+      // Marker consumed on first read.
       expect(File(ResearcherLauncher.markerPath).existsSync(), isFalse);
-      expect(ResearcherLauncher.isResearcherWindow, isFalse);
+      // The result is sticky — re-evaluation must not lose the flag.
+      expect(ResearcherLauncher.isResearcherWindow, isTrue);
     });
 
     test('isResearcherWindow is false without any flag', () {

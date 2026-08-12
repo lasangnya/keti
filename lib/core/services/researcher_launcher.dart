@@ -13,6 +13,12 @@ import '../constants/platform_channels.dart';
 /// [launch] writes the marker, opens a fresh instance via `open -n`, and the
 /// new instance reads+deletes the marker at startup (see [main]).
 ///
+/// LaunchServices (`open -n`) is required: spawning the raw executable
+/// directly starts the process without activation, the window server reports
+/// it occluded, and the Flutter engine stops presenting frames — a black
+/// window that in-process `NSApp.activate` cannot fix. LaunchServices
+/// launches the new instance with system-granted activation.
+///
 /// Both instances share the same Firestore project, so admin actions
 /// (e.g. Activate Day 2) are picked up by the participant window's auto-check.
 class ResearcherLauncher {
@@ -25,10 +31,26 @@ class ResearcherLauncher {
       '${Directory.systemTemp.path}/keti_researcher_request';
 
   /// True when the current process IS the researcher window.
-  static bool get isResearcherWindow => !kIsWeb &&
-      (Platform.executableArguments.contains(flag) ||
-          Platform.environment[envFlag] == '1' ||
-          _consumeMarker());
+  ///
+  /// The first evaluation is cached: the marker file is one-shot (consumed on
+  /// read), so evaluating this more than once — the startup diagnostics in
+  /// `main()` and again when `runApp` builds the tree — must not lose it.
+  static bool? _isResearcherWindow;
+
+  static bool get isResearcherWindow {
+    _isResearcherWindow ??= !kIsWeb &&
+        (Platform.executableArguments.contains(flag) ||
+            Platform.environment[envFlag] == '1' ||
+            _consumeMarker());
+    return _isResearcherWindow!;
+  }
+
+  /// Test hook: clears the cached flag so a test can re-evaluate from a
+  /// clean state (the cache is process-global static state).
+  @visibleForTesting
+  static void resetCachedFlag() {
+    _isResearcherWindow = null;
+  }
 
   static bool _consumeMarker() {
     try {
@@ -44,34 +66,55 @@ class ResearcherLauncher {
     return false;
   }
 
-  /// Spawns a second instance directly with the researcher env flag.
+  /// Opens a second instance through LaunchServices (`open -n`), which
+  /// forces a new instance and launches it with system-granted activation —
+  /// a directly spawned process is never activated, its window is reported
+  /// occluded, and the Flutter surface stays black.
   ///
-  /// `open -n` (LaunchServices) is NOT used: when the app is hosted by
-  /// `flutter run`, LaunchServices does not reliably start a second process
-  /// with our flags. Direct spawn always passes env reliably; the black
-  /// window that direct spawn used to cause is fixed by the native
-  /// `NSApp.activate` in `AppDelegate.applicationDidFinishLaunching`.
+  /// The marker file carries the researcher flag (written before `open`);
+  /// LaunchServices does not propagate env/argv to the new process.
   ///
   /// Returns false (and logs) when the launch fails.
   static Future<bool> launch() async {
     if (kIsWeb) return false;
     try {
-      // Marker as well — belt and braces with the env flag.
+      final bundle = _appBundlePath(Platform.resolvedExecutable);
+      if (bundle == null) {
+        debugPrint('ResearcherLauncher: could not locate the .app bundle for '
+            '${Platform.resolvedExecutable}');
+        return false;
+      }
+      // Marker first — the new instance reads it before/independent of any
+      // env/argv quirks of the launch mechanism.
       File(markerPath).writeAsStringSync('1');
-      await Process.start(
-        Platform.resolvedExecutable,
-        const <String>[],
-        environment: {
-          ...Platform.environment,
-          envFlag: '1',
-        },
-        mode: ProcessStartMode.detached,
-      );
+      final result = await Process.run('open', ['-n', bundle]);
+      if (result.exitCode != 0) {
+        debugPrint('ResearcherLauncher: open failed (${result.exitCode}): '
+            '${result.stderr}');
+        // Do not leave a stale marker behind — a later launch of the
+        // participant app would consume it and boot into admin mode.
+        try {
+          File(markerPath).deleteSync();
+        } catch (_) {}
+        return false;
+      }
       return true;
     } catch (e) {
       debugPrint('ResearcherLauncher: failed to launch: $e');
       return false;
     }
+  }
+
+  /// Walks up from the executable to the enclosing `*.app` bundle.
+  /// `resolvedExecutable` is `…/keti.app/Contents/MacOS/keti`, so the bundle
+  /// is two levels up.
+  static String? _appBundlePath(String executablePath) {
+    var dir = File(executablePath).parent;
+    for (var i = 0; i < 6; i++) {
+      if (dir.path.endsWith('.app') && dir.existsSync()) return dir.path;
+      dir = dir.parent;
+    }
+    return null;
   }
 
   /// Closes the current window (used by the researcher instance's

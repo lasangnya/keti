@@ -14,10 +14,25 @@ class AppDelegate: FlutterAppDelegate {
         TrayPillManager.setup()
         super.applicationDidFinishLaunching(notification)
 
-        // Directly-spawned instances (researcher window) arrive inactive,
-        // leaving the Flutter surface black until activated.
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
+        // Directly-spawned instances (the researcher window) are never
+        // activated by LaunchServices. An inactive app's window is reported
+        // as occluded, so the Flutter engine pauses the rasterizer and the
+        // surface stays black. Activating synchronously here is too early to
+        // win the launch race — defer to the next runloop turn (the pattern
+        // Ghostty uses for CLI-spawned instances) and order the window front.
+        DispatchQueue.main.async {
+            NSApp.setActivationPolicy(.regular)
+            NSApp.activate(ignoringOtherApps: true)
+            NSApp.unhide(nil)
+            NSApp.windows.first?.makeKeyAndOrderFront(nil)
+            NSApp.arrangeInFront(nil)
+        }
+        // Retry once the window server has settled — the first activation
+        // attempt during a directly-spawned launch can be dropped.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+            NSApp.activate(ignoringOtherApps: true)
+            NSApp.arrangeInFront(nil)
+        }
     }
 
     override func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
