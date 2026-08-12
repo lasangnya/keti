@@ -10,6 +10,10 @@ class ComplianceCardManager {
     private static var cardWindow: NSPanel?
     private static var timeoutTimer: Timer?
 
+    /// Gap between the card and the top/right edges of the screen (points).
+    /// Increase to push the card lower / more inward.
+    static let edgeMargin: CGFloat = 28
+
     static func show(
         question: String,
         button1Text: String,
@@ -47,10 +51,13 @@ class ComplianceCardManager {
         panel.canHide = false
         panel.contentView = hostingView
 
-        // Top-right corner of the main screen, always.
-        if let screen = NSScreen.main {
-            let x = screen.frame.maxX - idealSize.width - 16
-            let y = screen.frame.maxY - idealSize.height - 16
+        // Top-right corner of the screen the app's window is on (falls back
+        // to the main screen). Anchoring to the app's window screen keeps the
+        // card on the display the participant is actually looking at.
+        let screen = NSApp.mainWindow?.screen ?? NSScreen.main
+        if let screen {
+            let x = screen.frame.maxX - idealSize.width - edgeMargin
+            let y = screen.frame.maxY - idealSize.height - edgeMargin
             panel.setFrameOrigin(NSPoint(x: x, y: y))
         }
 
