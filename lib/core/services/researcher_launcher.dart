@@ -24,9 +24,14 @@ class ResearcherLauncher {
           Platform.environment[envFlag] == '1');
 
   /// Launches a second instance of this app through LaunchServices
-  /// (`open -n`), which forces a new instance and — unlike spawning the raw
-  /// executable — properly activates the window so the Flutter surface
+  /// (`open -n --env`), which forces a new instance and — unlike spawning the
+  /// raw executable — properly activates the window so the Flutter surface
   /// renders (spawning directly produces a black window on macOS).
+  ///
+  /// The researcher flag is passed via the `KETI_RESEARCHER` environment
+  /// variable (and mirrored as `--researcher` argv for good measure) — env is
+  /// reliably visible to the new process, while `--args` argv is not always
+  /// surfaced to Dart's `Platform.executableArguments` on macOS.
   ///
   /// Returns false (and logs) when the launch fails.
   static Future<bool> launch() async {
@@ -39,7 +44,14 @@ class ResearcherLauncher {
             '${Platform.resolvedExecutable}');
         return false;
       }
-      final result = await Process.run('open', ['-n', bundle, '--args', flag]);
+      final result = await Process.run('open', [
+        '-n',
+        bundle,
+        '--env',
+        '$envFlag=1',
+        '--args',
+        flag,
+      ]);
       if (result.exitCode != 0) {
         debugPrint('ResearcherLauncher: open failed (${result.exitCode}): '
             '${result.stderr}');
