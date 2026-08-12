@@ -14,6 +14,7 @@ import 'package:keti/core/services/local/local_store.dart';
 import 'package:keti/core/services/study/mock_participant_repository.dart';
 import 'package:keti/domain/study/day_schedule.dart';
 import 'package:keti/domain/study/participant.dart';
+import 'package:keti/domain/study/reminder_event.dart';
 import 'package:keti/domain/study/scheduled_reminder.dart';
 import 'package:keti/domain/study/study_config.dart';
 import 'package:keti/domain/study/study_enums.dart';
@@ -160,6 +161,55 @@ void main() {
     expect(find.text('Session complete'), findsOneWidget);
     expect(find.text('Start Day 1'), findsNothing);
     expect(find.text('Day 2'), findsNothing);
+  });
+
+  testWidgets(
+      'unfinished session offers Resume only — never a second Start',
+      (tester) async {
+    // An active day-1 session already exists locally (app quit mid-session).
+    final csv = CsvStore(rootDir: csvRoot);
+    final sessionStart = DateTime.parse('2026-08-03T09:00:00+02:00');
+    await csv.writeSession(
+      StudySession(
+        participantCode: 'P001',
+        dayNumber: 1,
+        style: PresentationStyle.ambient,
+        status: StudySessionStatus.active,
+        startedAtLocal: sessionStart,
+        schedule: const DaySchedule(
+          dayNumber: 1,
+          style: PresentationStyle.ambient,
+          reminders: kDefaultScheduleTemplate,
+        ),
+        links: const QuestionnaireLinks(),
+      ),
+    );
+    await csv.writeEvents('P001', 'day1', [
+      for (final r in kDefaultScheduleTemplate)
+        ReminderEvent.scheduled(
+          participantCode: 'P001',
+          dayNumber: 1,
+          reminder: r,
+          style: PresentationStyle.ambient,
+          sessionStartLocal: sessionStart,
+          environment: 'dev',
+          appVersion: '1.0.0+1',
+          protocolVersion: '2026-08-v1',
+        ),
+    ]);
+
+    await pumpStudyPage(tester);
+    await enterCode(tester, 'P001');
+
+    // Resumable → only Resume is offered. A second Start would reuse the
+    // same Firestore event doc IDs and silently produce mixed data.
+    expect(find.text('Resume Day 1'), findsOneWidget);
+    expect(find.text('Start Day 1'), findsNothing);
+    expect(find.text('Start Day 2'), findsNothing);
+
+    await tester.tap(find.text('Resume Day 1'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Session active'), findsOneWidget);
   });
 
   testWidgets('day 2 completion reveals the end-of-study questionnaire',

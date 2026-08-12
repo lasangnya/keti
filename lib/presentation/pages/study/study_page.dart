@@ -138,14 +138,19 @@ class _StudyPageState extends ConsumerState<StudyPage> {
               child: Text('Resume Day ${schedule.dayNumber}'),
             ),
             const SizedBox(height: 8),
-          ],
-          FilledButton.tonal(
-            onPressed: entry.dayAlreadyCompleted
-                ? null
-                : () =>
-                    ref.read(sessionControllerProvider.notifier).startDay(),
-            child: Text('${AppStrings.startDay} ${schedule.dayNumber}'),
-          ),
+            // No "Start" button while an unfinished session exists: starting
+            // again would reuse the same event doc IDs in Firestore, which
+            // the rules treat as an update and reject — leaving the old
+            // session's data in Firestore mixed with the new one's. A
+            // restart is only legitimate via a researcher reset.
+          ] else
+            FilledButton.tonal(
+              onPressed: entry.dayAlreadyCompleted
+                  ? null
+                  : () =>
+                      ref.read(sessionControllerProvider.notifier).startDay(),
+              child: Text('${AppStrings.startDay} ${schedule.dayNumber}'),
+            ),
           if (entry.errorMessage != null) ...[
             const SizedBox(height: 12),
             Text(
