@@ -7,31 +7,47 @@ import '../constants/platform_channels.dart';
 /// Launches a second instance of this app in **researcher mode** so the
 /// participant and researcher can run in parallel windows/processes.
 ///
-/// The new process boots into the admin UI because [main] checks the
-/// `--researcher` command-line argument (see `main.dart`). Both instances
-/// share the same Firestore project, so admin actions (e.g. Activate Day 2)
-/// are picked up by the participant window's auto-check.
+/// The researcher flag is communicated via a **marker file** rather than
+/// process env/argv: env vars and `--args` are not reliably propagated to a
+/// second instance when the app is hosted by `flutter run` or LaunchServices.
+/// [launch] writes the marker, opens a fresh instance via `open -n`, and the
+/// new instance reads+deletes the marker at startup (see [main]).
+///
+/// Both instances share the same Firestore project, so admin actions
+/// (e.g. Activate Day 2) are picked up by the participant window's auto-check.
 class ResearcherLauncher {
-  /// Command-line flag the second instance checks at startup.
+  /// Legacy env/argv flags, kept for direct launches.
   static const flag = '--researcher';
-
-  /// Legacy environment-flag fallback (set only when launched directly).
   static const envFlag = 'KETI_RESEARCHER';
+
+  /// Marker file the second instance checks at startup.
+  static String get markerPath =>
+      '${Directory.systemTemp.path}/keti_researcher_request';
 
   /// True when the current process IS the researcher window.
   static bool get isResearcherWindow => !kIsWeb &&
       (Platform.executableArguments.contains(flag) ||
-          Platform.environment[envFlag] == '1');
+          Platform.environment[envFlag] == '1' ||
+          _consumeMarker());
 
-  /// Launches a second instance of this app through LaunchServices
-  /// (`open -n --env`), which forces a new instance and — unlike spawning the
-  /// raw executable — properly activates the window so the Flutter surface
-  /// renders (spawning directly produces a black window on macOS).
-  ///
-  /// The researcher flag is passed via the `KETI_RESEARCHER` environment
-  /// variable (and mirrored as `--researcher` argv for good measure) — env is
-  /// reliably visible to the new process, while `--args` argv is not always
-  /// surfaced to Dart's `Platform.executableArguments` on macOS.
+  static bool _consumeMarker() {
+    try {
+      final marker = File(markerPath);
+      if (marker.existsSync()) {
+        marker.deleteSync();
+        debugPrint('ResearcherLauncher: researcher marker consumed');
+        return true;
+      }
+    } catch (e) {
+      debugPrint('ResearcherLauncher: marker check failed: $e');
+    }
+    return false;
+  }
+
+  /// Writes the marker and opens a second instance via LaunchServices
+  /// (`open -n`), which forces a new instance and properly activates the
+  /// window so the Flutter surface renders (spawning the raw executable
+  /// directly produces a black window on macOS).
   ///
   /// Returns false (and logs) when the launch fails.
   static Future<bool> launch() async {
@@ -44,14 +60,10 @@ class ResearcherLauncher {
             '${Platform.resolvedExecutable}');
         return false;
       }
-      final result = await Process.run('open', [
-        '-n',
-        bundle,
-        '--env',
-        '$envFlag=1',
-        '--args',
-        flag,
-      ]);
+      // Marker first — the new instance reads it before/independent of any
+      // env/argv quirks of the launch mechanism.
+      File(markerPath).writeAsStringSync('1');
+      final result = await Process.run('open', ['-n', bundle]);
       if (result.exitCode != 0) {
         debugPrint('ResearcherLauncher: open failed (${result.exitCode}): '
             '${result.stderr}');

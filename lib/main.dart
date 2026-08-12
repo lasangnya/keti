@@ -40,6 +40,7 @@ void _logLaunchMode() {
   final args = Platform.executableArguments;
   debugPrint('[launch-mode] executableArguments=$args');
   debugPrint('[launch-mode] KETI_RESEARCHER env=$env');
+  debugPrint('[launch-mode] markerPath=${ResearcherLauncher.markerPath}');
   debugPrint('[launch-mode] isResearcherWindow='
       '${ResearcherLauncher.isResearcherWindow}');
 }
