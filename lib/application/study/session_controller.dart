@@ -95,6 +95,11 @@ class SessionController extends _$SessionController {
   Future<void> startDay() async {
     final entry = ref.read(participantEntryProvider);
     if (!entry.isReady || state.active) return;
+    // Never start over an unfinished session: a second start would reuse the
+    // same event doc IDs in Firestore (rejected as an update by the rules,
+    // leaving mixed data). Resuming is the only legitimate path; a full
+    // restart requires a researcher reset.
+    if (entry.resumableDayId != null) return;
     final participant = entry.participant!;
     final schedule = entry.daySchedule!;
 
@@ -459,7 +464,9 @@ class SessionController extends _$SessionController {
       await ref
           .read(reminderEventRepositoryProvider)
           .updateEventLifecycle(code, dayId, updated);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Firestore sync FAILED for $transition ${updated.eventId}: $e');
+    }
   }
 
   /// An event is final when it left the scheduled state AND — for delivered
