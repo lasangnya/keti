@@ -6,6 +6,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../core/services/firebase/auth_service.dart';
 import '../../core/services/local/csv_store.dart';
+import '../../core/services/local/local_store.dart';
 import '../../core/services/local/sync_service.dart';
 import '../../core/services/study/participant_repository.dart';
 import '../../domain/study/condition_assignment.dart';
@@ -134,6 +135,7 @@ class ParticipantEntry extends _$ParticipantEntry {
           protocolVersion: participant.protocolVersion,
           resetDay1At: participant.resetDay1At,
           resetDay2At: participant.resetDay2At,
+          resetAllAt: participant.resetAllAt,
           linkFlags: participant.linkFlags,
         );
       }
@@ -163,6 +165,7 @@ class ParticipantEntry extends _$ParticipantEntry {
 
       // Reset-signal detection: wipe any day whose server-side reset
       // timestamp is newer than the local session start.
+      await _applyFullResetIfNeeded(csv, store, participant);
       await _applyResetSignals(csv, participant);
 
       await store.setLastParticipantCode(participant.participantCode);
@@ -232,6 +235,29 @@ class ParticipantEntry extends _$ParticipantEntry {
       state = await _readyState(csv, cached, cachedConfig, cachedSchedule,
           links, fromCache: true);
     }
+  }
+
+  /// Wipes ALL local data for a fully-reset participant (server `resetAllAt`
+  /// signal): the whole `keti_data/{code}` directory, the tutorial-seen flag
+  /// and every cached document — so the same code starts over as a fresh
+  /// participant (tutorial → day 1).
+  ///
+  /// A local watermark records the last applied signal so each reset is
+  /// applied exactly once, even across repeated code entries.
+  Future<void> _applyFullResetIfNeeded(
+      CsvStore csv, LocalStore store, Participant participant) async {
+    final resetAllAt = participant.resetAllAt;
+    if (resetAllAt == null) return;
+    final code = participant.participantCode;
+    final watermark = store.readResetWatermark(code);
+    if (watermark == resetAllAt.toIso8601String()) return;
+
+    debugPrint('Full reset signal for $code — wiping all local data...');
+    await csv.deleteParticipantDirectory(code);
+    await store.clearTutorialSeen(code);
+    await store.forgetCachedParticipant(code);
+    await store.setResetWatermark(code, resetAllAt.toIso8601String());
+    debugPrint('Full reset applied for $code — fresh start.');
   }
 
   /// Wipes local CSV sessions for any day whose server-side reset timestamp

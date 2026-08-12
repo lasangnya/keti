@@ -109,4 +109,63 @@ void main() {
     expect(doc?['activeDay'], 1);
     expect(doc, containsPair('resetDay2At', isNotNull));
   });
+
+  test(
+      'resetParticipant deletes both sessions and events and stamps the '
+      'full reset signal', () async {
+    await seedParticipant(activeDay: 2);
+    await seedDay1Session();
+    await firestore
+        .collection('participants')
+        .doc('P001')
+        .collection('studySessions')
+        .doc('day2')
+        .set({
+      'dayId': 'day2',
+      'dayNumber': 2,
+      'participantCode': 'P001',
+      'style': 'CHARACTER_BASED',
+      'status': 'COMPLETED',
+      'startedAtLocal': '2026-08-04T09:00:00+02:00',
+      'resumedCount': 0,
+    });
+    // One event under each day.
+    for (final day in const ['day1', 'day2']) {
+      await firestore
+          .collection('participants')
+          .doc('P001')
+          .collection('studySessions')
+          .doc(day)
+          .collection('reminderEvents')
+          .doc('reminder01')
+          .set({'eventId': 'reminder01'});
+    }
+
+    await repository.resetParticipant('P001');
+
+    final doc = await participantDoc();
+    expect(doc?['activeDay'], 1);
+    expect(doc, containsPair('resetAllAt', isNotNull));
+    expect(doc, containsPair('resetDay1At', isNotNull));
+    expect(doc, containsPair('resetDay2At', isNotNull));
+
+    // Both sessions and their events are gone.
+    for (final day in const ['day1', 'day2']) {
+      final sessionSnap = await firestore
+          .collection('participants')
+          .doc('P001')
+          .collection('studySessions')
+          .doc(day)
+          .get();
+      expect(sessionSnap.exists, isFalse, reason: 'session $day should be gone');
+      final eventsSnap = await firestore
+          .collection('participants')
+          .doc('P001')
+          .collection('studySessions')
+          .doc(day)
+          .collection('reminderEvents')
+          .get();
+      expect(eventsSnap.docs, isEmpty, reason: 'events $day should be gone');
+    }
+  });
 }

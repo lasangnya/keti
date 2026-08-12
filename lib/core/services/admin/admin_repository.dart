@@ -41,6 +41,15 @@ abstract class AdminRepository {
   /// gate back to [day] so the participant can redo it.
   Future<void> resetDay(String participantCode, int day);
 
+  /// FULL participant reset: deletes both days' sessions and events
+  /// (Firestore), stamps a full reset signal (`resetAllAt` + both per-day
+  /// signals) that wipes ALL local device data on the participant's next
+  /// code entry — sessions, tutorial-seen flag and caches — and moves the
+  /// active-day gate back to day 1, so the same code starts over as a
+  /// fresh participant. Identity, condition assignment and schedules are
+  /// kept.
+  Future<void> resetParticipant(String participantCode);
+
   /// Admin-only order change — the UI blocks it once Day 1 has started.
   Future<void> setStyleOrder(String participantCode, StyleOrder order,
       {required bool assignmentOverride});
@@ -200,6 +209,37 @@ class FirestoreAdminRepository implements AdminRepository {
     batch.update(_participant(participantCode), {
       'activeDay': nextActiveDay,
       'resetDay$day' 'At': FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
+  }
+
+  @override
+  Future<void> resetParticipant(String participantCode) async {
+    final batch = _firestore.batch();
+
+    // Delete both days' sessions and every reminder event under them.
+    for (final day in const [1, 2]) {
+      final sessionRef = _participant(participantCode)
+          .collection('studySessions')
+          .doc('day$day');
+      final eventsRef = sessionRef.collection('reminderEvents');
+      final eventsSnap = await eventsRef.get();
+      for (final doc in eventsSnap.docs) {
+        batch.delete(doc.reference);
+      }
+      batch.delete(sessionRef);
+    }
+
+    // Back to a fresh state: day-1 gate, default link flags, and full +
+    // per-day reset signals so the participant device wipes everything on
+    // its next code entry.
+    batch.update(_participant(participantCode), {
+      'activeDay': 1,
+      'linkFlags': const ParticipantLinkFlags.allOn().toJson(),
+      'resetDay1At': FieldValue.serverTimestamp(),
+      'resetDay2At': FieldValue.serverTimestamp(),
+      'resetAllAt': FieldValue.serverTimestamp(),
     });
 
     await batch.commit();

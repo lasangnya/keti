@@ -78,6 +78,25 @@ void main() {
       final restored = Participant.fromJson(json);
       expect(restored.linkFlags.finalQuestionnaire, isTrue);
     });
+
+    test('reset signals round-trip, including resetAllAt', () {
+      final participant = Participant(
+        participantCode: 'P014',
+        serial: 14,
+        styleOrder: StyleOrder.characterFirst,
+        assignmentOverride: false,
+        activeDay: 2,
+        environment: 'study',
+        protocolVersion: '2026-08-v1',
+        resetDay1At: DateTime.parse('2026-08-11T10:00:00+02:00'),
+        resetDay2At: DateTime.parse('2026-08-12T10:00:00+02:00'),
+        resetAllAt: DateTime.parse('2026-08-12T12:00:00+02:00'),
+      );
+      final restored = Participant.fromJson(participant.toJson());
+      expect(restored.resetAllAt, participant.resetAllAt);
+      expect(restored.resetDay1At, participant.resetDay1At);
+      expect(restored.resetDay2At, participant.resetDay2At);
+    });
   });
 
   group('Participant CSV', () {

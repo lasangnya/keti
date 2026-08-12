@@ -103,6 +103,20 @@ class AdminExportService {
     ];
   }
 
+  /// Removes the exported CSVs for [participantCode] (full participant
+  /// reset — stale exports must not outlive the reset).
+  Future<void> deleteParticipantExports(String participantCode) async {
+    final dir = await exportDirectory();
+    for (final suffix in const [
+      '_participant.csv',
+      '_sessions.csv',
+      '_events.csv',
+    ]) {
+      final file = File(p.join(dir.path, '$participantCode$suffix'));
+      if (file.existsSync()) file.deleteSync();
+    }
+  }
+
   /// Opens the export folder in Finder (macOS only).
   Future<bool> revealExportDirectory() async {
     if (!Platform.isMacOS) return false;

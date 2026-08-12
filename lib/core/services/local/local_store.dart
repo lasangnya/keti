@@ -26,6 +26,7 @@ class LocalStore {
       'cache.schedule.$code.$dayId';
   static String _keyActiveSession(String code) => 'session.active.$code';
   static String _keyTutorialSeen(String code) => 'tutorial.seen.$code';
+  static String _keyResetWatermark(String code) => 'reset.watermark.$code';
 
   // ── Last entered participant code (ID-entry pre-fill) ────────────
 
@@ -40,6 +41,20 @@ class LocalStore {
 
   Future<void> setTutorialSeen(String code) =>
       _prefs.setBool(_keyTutorialSeen(code), true);
+
+  /// Clears the tutorial-seen flag (full participant reset — the tutorial
+  /// must show again so the participant starts over completely fresh).
+  Future<void> clearTutorialSeen(String code) =>
+      _prefs.remove(_keyTutorialSeen(code));
+
+  /// The last applied full-reset signal for [code] (ISO string of the
+  /// participant document's `resetAllAt`), used to apply each full reset
+  /// exactly once.
+  String? readResetWatermark(String code) =>
+      _prefs.getString(_keyResetWatermark(code));
+
+  Future<void> setResetWatermark(String code, String value) =>
+      _prefs.setString(_keyResetWatermark(code), value);
 
   // ── Cached Firestore documents (offline fallback) ────────────────
 
@@ -108,4 +123,13 @@ class LocalStore {
 
   Future<void> clearActiveSession(String code) =>
       _prefs.remove(_keyActiveSession(code));
+
+  /// Removes every cached document for [code] (participant, both day
+  /// schedules, active-session pointer) — part of a full participant reset.
+  Future<void> forgetCachedParticipant(String code) async {
+    await _prefs.remove(_keyParticipant(code));
+    await _prefs.remove(_keySchedule(code, 'day1'));
+    await _prefs.remove(_keySchedule(code, 'day2'));
+    await _prefs.remove(_keyActiveSession(code));
+  }
 }

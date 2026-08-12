@@ -96,11 +96,41 @@ void main() {
   });
 
   test('active session pointer set, read, clear', () async {
-    expect(store.readActiveSession('P014'), isNull);
     await store.setActiveSession('P014', 'day1');
     expect(store.readActiveSession('P014'), 'day1');
     await store.clearActiveSession('P014');
     expect(store.readActiveSession('P014'), isNull);
+  });
+
+  test('clearTutorialSeen removes the tutorial flag', () async {
+    await store.setTutorialSeen('P014');
+    expect(store.isTutorialSeen('P014'), isTrue);
+    await store.clearTutorialSeen('P014');
+    expect(store.isTutorialSeen('P014'), isFalse);
+  });
+
+  test('forgetCachedParticipant removes participant, schedules, session',
+      () async {
+    await store.cacheParticipant(participant);
+    await store.cacheScheduleFor('P014', schedule);
+    await store.cacheScheduleFor('P014',
+        const DaySchedule(dayNumber: 2, style: PresentationStyle.ambient, reminders: kDefaultScheduleTemplate));
+    await store.setActiveSession('P014', 'day1');
+
+    await store.forgetCachedParticipant('P014');
+
+    expect(store.readCachedParticipant('P014'), isNull);
+    expect(store.readCachedSchedule('P014', 'day1', style: schedule.style),
+        isNull);
+    expect(store.readCachedSchedule('P014', 'day2', style: schedule.style),
+        isNull);
+    expect(store.readActiveSession('P014'), isNull);
+  });
+
+  test('reset watermark round-trips and defaults to null', () async {
+    expect(store.readResetWatermark('P014'), isNull);
+    await store.setResetWatermark('P014', '2026-08-12T12:00:00+02:00');
+    expect(store.readResetWatermark('P014'), '2026-08-12T12:00:00+02:00');
   });
 
   test('values survive a fresh SharedPreferences instance', () async {

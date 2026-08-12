@@ -189,10 +189,59 @@ class _ParticipantDetailPageState
                   foregroundColor: theme.colorScheme.error),
               onPressed: () => _confirmReset(context, 2),
             ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              icon: const Icon(Icons.delete_forever, size: 16),
+              label: const Text('Reset participant'),
+              style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.error,
+                  foregroundColor: theme.colorScheme.onError),
+              onPressed: () => _confirmResetParticipant(context),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _confirmResetParticipant(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset participant?'),
+        content: const Text(
+            'This deletes BOTH days from Firestore and wipes ALL data for '
+            'this participant on the device: sessions, reminders, the '
+            'tutorial flag and cached documents. The same participant code '
+            'will start over as a completely fresh participant. This cannot '
+            'be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Reset everything',
+                style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ref
+          .read(adminParticipantsProvider.notifier)
+          .resetParticipant(widget.participantCode);
+      // Stale exports must not outlive the reset.
+      await ref
+          .read(adminExportServiceProvider)
+          .deleteParticipantExports(widget.participantCode);
+      ref.invalidate(participantDetailProvider(widget.participantCode));
+      if (!mounted) return;
+      setState(() => _message = 'Participant reset — starts fresh on next '
+          'code entry.');
+    }
   }
 
   Future<void> _confirmReset(BuildContext context, int day) async {
