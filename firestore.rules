@@ -58,7 +58,7 @@ service cloud.firestore {
                  ['reminderShownAt','reminderShownAtLocal','reminderHiddenAtLocal',
                   'deliveryLatenessMs','deliveryStatus','failureReason','suppressionReason',
                   'usedFallback','cardShownAtLocal','outcome','answeredAt',
-                  'responseLatencyMs','sessionResumed','updatedAt']);
+                  'responseLatencyMs','cardResponse','sessionResumed','updatedAt']);
           allow delete: if isAdmin();
         }
       }

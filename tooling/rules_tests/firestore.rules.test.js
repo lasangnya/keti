@@ -284,6 +284,7 @@ describe('reminderEvents', () => {
     await assertSucceeds(
       updateDoc(ref, { outcome: 'COMPLETED', responseLatencyMs: 7120 })
     );
+    await assertSucceeds(updateDoc(ref, { cardResponse: 'Done' }));
     await assertSucceeds(updateDoc(ref, { usedFallback: true }));
     await assertSucceeds(updateDoc(ref, { sessionResumed: true }));
   });

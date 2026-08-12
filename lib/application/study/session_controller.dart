@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../core/constants/app_config.dart';
@@ -347,10 +348,13 @@ class SessionController extends _$SessionController {
         onCardShown: () async {
           if (!ref.mounted) return;
           final current = _eventById(event.eventId);
+          final shown = current.markCardShown(_now());
+          debugPrint('ComplianceCard: ${event.eventId} card shown at '
+              '${shown.cardShownAtLocal?.toIso8601String()}');
           await _persistEvent(
             code,
             session.dayId,
-            current.markCardShown(_now()),
+            shown,
             'card_shown',
           );
         },
@@ -358,19 +362,24 @@ class SessionController extends _$SessionController {
           if (!ref.mounted) return;
           final current = _eventById(event.eventId);
           final isCompleted = action == 'completed';
+          final answered = current.markAnswered(
+            outcome: isCompleted
+                ? ResponseOutcome.completed
+                : ResponseOutcome.dismissed,
+            answeredAtLocal: _now(),
+            // The actual label the participant saw and pressed.
+            cardResponse: isCompleted
+                ? AppStrings.complianceButton1
+                : AppStrings.complianceButton2,
+          );
+          debugPrint('ComplianceCard: ${event.eventId} answered action=$action '
+              'outcome=${answered.outcome.wireName} '
+              'cardResponse=${answered.cardResponse} '
+              'latencyMs=${answered.responseLatencyMs}');
           await _persistEvent(
             code,
             session.dayId,
-            current.markAnswered(
-              outcome: isCompleted
-                  ? ResponseOutcome.completed
-                  : ResponseOutcome.dismissed,
-              answeredAtLocal: _now(),
-              // The actual label the participant saw and pressed.
-              cardResponse: isCompleted
-                  ? AppStrings.complianceButton1
-                  : AppStrings.complianceButton2,
-            ),
+            answered,
             'answered',
           );
           await _completeDayIfDone();
@@ -378,10 +387,14 @@ class SessionController extends _$SessionController {
         onCardTimedOut: () async {
           if (!ref.mounted) return;
           final current = _eventById(event.eventId);
+          final timedOut = current.markTimedOut(_now());
+          debugPrint('ComplianceCard: ${event.eventId} timed out — '
+              'outcome=${timedOut.outcome.wireName} '
+              'cardResponse=${timedOut.cardResponse}');
           await _persistEvent(
             code,
             session.dayId,
-            current.markTimedOut(_now()),
+            timedOut,
             'timed_out',
           );
           await _completeDayIfDone();
