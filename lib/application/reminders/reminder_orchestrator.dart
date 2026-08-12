@@ -24,7 +24,7 @@ typedef ReminderOutcomeCallback = Future<void> Function(String action);
 /// ```
 /// show reminder (placement)      → onDelivered  (native onShown confirmed)
 /// reminder hides (~10s anim)     → onReminderHidden
-/// compliance card top-right      → onCardShown (after reminder disappears)
+/// cardDelayMs after hidden       → onCardShown (card appears top-right)
 /// button press / card timeout    → onCardAnswered(action) | onCardTimedOut
 /// any technical failure          → onFailed(reason) — sequence aborts
 /// ```
@@ -40,6 +40,7 @@ class ReminderOrchestrator {
     required String button1Text,
     required String button2Text,
     required int visibilityMs,
+    required int cardDelayMs,
     required int cardTimeoutMs,
     required ReminderCallback onDelivered,
     required ReminderCallback onReminderHidden,
@@ -70,13 +71,16 @@ class ReminderOrchestrator {
 
       // The compliance card appears only AFTER the reminder has disappeared
       // (the reminder animation is ~10s, after which the native side reports
-      // hidden). The card then auto-dismisses after cardTimeoutMs without a
-      // response.
+      // hidden), and then only after a cardDelayMs pause — the participant
+      // gets a moment with no UI before the question appears. The card
+      // auto-dismisses after cardTimeoutMs without a response.
       await ReminderChannels.waitForHidden(
         reminderId,
         window: Duration(milliseconds: visibilityMs),
       );
       await onReminderHidden();
+
+      await Future.delayed(Duration(milliseconds: cardDelayMs));
 
       await ComplianceCardService.show(
         reminderId: reminderId,

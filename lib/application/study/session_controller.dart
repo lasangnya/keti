@@ -318,6 +318,7 @@ class SessionController extends _$SessionController {
         button1Text: AppStrings.complianceButton1,
         button2Text: AppStrings.complianceButton2,
         visibilityMs: AppConfig.reminderVisibilityMs,
+        cardDelayMs: AppConfig.complianceCardDelayMs,
         cardTimeoutMs: AppConfig.complianceCardTimeoutMs,
         onDelivered: () async {
           if (!ref.mounted) return;

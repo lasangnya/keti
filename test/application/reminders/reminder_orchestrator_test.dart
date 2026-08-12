@@ -65,7 +65,8 @@ void main() {
       .resolve(ReminderKind.hydration, PresentationStyle.ambient)
       .content;
 
-  Future<void> startSequence(List<String> stages, {int cardTimeoutMs = 30}) =>
+  Future<void> startSequence(List<String> stages,
+          {int cardTimeoutMs = 30, int cardDelayMs = 30}) =>
       ReminderOrchestrator().runReminderSequence(
         reminderId: 'reminder01',
         content: content,
@@ -74,6 +75,7 @@ void main() {
         button1Text: 'Done',
         button2Text: 'Not now',
         visibilityMs: 45000,
+        cardDelayMs: cardDelayMs,
         cardTimeoutMs: cardTimeoutMs,
         onDelivered: () async => stages.add('delivered'),
         onReminderHidden: () async => stages.add('hidden'),
@@ -102,9 +104,15 @@ void main() {
     expect(stages, ['delivered']);
     expect(capturedCard, isEmpty);
 
-    // Reminder disappears → hidden, then the compliance card appears.
+    // Reminder disappears → hidden. Card still NOT shown: cardDelayMs pause.
     await emitNative(PlatformChannels.cursorPill,
         PlatformChannels.methodOnHidden, 'reminder01');
+    await pumpEventQueue();
+    expect(stages, ['delivered', 'hidden']);
+    expect(capturedCard, isEmpty);
+
+    // After the delay elapses the compliance card appears.
+    await Future<void>.delayed(const Duration(milliseconds: 200));
     await pumpEventQueue();
     expect(stages, ['delivered', 'hidden', 'cardShown']);
     expect(capturedCard, hasLength(1));
@@ -133,6 +141,9 @@ void main() {
     await emitNative(PlatformChannels.cursorPill,
         PlatformChannels.methodOnHidden, 'reminder01');
     await pumpEventQueue();
+    // Let the card appear after its delay.
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    await pumpEventQueue();
     await emitNative(PlatformChannels.complianceCard,
         PlatformChannels.methodOnCardAction, {
       PlatformChannels.keyReminderId: 'reminder01',
@@ -151,6 +162,9 @@ void main() {
     await pumpEventQueue();
     await emitNative(PlatformChannels.cursorPill,
         PlatformChannels.methodOnHidden, 'reminder01');
+    await pumpEventQueue();
+    // Let the card appear after its delay.
+    await Future<void>.delayed(const Duration(milliseconds: 200));
     await pumpEventQueue();
     expect(stages, contains('cardShown'));
 
