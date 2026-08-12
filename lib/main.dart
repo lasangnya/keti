@@ -22,6 +22,14 @@ void main() async {
     FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
     await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
   }
+  // Firestore's on-disk persistence (LevelDB) takes an exclusive lock that a
+  // second app instance cannot share: with the researcher window open, the
+  // participant's first query crashes with a Firestore internal assertion
+  // ("Failed to open DB ... main/LOCK"). Both instances run with an
+  // in-memory cache; the app's own local store (drift/CSV + sync) is the
+  // offline layer.
+  FirebaseFirestore.instance.settings =
+      const Settings(persistenceEnabled: false);
   // Silent anonymous sign-in — participants never see a login screen.
   try {
     await AuthService().signInAnonymouslyIfNeeded();
