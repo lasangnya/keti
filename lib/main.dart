@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -27,7 +29,19 @@ void main() async {
     debugPrint('Firebase Auth Error: $e');
     // We continue so the app still launches, but Firestore may fail if rules require auth.
   }
+  // Log what this process received, so the researcher-launch path is
+  // diagnosable without guessing.
+  _logLaunchMode();
   runApp(const ProviderScope(child: KetiApp()));
+}
+
+void _logLaunchMode() {
+  final env = Platform.environment['KETI_RESEARCHER'];
+  final args = Platform.executableArguments;
+  debugPrint('[launch-mode] executableArguments=$args');
+  debugPrint('[launch-mode] KETI_RESEARCHER env=$env');
+  debugPrint('[launch-mode] isResearcherWindow='
+      '${ResearcherLauncher.isResearcherWindow}');
 }
 
 class KetiApp extends ConsumerWidget {
