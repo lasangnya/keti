@@ -28,6 +28,7 @@ const {
   setDoc,
   updateDoc,
   deleteDoc,
+  serverTimestamp,
 } = require('firebase/firestore');
 
 const RULES = readFileSync(join(__dirname, '..', '..', 'firestore.rules'), 'utf8');
@@ -287,6 +288,29 @@ describe('reminderEvents', () => {
     await assertSucceeds(updateDoc(ref, { cardResponse: 'Done' }));
     await assertSucceeds(updateDoc(ref, { usedFallback: true }));
     await assertSucceeds(updateDoc(ref, { sessionResumed: true }));
+    // The FULL lifecycle payload the app sends in one answered update —
+    // including null deletes and server timestamps — must pass as a single
+    // write (unit-level tests only exercised keys one at a time).
+    await assertSucceeds(
+      updateDoc(ref, {
+        reminderShownAtLocal: '2026-08-12T15:56:51.086486',
+        reminderHiddenAtLocal: '2026-08-12T15:56:54.910001',
+        deliveryLatenessMs: 780,
+        deliveryStatus: 'DELIVERED',
+        failureReason: null,
+        suppressionReason: null,
+        usedFallback: false,
+        cardShownAtLocal: '2026-08-12T15:57:05.002782',
+        outcome: 'COMPLETED',
+        answeredAtLocal: '2026-08-12T15:57:06.486248',
+        responseLatencyMs: 1483,
+        cardResponse: 'Done',
+        sessionResumed: true,
+        updatedAt: serverTimestamp(),
+        reminderShownAt: serverTimestamp(),
+        answeredAt: serverTimestamp(),
+      })
+    );
   });
 
   it('anonymous may NOT alter condition or identity fields', async () => {
