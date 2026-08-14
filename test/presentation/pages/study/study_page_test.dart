@@ -86,14 +86,14 @@ void main() {
 
   /// Advances the tutorial from Welcome to the Participant-ID step.
   Future<void> continueWelcome(WidgetTester tester) async {
-    await tester.tap(find.text('Continue'));
+    await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
   }
 
   Future<void> enterCodeAndContinue(WidgetTester tester, String code) async {
     await continueWelcome(tester);
     await tester.enterText(find.byType(TextField), code);
-    await tester.tap(find.text('Continue'));
+    await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
   }
 
@@ -113,7 +113,7 @@ void main() {
         (tester) async {
       await pumpStudyPage(tester);
       await continueWelcome(tester);
-      await tester.tap(find.text('Continue'));
+      await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
       expect(
         find.text("Please enter the Participant ID provided by the researcher. "
@@ -146,20 +146,20 @@ void main() {
       await tester.tap(find.text('I have completed the pre-study questionnaire'));
       await tester.pumpAndSettle();
       expect(find.text('Work as you normally would'), findsOneWidget);
-      await tester.ensureVisible(find.text('Continue'));
-      await tester.tap(find.text('Continue'));
+      await tester.ensureVisible(find.text('Next'));
+      await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
       expect(find.text('Respond naturally'), findsOneWidget);
-      await tester.ensureVisible(find.text('Continue'));
-      await tester.tap(find.text('Continue'));
+      await tester.ensureVisible(find.text('Next'));
+      await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
       expect(find.textContaining('dismiss a reminder quickly'), findsOneWidget);
-      await tester.ensureVisible(find.text('Continue'));
-      await tester.tap(find.text('Continue'));
+      await tester.ensureVisible(find.text('Next'));
+      await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
       expect(find.text('Your comfort comes first'), findsOneWidget);
-      await tester.ensureVisible(find.text('Continue'));
-      await tester.tap(find.text('Continue'));
+      await tester.ensureVisible(find.text('Next'));
+      await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
       expect(find.text('At the end of the session'), findsOneWidget);
 

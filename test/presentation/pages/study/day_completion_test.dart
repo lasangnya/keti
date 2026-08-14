@@ -101,10 +101,10 @@ void main() {
   }
 
   Future<void> enterCode(WidgetTester tester, String code) async {
-    await tester.tap(find.text('Continue'));
+    await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), code);
-    await tester.tap(find.text('Continue'));
+    await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
   }
 

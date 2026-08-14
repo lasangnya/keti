@@ -114,7 +114,7 @@ class _ParticipantTutorialState extends ConsumerState<ParticipantTutorial> {
         return [
           Text(AppStrings.tutorialWelcomeBody, style: theme.textTheme.bodyMedium),
           const SizedBox(height: 20),
-          _continueButton(AppStrings.continueLabel, () {
+          _continueButton(AppStrings.nextLabel, () {
             setState(() => _step = _Step.idEntry);
           }),
         ];
@@ -143,7 +143,7 @@ class _ParticipantTutorialState extends ConsumerState<ParticipantTutorial> {
             onSubmitted: (_) => _submitId(entry),
           ),
           const SizedBox(height: 16),
-          _continueButton(AppStrings.continueLabel, () => _submitId(entry)),
+          _continueButton(AppStrings.nextLabel, () => _submitId(entry)),
         ];
 
       case _Step.prepare:
@@ -172,7 +172,7 @@ class _ParticipantTutorialState extends ConsumerState<ParticipantTutorial> {
         return [
           Text(AppStrings.tutorialDuringBody, style: theme.textTheme.bodyMedium),
           const SizedBox(height: 20),
-          _continueButton(AppStrings.continueLabel, () {
+          _continueButton(AppStrings.nextLabel, () {
             setState(() => _step = _Step.respond);
           }),
         ];
@@ -181,7 +181,7 @@ class _ParticipantTutorialState extends ConsumerState<ParticipantTutorial> {
         return [
           Text(AppStrings.tutorialRespondBody, style: theme.textTheme.bodyMedium),
           const SizedBox(height: 20),
-          _continueButton(AppStrings.continueLabel, () {
+          _continueButton(AppStrings.nextLabel, () {
             setState(() => _step = _Step.dismiss);
           }),
         ];
@@ -190,7 +190,7 @@ class _ParticipantTutorialState extends ConsumerState<ParticipantTutorial> {
         return [
           Text(AppStrings.tutorialDismissBody, style: theme.textTheme.bodyMedium),
           const SizedBox(height: 20),
-          _continueButton(AppStrings.continueLabel, () {
+          _continueButton(AppStrings.nextLabel, () {
             setState(() => _step = _Step.safety);
           }),
         ];
@@ -199,7 +199,7 @@ class _ParticipantTutorialState extends ConsumerState<ParticipantTutorial> {
         return [
           Text(AppStrings.tutorialSafetyBody, style: theme.textTheme.bodyMedium),
           const SizedBox(height: 20),
-          _continueButton(AppStrings.continueLabel, () {
+          _continueButton(AppStrings.nextLabel, () {
             setState(() => _step = _Step.finish);
           }),
         ];
