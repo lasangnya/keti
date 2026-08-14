@@ -47,17 +47,13 @@ class _ParticipantTutorialState extends ConsumerState<ParticipantTutorial> {
     super.dispose();
   }
 
-  /// Effective step: once the participant is loaded (ID entry succeeded),
-  /// the wizard continues past the ID screen automatically.
-  _Step get _effectiveStep =>
-      _step == _Step.idEntry && ref.watch(participantEntryProvider).isReady
-          ? _Step.prepare
-          : _step;
-
+  /// The wizard shows the step that was last navigated to. Advancing past
+  /// the ID screen happens explicitly in [_submitId] once the participant
+  /// loaded, so Back can always return to step 2 to edit the ID.
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final step = _effectiveStep;
+    final step = _step;
     final entry = ref.watch(participantEntryProvider);
     _prefillIdIfNeeded(step);
 
@@ -114,9 +110,10 @@ class _ParticipantTutorialState extends ConsumerState<ParticipantTutorial> {
         return [
           Text(AppStrings.tutorialWelcomeBody, style: theme.textTheme.bodyMedium),
           const SizedBox(height: 20),
-          _continueButton(AppStrings.nextLabel, () {
-            setState(() => _step = _Step.idEntry);
-          }),
+          _stepButtons(
+            nextLabel: AppStrings.nextLabel,
+            onNext: () => setState(() => _step = _Step.idEntry),
+          ),
         ];
 
       case _Step.idEntry:
@@ -143,7 +140,11 @@ class _ParticipantTutorialState extends ConsumerState<ParticipantTutorial> {
             onSubmitted: (_) => _submitId(entry),
           ),
           const SizedBox(height: 16),
-          _continueButton(AppStrings.nextLabel, () => _submitId(entry)),
+          _stepButtons(
+            nextLabel: AppStrings.nextLabel,
+            onNext: () => _submitId(entry),
+            backTo: _Step.welcome,
+          ),
         ];
 
       case _Step.prepare:
@@ -163,60 +164,97 @@ class _ParticipantTutorialState extends ConsumerState<ParticipantTutorial> {
             ),
             const SizedBox(height: 12),
           ],
-          _continueButton(AppStrings.tutorialPreStudyDone, () {
-            setState(() => _step = _Step.during);
-          }),
+          _stepButtons(
+            nextLabel: AppStrings.tutorialPreStudyDone,
+            onNext: () => setState(() => _step = _Step.during),
+            backTo: _Step.idEntry,
+          ),
         ];
 
       case _Step.during:
         return [
           Text(AppStrings.tutorialDuringBody, style: theme.textTheme.bodyMedium),
           const SizedBox(height: 20),
-          _continueButton(AppStrings.nextLabel, () {
-            setState(() => _step = _Step.respond);
-          }),
+          _stepButtons(
+            nextLabel: AppStrings.nextLabel,
+            onNext: () => setState(() => _step = _Step.respond),
+            backTo: _Step.prepare,
+          ),
         ];
 
       case _Step.respond:
         return [
           Text(AppStrings.tutorialRespondBody, style: theme.textTheme.bodyMedium),
           const SizedBox(height: 20),
-          _continueButton(AppStrings.nextLabel, () {
-            setState(() => _step = _Step.dismiss);
-          }),
+          _stepButtons(
+            nextLabel: AppStrings.nextLabel,
+            onNext: () => setState(() => _step = _Step.dismiss),
+            backTo: _Step.during,
+          ),
         ];
 
       case _Step.dismiss:
         return [
           Text(AppStrings.tutorialDismissBody, style: theme.textTheme.bodyMedium),
           const SizedBox(height: 20),
-          _continueButton(AppStrings.nextLabel, () {
-            setState(() => _step = _Step.safety);
-          }),
+          _stepButtons(
+            nextLabel: AppStrings.nextLabel,
+            onNext: () => setState(() => _step = _Step.safety),
+            backTo: _Step.respond,
+          ),
         ];
 
       case _Step.safety:
         return [
           Text(AppStrings.tutorialSafetyBody, style: theme.textTheme.bodyMedium),
           const SizedBox(height: 20),
-          _continueButton(AppStrings.nextLabel, () {
-            setState(() => _step = _Step.finish);
-          }),
+          _stepButtons(
+            nextLabel: AppStrings.nextLabel,
+            onNext: () => setState(() => _step = _Step.finish),
+            backTo: _Step.dismiss,
+          ),
         ];
 
       case _Step.finish:
         return [
           Text(AppStrings.tutorialFinishBody, style: theme.textTheme.bodyMedium),
           const SizedBox(height: 20),
-          _continueButton(AppStrings.startSession, _startSession),
+          _stepButtons(
+            nextLabel: AppStrings.startSession,
+            onNext: _startSession,
+            backTo: _Step.safety,
+          ),
         ];
     }
   }
 
-  Widget _continueButton(String label, VoidCallback onPressed) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: FilledButton(onPressed: onPressed, child: Text(label)),
+  /// Bottom action row: Back at the start (omitted on the first step) and
+  /// the step's primary button at the end.
+  Widget _stepButtons({
+    required String nextLabel,
+    required VoidCallback onNext,
+    _Step? backTo,
+  }) {
+    return Row(
+      mainAxisAlignment: backTo == null
+          ? MainAxisAlignment.end
+          : MainAxisAlignment.spaceBetween,
+      children: [
+        if (backTo != null)
+          OutlinedButton.icon(
+            onPressed: () => setState(() => _step = backTo),
+            icon: const Icon(Icons.arrow_back, size: 16),
+            label: const Text(AppStrings.backLabel),
+          ),
+        // Flexible so a long primary label (e.g. the pre-study questionnaire
+        // confirmation) wraps instead of overflowing next to the Back button.
+        Flexible(
+          child: FilledButton(
+            onPressed: onNext,
+            child: Text(nextLabel, textAlign: TextAlign.center),
+          ),
+        ),
+      ],
     );
   }
 
@@ -244,6 +282,12 @@ class _ParticipantTutorialState extends ConsumerState<ParticipantTutorial> {
     await ref
         .read(participantEntryProvider.notifier)
         .enterCode(_idController.text);
+    // Advance past the ID screen once the participant loaded. Explicit here
+    // (rather than a derived step) so Back can return to this screen and a
+    // changed ID is re-submitted the same way.
+    if (mounted && ref.read(participantEntryProvider).isReady) {
+      setState(() => _step = _Step.prepare);
+    }
   }
 
   Future<void> _startSession() async {

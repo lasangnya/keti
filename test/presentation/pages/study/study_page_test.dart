@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keti/application/reminders/reminder_orchestrator.dart';
+import 'package:keti/application/study/participant_entry_provider.dart';
 import 'package:keti/application/study/participant_providers.dart';
 import 'package:keti/application/study/scheduler_provider.dart';
 import 'package:keti/core/services/firebase/firestore_providers.dart';
@@ -168,6 +169,56 @@ void main() {
       await tester.tap(find.text('Start session'));
       await tester.pumpAndSettle();
       expect(find.text('Session active — Day 1'), findsOneWidget);
+    });
+
+    testWidgets('Back walks the tutorial to any previous step', (tester) async {
+      await pumpStudyPage(tester);
+
+      // First step has no Back.
+      expect(find.text('Back'), findsNothing);
+      await continueWelcome(tester);
+      expect(find.text('Back'), findsOneWidget);
+
+      // Back from the ID step returns to Welcome.
+      await tester.tap(find.text('Back'));
+      await tester.pumpAndSettle();
+      expect(find.text('Welcome to the health-reminder study'), findsOneWidget);
+
+      // Forward again, submit a code, then Back from Prepare returns to the
+      // ID step with the entered code still in the field.
+      await continueWelcome(tester);
+      await tester.enterText(find.byType(TextField), 'P001');
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      expect(find.text('Prepare for your session'), findsOneWidget);
+
+      await tester.tap(find.text('Back'));
+      await tester.pumpAndSettle();
+      expect(find.text('Enter your Participant ID'), findsOneWidget);
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.controller!.text, 'P001');
+    });
+
+    testWidgets('Back to the ID step allows changing the participant code',
+        (tester) async {
+      await pumpStudyPage(tester);
+      await enterCodeAndContinue(tester, 'P001');
+      expect(find.text('Prepare for your session'), findsOneWidget);
+
+      await tester.tap(find.text('Back'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'P002');
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+
+      // The re-submitted code replaces the first participant.
+      expect(find.text('Prepare for your session'), findsOneWidget);
+      final container =
+          ProviderScope.containerOf(tester.element(find.byType(StudyPage)));
+      expect(
+        container.read(participantEntryProvider).participant!.participantCode,
+        'P002',
+      );
     });
 
     testWidgets('tutorial is skipped once seen — straight to day overview',

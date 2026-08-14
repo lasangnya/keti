@@ -4,6 +4,7 @@ class AppStrings {
   static const String participantCode = 'Participant code';
   static const String participantCodeHint = 'e.g. P014';
   static const String nextLabel = 'Next';
+  static const String backLabel = 'Back';
   static const String changeParticipant = 'Use a different code';
   static const String day = 'Day';
   static const String resumeAvailable = 'Unfinished session found on this machine';
