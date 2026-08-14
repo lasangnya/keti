@@ -1,5 +1,6 @@
 class AppStrings {
   static const String study = 'Study';
+  static const String guidelines = 'Guidelines';
   static const String startStudySession = 'Start study session';
   static const String participantCode = 'Participant code';
   static const String participantCodeHint = 'e.g. P014';

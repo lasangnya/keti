@@ -104,6 +104,7 @@ void main() {
     testWidgets('welcome shows first, then the participant ID step',
         (tester) async {
       await pumpStudyPage(tester);
+      expect(find.text('Guidelines'), findsOneWidget);
       expect(find.text('Welcome to the health-reminder study'), findsOneWidget);
       expect(find.byType(TextField), findsNothing);
 

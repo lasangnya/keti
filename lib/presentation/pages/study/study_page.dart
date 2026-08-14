@@ -43,6 +43,11 @@ class _StudyPageState extends ConsumerState<StudyPage> {
     final tutorialSeen = entry.participant != null &&
         (store?.isTutorialSeen(entry.participant!.participantCode) ?? false);
 
+    // The tutorial wizard gets the "Guidelines" title; the day overview and
+    // completion screens keep the "Study" heading.
+    final showingTutorial = !entry.isReady ||
+        (!tutorialSeen && !session.active && !session.completed);
+
     // Reset the auto-check flag whenever a new participant is entered, so
     // each day-1 completion screen triggers a fresh activation check.
     if (entry.participant == null) {
@@ -73,7 +78,7 @@ class _StudyPageState extends ConsumerState<StudyPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const PageTitle(title: AppStrings.study),
+          PageTitle(title: showingTutorial ? AppStrings.guidelines : AppStrings.study),
           if (!entry.isReady)
             ParticipantTutorial(onStartSession: _startSession)
           else if (!tutorialSeen && !session.active && !session.completed)
