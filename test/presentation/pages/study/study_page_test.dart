@@ -56,6 +56,7 @@ void main() {
     WidgetTester tester, {
     LocalStore? localStore,
     MockParticipantRepository? repository,
+    FakeSessionRepository? sessionRepository,
   }) async {
     final store = localStore ?? await mockLocalStore();
     // Native channels under test: answer session-lifecycle calls with null.
@@ -70,7 +71,8 @@ void main() {
               .overrideWithValue(repository ?? MockParticipantRepository()),
           localStoreProvider.overrideWith((ref) async => store),
           csvStoreProvider.overrideWithValue(CsvStore(rootDir: csvRoot)),
-          sessionRepositoryProvider.overrideWithValue(FakeSessionRepository()),
+          sessionRepositoryProvider
+              .overrideWithValue(sessionRepository ?? FakeSessionRepository()),
           reminderEventRepositoryProvider
               .overrideWithValue(FakeEventRepository()),
           reminderOrchestratorProvider.overrideWithValue(FakeReminderOrchestrator()),
@@ -168,7 +170,7 @@ void main() {
       await tester.ensureVisible(find.text('Start session'));
       await tester.tap(find.text('Start session'));
       await tester.pumpAndSettle();
-      expect(find.text('Session active — Day 1'), findsOneWidget);
+      expect(find.text('SESSION 1 ACTIVE'), findsOneWidget);
     });
 
     testWidgets('Back walks the tutorial to any previous step', (tester) async {
@@ -339,7 +341,7 @@ void main() {
       expect(find.text('Loaded from local cache (offline)'), findsOneWidget);
     });
 
-    testWidgets('Start Day begins the session and shows the event list',
+    testWidgets('Start Day begins the session and shows the active-session screen',
         (tester) async {
       final store = await mockLocalStore(tutorialSeen: true);
       await pumpStudyPage(tester, localStore: store);
@@ -348,10 +350,37 @@ void main() {
       await tester.tap(find.text('Start Day 1'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Session active — Day 1'), findsOneWidget);
-      expect(find.text('Reminder 1'), findsOneWidget);
-      expect(find.text('Reminder 8'), findsOneWidget);
-      expect(find.text('SCHEDULED'), findsNWidgets(8));
+      expect(find.text('SESSION 1 ACTIVE'), findsOneWidget);
+      expect(find.text('Participant ID : P001'), findsOneWidget);
+      expect(
+        find.text('Please continue with your usual work.\n'
+            'Health reminders may appear occasionally.'),
+        findsOneWidget,
+      );
+      expect(find.text('Report a problem'), findsOneWidget);
+      expect(find.text('Session active for'), findsOneWidget);
+      expect(find.text('Exit'), findsOneWidget);
+    });
+
+    testWidgets('Exit records the participant exit request', (tester) async {
+      final sessionRepo = FakeSessionRepository();
+      final store = await mockLocalStore(tutorialSeen: true);
+      await pumpStudyPage(
+        tester,
+        localStore: store,
+        sessionRepository: sessionRepo,
+      );
+      await enterCodeAndContinue(tester, 'P001');
+      await tester.ensureVisible(find.text('Start Day 1'));
+      await tester.tap(find.text('Start Day 1'));
+      await tester.pumpAndSettle();
+      expect(find.text('SESSION 1 ACTIVE'), findsOneWidget);
+
+      await tester.tap(find.text('Exit'));
+      await tester.pumpAndSettle();
+
+      // Firestore marker written (the app-termination channel call is mocked).
+      expect(sessionRepo.exitMarkCalls, 1);
     });
 
     testWidgets('Resume button resumes an unfinished session', (tester) async {
@@ -397,7 +426,7 @@ void main() {
       await tester.tap(find.text('Resume Day 1'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Session active — Day 1'), findsOneWidget);
+      expect(find.text('SESSION 1 ACTIVE'), findsOneWidget);
     });
   });
 }

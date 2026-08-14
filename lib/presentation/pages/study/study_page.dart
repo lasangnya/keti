@@ -6,10 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../application/study/participant_entry_provider.dart';
 import '../../../application/study/participant_providers.dart';
 import '../../../application/study/session_controller.dart';
+import '../../../core/constants/app_config.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/services/link_launcher_service.dart';
 import '../../../domain/study/study_config.dart';
-import '../../../domain/study/study_enums.dart';
+import '../../../domain/study/study_session.dart';
 import '../../widgets/page_title.dart';
 import '../../widgets/technical_problem_dialog.dart';
 import 'participant_tutorial.dart';
@@ -64,6 +65,10 @@ class _StudyPageState extends ConsumerState<StudyPage> {
       });
     }
 
+    // The active-session screen is a standalone full-window layout (centered
+    // status + Exit button), so it renders outside the shared page scaffold.
+    if (session.active) return _buildSessionView(context, session);
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -73,8 +78,6 @@ class _StudyPageState extends ConsumerState<StudyPage> {
             ParticipantTutorial(onStartSession: _startSession)
           else if (!tutorialSeen && !session.active && !session.completed)
             ParticipantTutorial(onStartSession: _startSession)
-          else if (session.active)
-            _buildSessionView(context, session)
           else if (session.completed || entry.dayAlreadyCompleted)
             _buildCompletedView(context, entry, session)
           else
@@ -171,71 +174,92 @@ class _StudyPageState extends ConsumerState<StudyPage> {
     );
   }
 
+  /// Session-active screen: status, remaining-time countdown and the
+  /// participant support route, centered in the window. The Exit button sits
+  /// at the bottom-left; it records the exit request and terminates the app.
   Widget _buildSessionView(BuildContext context, StudySessionState session) {
     final theme = Theme.of(context);
     final s = session.session!;
-    final next = session.nextFireTime;
+    final end = _sessionEndTime(s);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Session active — Day ${s.dayNumber}',
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text(s.participantCode, style: theme.textTheme.bodyMedium),
-                  if (next != null) ...[
-                    const SizedBox(height: 4),
-                    _CountdownText(target: next),
-                  ],
-                ],
-              ),
+    return Stack(
+      children: [
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'SESSION ${s.dayNumber} ACTIVE',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${AppStrings.sessionParticipantIdLabel}${s.participantCode}',
+                  style: theme.textTheme.bodyLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                Text(
+                  'Please continue with your usual work.\n'
+                  'Health reminders may appear occasionally.',
+                  style: theme.textTheme.bodyLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.help_outline, size: 16),
+                  label: const Text(AppStrings.tutorialReportProblem),
+                  onPressed: () => showTechnicalProblemDialog(context),
+                ),
+                const SizedBox(height: 40),
+                Text(
+                  AppStrings.sessionActiveFor,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                if (end != null) _SessionCountdown(end: end),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Please continue with your usual work. '
-            'Health reminders may appear occasionally.',
-            style: theme.textTheme.bodyMedium,
+        ),
+        Positioned(
+          left: 16,
+          bottom: 16,
+          child: TextButton.icon(
+            icon: const Icon(Icons.logout, size: 16),
+            label: const Text(AppStrings.exitSession),
+            onPressed: () =>
+                ref.read(sessionControllerProvider.notifier).requestExit(),
           ),
-          const SizedBox(height: 8),
-          TextButton.icon(
-            icon: const Icon(Icons.help_outline, size: 16),
-            label: const Text(AppStrings.tutorialReportProblem),
-            onPressed: () => showTechnicalProblemDialog(context),
+        ),
+      ],
+    );
+  }
+
+  /// When the session is expected to finish: the last reminder's fire time
+  /// plus the full reminder → compliance-card sequence duration.
+  DateTime? _sessionEndTime(StudySession s) {
+    final reminders = s.schedule.reminders;
+    if (reminders.isEmpty) return null;
+    var lastOffset = reminders.first.offset;
+    for (final r in reminders) {
+      if (r.offset > lastOffset) lastOffset = r.offset;
+    }
+    return s.startedAtLocal.add(
+      lastOffset +
+          const Duration(
+            milliseconds: AppConfig.reminderVisibilityMs +
+                AppConfig.complianceCardDelayMs +
+                AppConfig.complianceCardTimeoutMs,
           ),
-          const SizedBox(height: 16),
-          for (final event in session.events)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 110,
-                    child: Text('Reminder ${event.reminderNumber}',
-                        style: theme.textTheme.bodyMedium),
-                  ),
-                  Text(
-                    event.deliveryStatus.wireName,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: event.deliveryStatus == DeliveryStatus.delivered
-                          ? theme.colorScheme.primary
-                          : theme.textTheme.bodySmall?.color,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
     );
   }
 
@@ -391,17 +415,17 @@ class _StudyPageState extends ConsumerState<StudyPage> {
   }
 }
 
-/// Self-contained per-second countdown to the next reminder.
-class _CountdownText extends StatefulWidget {
-  const _CountdownText({required this.target});
+/// Live countdown of the remaining session time, in HH:MM:SS.
+class _SessionCountdown extends StatefulWidget {
+  const _SessionCountdown({required this.end});
 
-  final DateTime target;
+  final DateTime end;
 
   @override
-  State<_CountdownText> createState() => _CountdownTextState();
+  State<_SessionCountdown> createState() => _SessionCountdownState();
 }
 
-class _CountdownTextState extends State<_CountdownText> {
+class _SessionCountdownState extends State<_SessionCountdown> {
   Timer? _timer;
 
   @override
@@ -420,16 +444,19 @@ class _CountdownTextState extends State<_CountdownText> {
 
   @override
   Widget build(BuildContext context) {
-    final remaining = widget.target.difference(DateTime.now());
     final theme = Theme.of(context);
-    if (remaining.isNegative) {
-      return Text('Reminder arriving…', style: theme.textTheme.bodySmall);
-    }
-    final minutes = remaining.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = remaining.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final remaining = widget.end.difference(DateTime.now());
+    final clamped = remaining.isNegative ? Duration.zero : remaining;
+    final h = clamped.inHours.toString().padLeft(2, '0');
+    final m = clamped.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final sec = clamped.inSeconds.remainder(60).toString().padLeft(2, '0');
     return Text(
-      'Next reminder in $minutes:$seconds',
-      style: theme.textTheme.bodySmall,
+      '$h:$m:$sec',
+      style: theme.textTheme.displayMedium?.copyWith(
+        fontWeight: FontWeight.w600,
+        fontFeatures: const [FontFeature.tabularFigures()],
+        color: theme.colorScheme.primary,
+      ),
     );
   }
 }

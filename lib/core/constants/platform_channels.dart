@@ -33,6 +33,7 @@ class PlatformChannels {
   // ── Method names (session_lifecycle) ───────────────────────────
   static const String methodSetSessionActive = 'setSessionActive';
   static const String methodCloseWindow = 'closeWindow';
+  static const String methodExitApp = 'exitApp';
 
   // ── Argument keys (notch_hook) ─────────────────────────────────
   static const String keyMessage = 'message';

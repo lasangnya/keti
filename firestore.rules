@@ -47,7 +47,8 @@ service cloud.firestore {
           && request.resource.data.status != 'voided';
         allow update: if isAdmin() || (signedIn()
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['status','completedAt','resumedCount']));
+               .hasOnly(['status','completedAt','resumedCount',
+                         'participantExitRequestedAt']));
         allow delete: if isAdmin();
 
         match /reminderEvents/{eventId} {

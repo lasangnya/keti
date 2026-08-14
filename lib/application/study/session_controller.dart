@@ -239,6 +239,38 @@ class SessionController extends _$SessionController {
   /// Test seam: wait until all in-flight reminder sequences have finished.
   Future<void> debugAwaitIdle() => Future.wait(_inFlight.toList());
 
+  /// Participant tapped Exit during an active session. Records the event
+  /// locally and in Firestore, then terminates the app. The session itself
+  /// stays active, so a relaunch offers Resume (same as a window close).
+  Future<void> requestExit() async {
+    final session = state.session;
+    if (session == null || !state.active) return;
+    final code = session.participantCode;
+    final dayId = session.dayId;
+
+    // CSV-first: local record is ground truth.
+    final csv = ref.read(csvStoreProvider);
+    await csv.appendEventLog(
+      code,
+      dayId,
+      EventLogEntry(
+        timestamp: _now(),
+        eventId: 'session',
+        transition: 'participant_exit_requested',
+      ),
+    );
+    try {
+      await ref
+          .read(sessionRepositoryProvider)
+          .markParticipantExit(code, dayId)
+          // Best effort: never block the exit on a slow/unreachable network.
+          .timeout(const Duration(seconds: 3));
+    } catch (e) {
+      debugPrint('Firestore exit marker failed: $e');
+    }
+    await SessionLifecycleService.exitApp();
+  }
+
   final Set<Future<void>> _inFlight = {};
 
   void _trackInFlight(Future<void> future) {

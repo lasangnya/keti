@@ -244,13 +244,14 @@ describe('studySessions creation gate', () => {
 // ── session update whitelist ─────────────────────────────────────────
 
 describe('studySessions update whitelist', () => {
-  it('allows status, completedAt and resumedCount only', async () => {
+  it('allows status, completedAt, resumedCount and participantExitRequestedAt only', async () => {
     await seedParticipant();
     await seedSession('day1');
     const ref = doc(anonDb(), 'participants', 'P014', 'studySessions', 'day1');
 
     await assertSucceeds(updateDoc(ref, { status: 'completed' }));
     await assertSucceeds(updateDoc(ref, { resumedCount: 1 }));
+    await assertSucceeds(updateDoc(ref, { participantExitRequestedAt: '2026-08-03T10:00:00Z' }));
 
     await seedSession('day1'); // reset
     await assertFails(updateDoc(ref, { style: 'AMBIENT' }));

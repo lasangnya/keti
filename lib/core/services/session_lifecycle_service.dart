@@ -22,4 +22,18 @@ class SessionLifecycleService {
       // No native handler on this platform (Windows/Linux).
     }
   }
+
+  /// Terminates the host application (participant Exit button). Like
+  /// [setSessionActive], a native failure must never hang the flow.
+  static Future<void> exitApp() async {
+    try {
+      await _channel
+          .invokeMethod(PlatformChannels.methodExitApp)
+          .timeout(const Duration(seconds: 2), onTimeout: () {});
+    } on PlatformException {
+      // Native side rejected the call.
+    } on MissingPluginException {
+      // No native handler on this platform (Windows/Linux).
+    }
+  }
 }

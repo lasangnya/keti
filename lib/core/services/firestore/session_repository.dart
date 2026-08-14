@@ -16,6 +16,11 @@ abstract class SessionRepository {
 
   /// Marks the session completed with a server `completedAt`.
   Future<void> completeSession(String participantCode, String dayId);
+
+  /// Records that the participant requested an app exit mid-session, with a
+  /// server `participantExitRequestedAt` timestamp. The session itself stays
+  /// active so a relaunch can resume it.
+  Future<void> markParticipantExit(String participantCode, String dayId);
 }
 
 class FirestoreSessionRepository implements SessionRepository {
@@ -59,5 +64,11 @@ class FirestoreSessionRepository implements SessionRepository {
       _doc(participantCode, dayId).update({
         'status': 'COMPLETED',
         'completedAt': FieldValue.serverTimestamp(),
+      });
+
+  @override
+  Future<void> markParticipantExit(String participantCode, String dayId) =>
+      _doc(participantCode, dayId).update({
+        'participantExitRequestedAt': FieldValue.serverTimestamp(),
       });
 }

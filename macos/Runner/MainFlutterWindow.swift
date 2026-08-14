@@ -105,6 +105,10 @@ class MainFlutterWindow: NSWindow {
                 (NSApp.delegate as? AppDelegate)?.setSessionActive(active)
             } else if call.method == PlatformChannels.methodCloseWindow {
                 self.performClose(nil)
+            } else if call.method == PlatformChannels.methodExitApp {
+                // Participant Exit button: terminate unconditionally, even
+                // while a study session is active.
+                NSApp.terminate(nil)
             }
             result(nil)
         }
