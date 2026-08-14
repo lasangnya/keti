@@ -27,6 +27,7 @@ const P_HEADER = [
 const S_HEADER = [
   'participantCode','dayId','dayNumber','style','status','startedAtLocal',
   'completedAtLocal','resumedCount','scheduleJson','linksJson',
+  'participantExitRequestedAt',
 ];
 const E_HEADER = [
   'eventId','participantCode','dayId','dayNumber','reminderNumber',
@@ -71,6 +72,9 @@ async function main() {
         sdata.resumedCount ?? 0,
         JSON.stringify(sdata.scheduleSnapshot ?? []),
         JSON.stringify(sdata.linksSnapshot ?? {}),
+        sdata.participantExitRequestedAt
+          ? sdata.participantExitRequestedAt.toDate().toISOString()
+          : '',
       ]));
 
       const events = await sdoc.ref.collection('reminderEvents')

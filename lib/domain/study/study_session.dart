@@ -40,6 +40,7 @@ class StudySession {
     required this.links,
     this.completedAtLocal,
     this.resumedCount = 0,
+    this.participantExitRequestedAt,
   });
 
   final String participantCode;
@@ -49,6 +50,10 @@ class StudySession {
   final DateTime startedAtLocal;
   final DateTime? completedAtLocal;
   final int resumedCount;
+
+  /// Server-stamped when the participant clicked Exit during the session
+  /// (repository-only field: the device never writes it, Firestore does).
+  final DateTime? participantExitRequestedAt;
 
   /// The 8 rows actually used for this session.
   final DaySchedule schedule;
@@ -62,6 +67,7 @@ class StudySession {
     StudySessionStatus? status,
     DateTime? completedAtLocal,
     int? resumedCount,
+    DateTime? participantExitRequestedAt,
   }) =>
       StudySession(
         participantCode: participantCode,
@@ -71,6 +77,8 @@ class StudySession {
         startedAtLocal: startedAtLocal,
         completedAtLocal: completedAtLocal ?? this.completedAtLocal,
         resumedCount: resumedCount ?? this.resumedCount,
+        participantExitRequestedAt:
+            participantExitRequestedAt ?? this.participantExitRequestedAt,
         schedule: schedule,
         links: links,
       );
@@ -88,6 +96,7 @@ class StudySession {
     'resumedCount',
     'scheduleJson',
     'linksJson',
+    'participantExitRequestedAt',
   ];
 
   List<Object?> toCsvRow() => [
@@ -101,6 +110,7 @@ class StudySession {
         resumedCount,
         jsonEncode(schedule.toJson()),
         jsonEncode(links.toJson()),
+        participantExitRequestedAt?.toIso8601String(),
       ];
 
   factory StudySession.fromCsvRow(List<String> row) {
@@ -118,6 +128,10 @@ class StudySession {
           style: style),
       links: QuestionnaireLinks.fromJson(
           (jsonDecode(row[9]) as Map).cast<String, Object?>()),
+      // Column added later than the original file format — old files lack it.
+      participantExitRequestedAt: row.length > 10 && row[10].isNotEmpty
+          ? DateTime.parse(row[10])
+          : null,
     );
   }
 
@@ -132,6 +146,8 @@ class StudySession {
         'startedAtLocal': startedAtLocal.toIso8601String(),
         'completedAtLocal': completedAtLocal?.toIso8601String(),
         'resumedCount': resumedCount,
+        'participantExitRequestedAt':
+            participantExitRequestedAt?.toIso8601String(),
         'scheduleSnapshot': schedule.toJson()['reminders'],
         'linksSnapshot': links.toJson(),
       };
@@ -148,6 +164,9 @@ class StudySession {
           ? DateTime.parse(json['completedAtLocal'] as String)
           : null,
       resumedCount: (json['resumedCount'] as int?) ?? 0,
+      // Firestore Timestamp duck-typed like Participant.fromJson to keep the
+      // domain layer free of the Firestore dependency.
+      participantExitRequestedAt: _parseExitTime(json['participantExitRequestedAt']),
       schedule: DaySchedule.fromJson(
         {
           'dayNumber': json['dayNumber'],
@@ -158,5 +177,16 @@ class StudySession {
       links: QuestionnaireLinks.fromJson(
           (json['linksSnapshot'] as Map).cast<String, Object?>()),
     );
+  }
+
+  static DateTime? _parseExitTime(Object? value) {
+    if (value == null) return null;
+    if (value is String) return value.isEmpty ? null : DateTime.parse(value);
+    if (value is DateTime) return value;
+    try {
+      return (value as dynamic).toDate() as DateTime;
+    } catch (_) {
+      return null;
+    }
   }
 }

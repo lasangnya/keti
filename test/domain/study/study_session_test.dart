@@ -61,6 +61,26 @@ void main() {
       expect(restored.completedAtLocal,
           DateTime.parse('2026-08-03T11:05:00+02:00'));
     });
+
+    test('exit marker round-trips through the codec', () {
+      final session = buildSession().copyWith(
+        participantExitRequestedAt: DateTime.parse('2026-08-03T09:12:00+02:00'),
+      );
+      final text = CsvCodec.encode(StudySession.csvHeader, [session.toCsvRow()]);
+      final restored = StudySession.fromCsvRow(CsvCodec.decode(text)[1]);
+      expect(restored.participantExitRequestedAt,
+          DateTime.parse('2026-08-03T09:12:00+02:00'));
+    });
+
+    test('rows from the old file format (no exit column) still parse', () {
+      final text = CsvCodec.encode(
+        StudySession.csvHeader.sublist(0, 10),
+        [buildSession().toCsvRow().sublist(0, 10)],
+      );
+      final restored = StudySession.fromCsvRow(CsvCodec.decode(text)[1]);
+      expect(restored.participantExitRequestedAt, isNull);
+      expect(restored.resumedCount, 2);
+    });
   });
 
   group('StudySession JSON', () {
@@ -68,6 +88,14 @@ void main() {
       final session = buildSession();
       final restored = StudySession.fromJson(session.toJson());
       expect(restored.toJson(), session.toJson());
+    });
+
+    test('exit marker round-trips from a Firestore timestamp', () {
+      final json = buildSession().toJson();
+      json['participantExitRequestedAt'] = DateTime.parse('2026-08-03T09:12:00Z');
+      final restored = StudySession.fromJson(json);
+      expect(restored.participantExitRequestedAt,
+          DateTime.parse('2026-08-03T09:12:00Z'));
     });
 
     test('embeds schedule and link snapshots', () {
