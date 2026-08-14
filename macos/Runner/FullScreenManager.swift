@@ -17,11 +17,17 @@ enum FullScreenManager {
         isFullScreen = fullScreen
         menuBarRevealed = false
         if fullScreen {
-            if NSMenu.menuBarVisible() { NSMenu.setMenuBarVisible(false) }
+            // The auto-hide option gives the system full-screen hover
+            // behavior ("appears when the pointer nears the top edge") and
+            // is what makes the bar showable at all while the window covers
+            // the menu-bar strip.
+            NSApp.presentationOptions.insert(.autoHideMenuBar)
             NSApp.presentationOptions.insert(.autoHideDock)
+            if NSMenu.menuBarVisible() { NSMenu.setMenuBarVisible(false) }
         } else {
-            if !NSMenu.menuBarVisible() { NSMenu.setMenuBarVisible(true) }
+            NSApp.presentationOptions.remove(.autoHideMenuBar)
             NSApp.presentationOptions.remove(.autoHideDock)
+            if !NSMenu.menuBarVisible() { NSMenu.setMenuBarVisible(true) }
         }
     }
 
@@ -30,14 +36,21 @@ enum FullScreenManager {
     /// overlapping reminder surfaces cannot double-toggle it.
     static func revealMenuBarForReminder() {
         guard isFullScreen, !menuBarRevealed else { return }
+        // Force-show for the reminder: dropping the auto-hide option makes
+        // the bar stay up (the Ghostty/IINA pattern); setMenuBarVisible is
+        // kept as a belt-and-suspenders for older macOS behavior.
+        NSApp.presentationOptions.remove(.autoHideMenuBar)
         NSMenu.setMenuBarVisible(true)
         menuBarRevealed = true
+        debugPrint("[FullScreenManager] menu bar revealed for reminder")
     }
 
     /// Restores the hidden menu bar once the reminder is gone.
     static func restoreMenuBar() {
         guard menuBarRevealed else { return }
         NSMenu.setMenuBarVisible(false)
+        NSApp.presentationOptions.insert(.autoHideMenuBar)
         menuBarRevealed = false
+        debugPrint("[FullScreenManager] menu bar restored")
     }
 }
