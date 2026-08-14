@@ -233,7 +233,7 @@ void main() {
     expect(launchedUrls.single, contains('entry.10=P002'));
   });
 
-  testWidgets('Start Day 2 loads the day-2 overview, not the tutorial',
+  testWidgets('Start Day 2 starts the day-2 session in one step',
       (tester) async {
     // Repository that starts on day 1 and flips to day 2 when the
     // researcher "activates" it.
@@ -254,11 +254,11 @@ void main() {
     await tester.tap(find.text('Start Day 2'));
     await tester.pumpAndSettle();
 
-    // Lands on the Day 2 overview — never the tutorial welcome.
+    // Straight to the active session — no intermediate day-2 overview, and
+    // never the tutorial welcome.
     expect(find.text('Welcome to the health-reminder study'), findsNothing);
-    expect(find.text('P001'), findsOneWidget);
-    expect(find.text('Day 2'), findsOneWidget);
-    expect(find.text('Start Day 2'), findsOneWidget);
+    expect(find.text('SESSION 2 ACTIVE'), findsOneWidget);
+    expect(find.text('Participant ID : P001'), findsOneWidget);
   });
 
   testWidgets(
@@ -303,11 +303,9 @@ void main() {
     await tester.pumpAndSettle();
 
     // Without the reset wipe this would instantly show "Study complete".
-    // With it, we land on the Day 2 overview ready to start.
+    // With it, the stale day-2 data is gone and the session starts fresh.
     expect(find.text('Study complete'), findsNothing);
-    expect(find.text('P001'), findsOneWidget);
-    expect(find.text('Day 2'), findsOneWidget);
-    expect(find.text('Start Day 2'), findsOneWidget);
+    expect(find.text('SESSION 2 ACTIVE'), findsOneWidget);
   });
 }
 

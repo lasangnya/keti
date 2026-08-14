@@ -395,9 +395,10 @@ class _StudyPageState extends ConsumerState<StudyPage> {
               );
               return;
             }
-            // Day 2 is loaded: clear the finished day-1 session so the
-            // day-2 overview shows instead of the day-1 completion screen.
-            ref.read(sessionControllerProvider.notifier).resetForNewDay();
+            // Day 2 is loaded and ready: start it in one step — the session
+            // controller's own guards (active session / resumable day) hold
+            // at this point, so the intermediate day-2 overview is skipped.
+            await ref.read(sessionControllerProvider.notifier).startDay();
           },
         ),
         if (!day2Activated) ...[
