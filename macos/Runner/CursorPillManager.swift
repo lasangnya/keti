@@ -23,6 +23,8 @@ class CursorPillManager {
         dismissWorkItem = nil
         closeInstantly()
 
+        FullScreenManager.revealMenuBarForReminder()
+
         currentWidth = width
         currentHeight = height
         currentOffsetX = offsetX
@@ -99,6 +101,8 @@ class CursorPillManager {
         window?.close()
         window = nil
 
+        FullScreenManager.restoreMenuBar()
+
         currentOnHidden?()
         currentOnHidden = nil
     }
@@ -113,7 +117,17 @@ class CursorPillManager {
     private static func positionAtCursor() {
         guard let panel = window else { return }
         let mouse = NSEvent.mouseLocation
-        panel.setFrameOrigin(NSPoint(x: mouse.x + currentOffsetX, y: mouse.y + currentOffsetY))
+        var x = mouse.x + currentOffsetX
+        var y = mouse.y + currentOffsetY
+        // Clamp into the visible frame so the pill never clips at the top
+        // edge in full screen (or anywhere else).
+        if let visible = NSScreen.main?.visibleFrame {
+            let maxX = max(visible.minX, visible.maxX - currentWidth)
+            let maxY = max(visible.minY, visible.maxY - currentHeight)
+            x = min(max(x, visible.minX), maxX)
+            y = min(max(y, visible.minY), maxY)
+        }
+        panel.setFrameOrigin(NSPoint(x: x, y: y))
     }
 }
 

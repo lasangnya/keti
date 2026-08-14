@@ -33,6 +33,32 @@ class AppDelegate: FlutterAppDelegate {
             NSApp.activate(ignoringOtherApps: true)
             NSApp.arrangeInFront(nil)
         }
+
+        installViewMenu()
+    }
+
+    /// Re-adds the standard "Toggle Full Screen" (⌃⌘F) shortcut, which the
+    /// system normally provides for full-screen-capable windows. The app's
+    /// manual full screen is not system full screen, so the shortcut is wired
+    /// to the same zoom action the green button uses.
+    private func installViewMenu() {
+        guard let mainMenu = NSApp.mainMenu else { return }
+        let viewItem = NSMenuItem(title: "View", action: nil, keyEquivalent: "")
+        let viewMenu = NSMenu(title: "View")
+        let toggle = NSMenuItem(
+            title: "Toggle Full Screen",
+            action: #selector(toggleManualFullScreen(_:)),
+            keyEquivalent: "f"
+        )
+        toggle.keyEquivalentModifierMask = [.command, .control]
+        toggle.target = self
+        viewMenu.addItem(toggle)
+        viewItem.submenu = viewMenu
+        mainMenu.addItem(viewItem)
+    }
+
+    @objc private func toggleManualFullScreen(_ sender: Any?) {
+        (NSApp.keyWindow ?? NSApp.mainWindow)?.performZoom(sender)
     }
 
     override func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -50,6 +76,11 @@ class AppDelegate: FlutterAppDelegate {
             ProcessInfo.processInfo.endActivity(activity)
             sessionActivity = nil
         }
+        // Never leave the system menu bar hidden after the app quits.
+        if !NSMenu.menuBarVisible() {
+            NSMenu.setMenuBarVisible(true)
+        }
+        NSApp.presentationOptions.remove(.autoHideDock)
     }
 
     func setSessionActive(_ active: Bool) {

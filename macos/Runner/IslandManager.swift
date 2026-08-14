@@ -15,6 +15,10 @@ class IslandManager {
         dismissWorkItem = nil
         closeInstantly()
 
+        // In full screen the menu bar is hidden; reveal it for the reminder
+        // window so the panel does not sit in the invisible top strip.
+        FullScreenManager.revealMenuBarForReminder()
+
         let contentView = IslandView(
             message: message,
             resourceName: resourceName,
@@ -41,10 +45,23 @@ class IslandManager {
 
         panel.contentView = NSHostingView(rootView: contentView)
 
-        if let screen = NSScreen.main {
-            let x = (screen.frame.width - CGFloat(width)) / 2
-            let y = screen.frame.height - CGFloat(height) + 5
-            panel.setFrameOrigin(NSPoint(x: x, y: y))
+        // When the menu bar was just revealed, visibleFrame needs a runloop
+        // turn to settle; position then so the panel sits below the bar.
+        let position = {
+            if let screen = NSScreen.main {
+                // Anchor to the VISIBLE frame: it excludes the menu bar (and,
+                // in full screen, tracks the auto-hidden bar), so the panel
+                // never lands in a strip that is off-screen or hidden.
+                let visible = screen.visibleFrame
+                let x = visible.midX - CGFloat(width) / 2
+                let y = visible.maxY - CGFloat(height) + 5
+                panel.setFrameOrigin(NSPoint(x: x, y: y))
+            }
+        }
+        if FullScreenManager.isFullScreen {
+            DispatchQueue.main.async { position() }
+        } else {
+            position()
         }
 
         panel.makeKeyAndOrderFront(nil)
@@ -78,6 +95,8 @@ class IslandManager {
         window?.orderOut(nil)
         window?.close()
         window = nil
+
+        FullScreenManager.restoreMenuBar()
 
         currentOnHidden?()
         currentOnHidden = nil

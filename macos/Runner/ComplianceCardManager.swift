@@ -56,8 +56,12 @@ class ComplianceCardManager {
         // card on the display the participant is actually looking at.
         let screen = NSApp.mainWindow?.screen ?? NSScreen.main
         if let screen {
-            let x = screen.frame.maxX - idealSize.width - edgeMargin
-            let y = screen.frame.maxY - idealSize.height - edgeMargin
+            // Anchor to the visible frame (excludes the menu bar / dock, and
+            // tracks the auto-hidden bar in full screen) so the card never
+            // clips at the top edge.
+            let visible = screen.visibleFrame
+            let x = visible.maxX - idealSize.width - edgeMargin
+            let y = visible.maxY - idealSize.height - edgeMargin
             panel.setFrameOrigin(NSPoint(x: x, y: y))
         }
 
