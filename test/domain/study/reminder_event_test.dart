@@ -66,7 +66,7 @@ void main() {
       expect(event.usedFallback, isTrue);
     });
 
-    test('markAnswered computes latency from the card-shown timestamp', () {
+    test('markAnswered records the pressed button label and latency', () {
       final event = buildScheduledEvent()
           .markDelivered(
             shownAtLocal: DateTime.parse('2026-08-03T10:02:13+02:00'),
@@ -77,16 +77,19 @@ void main() {
           .markAnswered(
             outcome: ResponseOutcome.completed,
             answeredAtLocal: DateTime.parse('2026-08-03T10:03:05.120+02:00'),
+            cardResponse: 'Done',
           );
       expect(event.outcome, ResponseOutcome.completed);
+      expect(event.cardResponse, 'Done');
       expect(event.responseLatencyMs, 7120);
     });
 
-    test('markTimedOut sets the timeout outcome without latency', () {
+    test('markTimedOut records Ignored without latency', () {
       final event = buildScheduledEvent()
           .markCardShown(DateTime.parse('2026-08-03T10:02:58+02:00'))
-          .markTimedOut(DateTime.parse('2026-08-03T10:04:58+02:00'));
+          .markTimedOut(DateTime.parse('2026-08-03T10:03:13+02:00'));
       expect(event.outcome, ResponseOutcome.timedOut);
+      expect(event.cardResponse, 'Ignored');
       expect(event.responseLatencyMs, isNull);
     });
 
@@ -136,6 +139,7 @@ void main() {
         'environment',
         'appVersion',
         'protocolVersion',
+        'cardResponse',
       ]);
     });
 
@@ -171,11 +175,13 @@ void main() {
           .markAnswered(
             outcome: ResponseOutcome.dismissed,
             answeredAtLocal: DateTime.parse('2026-08-03T10:03:05+02:00'),
+            cardResponse: 'Not now',
           );
       final text = CsvCodec.encode(ReminderEvent.csvHeader, [event.toCsvRow()]);
       final restored = ReminderEvent.fromCsvRow(CsvCodec.decode(text)[1]);
       expect(restored.toCsvRow().toString(), event.toCsvRow().toString());
       expect(restored.sessionResumed, isTrue);
+      expect(restored.cardResponse, 'Not now');
       expect(restored.responseLatencyMs, 7000);
     });
   });
@@ -197,9 +203,11 @@ void main() {
           .markAnswered(
             outcome: ResponseOutcome.completed,
             answeredAtLocal: DateTime.parse('2026-08-03T10:03:05+02:00'),
+            cardResponse: 'Done',
           );
       final restored = ReminderEvent.fromJson(event.toJson());
       expect(restored.toJson(), event.toJson());
+      expect(restored.cardResponse, 'Done');
     });
 
     test('uses the Firestore field names', () {

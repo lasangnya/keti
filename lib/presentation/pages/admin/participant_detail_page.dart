@@ -7,8 +7,8 @@ import '../../../application/admin/participants_provider.dart';
 import '../../../application/admin/study_config_provider.dart';
 import '../../../domain/study/participant.dart';
 import '../../../domain/study/scheduled_reminder.dart';
-import '../../../domain/study/study_config.dart';
 import '../../../domain/study/study_enums.dart';
+import '../../../domain/study/study_links.dart';
 import '../../../domain/study/study_session.dart';
 
 /// Per-participant admin: status per day, Activate Day 2, style-order edit
@@ -29,29 +29,28 @@ class _ParticipantDetailPageState
   /// 8-entry template when none exists). Rows can be added/removed freely;
   /// [ScheduledReminder.reminderNumber] is renumbered 1..N on save.
   final List<_ScheduleRow> _rows = [];
-  Future<List<ScheduledReminder>>? _scheduleFuture;
+  Future<({List<ScheduledReminder> reminders, bool saved})>? _scheduleFuture;
   int? _futureDay;
   String? _futureCode;
   bool _scheduleLoaded = false;
+  bool _scheduleWasSaved = false;
   int _scheduleDay = 1;
   String? _message;
 
-  // Links editor state.
-  final _startController = TextEditingController();
-  final _day1EndController = TextEditingController();
-  final _day2EndController = TextEditingController();
-  final _finalController = TextEditingController();
+  // Links editor state (per-participant on/off switches).
+  late bool _preStudyOn;
+  late bool _endOfDay1On;
+  late bool _endOfDay2On;
+  late bool _finalOn;
   bool _linksLoaded = false;
+  bool _linksSaving = false;
+  String? _linksDoneMessage;
 
   @override
   void dispose() {
     for (final r in _rows) {
       r.offsetController.dispose();
     }
-    _startController.dispose();
-    _day1EndController.dispose();
-    _day2EndController.dispose();
-    _finalController.dispose();
     super.dispose();
   }
 
@@ -172,29 +171,88 @@ class _ParticipantDetailPageState
               child: const Text('Activate Day 2'),
             ),
             const SizedBox(height: 12),
-            if (safe?.sessions[0] != null)
-              OutlinedButton.icon(
-                icon: const Icon(Icons.refresh, size: 16),
-                label: const Text('Reset Day 1'),
-                style: OutlinedButton.styleFrom(
-                    foregroundColor: theme.colorScheme.error),
-                onPressed: () => _confirmReset(context),
-              ),
+            // Reset buttons are always available — even when a day has no
+            // session yet (e.g. after a previous reset), so the researcher
+            // can always re-align the active-day gate.
+            OutlinedButton.icon(
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('Reset Day 1'),
+              style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error),
+              onPressed: () => _confirmReset(context, 1),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('Reset Day 2'),
+              style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error),
+              onPressed: () => _confirmReset(context, 2),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              icon: const Icon(Icons.delete_forever, size: 16),
+              label: const Text('Reset participant'),
+              style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.error,
+                  foregroundColor: theme.colorScheme.onError),
+              onPressed: () => _confirmResetParticipant(context),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _confirmReset(BuildContext context) async {
+  Future<void> _confirmResetParticipant(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Reset Day 1?'),
+        title: const Text('Reset participant?'),
         content: const Text(
-            'This will delete Day 1 from Firestore and trigger a local wipe '
-            'on the participant\'s device next time they enter their code. '
-            'This cannot be undone.'),
+            'This deletes BOTH days from Firestore and wipes ALL data for '
+            'this participant on the device: sessions, reminders, the '
+            'tutorial flag and cached documents. The same participant code '
+            'will start over as a completely fresh participant. This cannot '
+            'be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Reset everything',
+                style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ref
+          .read(adminParticipantsProvider.notifier)
+          .resetParticipant(widget.participantCode);
+      // Stale exports must not outlive the reset.
+      await ref
+          .read(adminExportServiceProvider)
+          .deleteParticipantExports(widget.participantCode);
+      ref.invalidate(participantDetailProvider(widget.participantCode));
+      if (!mounted) return;
+      setState(() => _message = 'Participant reset — starts fresh on next '
+          'code entry.');
+    }
+  }
+
+  Future<void> _confirmReset(BuildContext context, int day) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Reset Day $day?'),
+        content: Text(
+            'This will delete Day $day from Firestore and trigger a local '
+            'wipe on the participant\'s device next time they enter their '
+            'code. This cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -212,9 +270,9 @@ class _ParticipantDetailPageState
     if (confirmed == true) {
       await ref
           .read(adminParticipantsProvider.notifier)
-          .resetDay1(widget.participantCode);
+          .resetDay(widget.participantCode, day);
       ref.invalidate(participantDetailProvider(widget.participantCode));
-      setState(() => _message = 'Day 1 reset signal sent.');
+      setState(() => _message = 'Day $day reset signal sent.');
     }
   }
 
@@ -266,7 +324,7 @@ class _ParticipantDetailPageState
   }
 
   Widget _buildLinksCard(ThemeData theme, Participant participant) {
-    final config = ref.watch(adminStudyConfigProvider);
+    if (!_linksLoaded) _loadLinks(participant.linkFlags);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -278,129 +336,132 @@ class _ParticipantDetailPageState
                     ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text(
-              'Override shared config links for this participant. '
-              'Leave empty to fall back to shared config.',
+              'Choose which questionnaires this participant is offered. '
+              'End-of-day type follows the day\'s presentation style '
+              '(ambient → type 1, character → type 2) and therefore '
+              'alternates between the two days automatically.',
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 12),
-            config.when(
-              loading: () => const Text('Loading shared config…'),
-              error: (e, _) => Text('Failed to load config: $e'),
-              data: (c) {
-                if (!_linksLoaded) {
-                  _loadLinks(participant.questionnaireLinks);
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _linkField(theme, 'Pre-study (start)', _startController,
-                        c.links.start, 1),
-                    _linkField(theme, 'End of Day 1', _day1EndController,
-                        c.links.day1End, 1),
-                    _linkField(theme, 'End of Day 2', _day2EndController,
-                        c.links.day2End, 2),
-                    _linkField(theme, 'Final', _finalController,
-                        c.links.finalLink, 2),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        FilledButton(
-                          onPressed: () =>
-                              _saveLinks(participant.participantCode),
-                          child: const Text('Save links'),
-                        ),
-                        const SizedBox(width: 8),
-                        if (participant.questionnaireLinks != null)
-                          OutlinedButton(
-                            onPressed: () => _clearLinks(
-                                participant.participantCode),
-                            child: const Text('Clear custom links'),
-                          ),
-                      ],
-                    ),
-                  ],
-                );
-              },
+            SwitchListTile(
+              title: const Text('Pre-study questionnaire'),
+              value: _preStudyOn,
+              onChanged: _linksSaving
+                  ? null
+                  : (v) => setState(() => _preStudyOn = v),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
             ),
+            SwitchListTile(
+              title: const Text('End-of-day questionnaire — Day 1'),
+              subtitle: Text(
+                  '${participant.styleOrder == StyleOrder.ambientFirst ? 'Ambient (type 1)' : 'Character (type 2)'} day'),
+              value: _endOfDay1On,
+              onChanged: _linksSaving
+                  ? null
+                  : (v) => setState(() => _endOfDay1On = v),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
+            SwitchListTile(
+              title: const Text('End-of-day questionnaire — Day 2'),
+              subtitle: Text(
+                  '${participant.styleOrder == StyleOrder.ambientFirst ? 'Character (type 2)' : 'Ambient (type 1)'} day'),
+              value: _endOfDay2On,
+              onChanged: _linksSaving
+                  ? null
+                  : (v) => setState(() => _endOfDay2On = v),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
+            SwitchListTile(
+              title: const Text('Final questionnaire'),
+              value: _finalOn,
+              onChanged: _linksSaving
+                  ? null
+                  : (v) => setState(() => _finalOn = v),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                FilledButton(
+                  onPressed: _linksSaving
+                      ? null
+                      : () => _saveLinks(participant.participantCode),
+                  child: _linksSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Save links'),
+                ),
+              ],
+            ),
+            if (_linksDoneMessage != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.check_circle,
+                      size: 16, color: theme.colorScheme.primary),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      _linksDoneMessage!,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _linkField(
-    ThemeData theme,
-    String label,
-    TextEditingController controller,
-    String? sharedValue,
-    int day,
-  ) {
-    final helperText = controller.text.isEmpty && sharedValue != null
-        ? 'Falls back to shared: $sharedValue'
-        : null;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          helperText: helperText,
-          border: const OutlineInputBorder(),
-        ),
-      ),
-    );
-  }
-
-  void _loadLinks(QuestionnaireLinks? override) {
-    _startController.text = override?.start ?? '';
-    _day1EndController.text = override?.day1End ?? '';
-    _day2EndController.text = override?.day2End ?? '';
-    _finalController.text = override?.finalLink ?? '';
+  void _loadLinks(ParticipantLinkFlags flags) {
+    _preStudyOn = flags.preStudy;
+    _endOfDay1On = flags.endOfDay1;
+    _endOfDay2On = flags.endOfDay2;
+    _finalOn = flags.finalQuestionnaire;
     _linksLoaded = true;
   }
 
   Future<void> _saveLinks(String participantCode) async {
-    for (final (label, controller) in [
-      ('start', _startController),
-      ('day 1 end', _day1EndController),
-      ('day 2 end', _day2EndController),
-      ('final', _finalController),
-    ]) {
-      final value = controller.text.trim();
-      if (value.isNotEmpty && !value.contains('{participantId}')) {
-        setState(() {
-          _message = 'The $label link is missing {participantId}.';
-        });
-        return;
+    setState(() {
+      _linksSaving = true;
+      _linksDoneMessage = null;
+    });
+    try {
+      await ref.read(adminParticipantsProvider.notifier).saveParticipantLinkFlags(
+            participantCode,
+            ParticipantLinkFlags(
+              preStudy: _preStudyOn,
+              endOfDay1: _endOfDay1On,
+              endOfDay2: _endOfDay2On,
+              finalQuestionnaire: _finalOn,
+            ),
+          );
+      if (!mounted) return;
+      ref.invalidate(participantDetailProvider(participantCode));
+      setState(() {
+        _linksDoneMessage = 'Done — links saved for $participantCode.';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _linksDoneMessage = 'Failed to save links: $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _linksSaving = false);
       }
     }
-    String? orNull(TextEditingController c) =>
-        c.text.trim().isEmpty ? null : c.text.trim();
-
-    await ref.read(adminParticipantsProvider.notifier).saveParticipantQuestionnaireLinks(
-          participantCode,
-          QuestionnaireLinks(
-            start: orNull(_startController),
-            day1End: orNull(_day1EndController),
-            day2End: orNull(_day2EndController),
-            finalLink: orNull(_finalController),
-          ),
-        );
-    ref.invalidate(participantDetailProvider(participantCode));
-    setState(() {
-      _message = 'Links saved.';
-    });
-  }
-
-  Future<void> _clearLinks(String participantCode) async {
-    await ref
-        .read(adminParticipantsProvider.notifier)
-        .saveParticipantQuestionnaireLinks(participantCode, null);
-    ref.invalidate(participantDetailProvider(participantCode));
-    setState(() {
-      _linksLoaded = false;
-      _message = 'Custom links cleared — falls back to shared config.';
-    });
   }
 
   Widget _buildScheduleCard(ThemeData theme) {
@@ -408,9 +469,14 @@ class _ParticipantDetailPageState
     if (future == null ||
         _futureDay != _scheduleDay ||
         _futureCode != widget.participantCode) {
-      _scheduleFuture = ref
-          .read(adminRepositoryProvider)
-          .getSchedule(widget.participantCode, _scheduleDay);
+      final repo = ref.read(adminRepositoryProvider);
+      _scheduleFuture = () async {
+        final reminders =
+            await repo.getSchedule(widget.participantCode, _scheduleDay);
+        final saved =
+            await repo.hasSavedSchedule(widget.participantCode, _scheduleDay);
+        return (reminders: reminders, saved: saved);
+      }();
       _futureDay = _scheduleDay;
       _futureCode = widget.participantCode;
     }
@@ -438,11 +504,11 @@ class _ParticipantDetailPageState
               ],
             ),
             const SizedBox(height: 8),
-            FutureBuilder<List<ScheduledReminder>>(
+            FutureBuilder<({List<ScheduledReminder> reminders, bool saved})>(
               future: _scheduleFuture,
               builder: (context, snapshot) {
-                final reminders = snapshot.data;
-                if (reminders == null) {
+                final data = snapshot.data;
+                if (data == null) {
                   // Waiting for data: show loading unless we already have
                   // rows for this exact day/participant.
                   if (_rows.isEmpty ||
@@ -453,10 +519,30 @@ class _ParticipantDetailPageState
                 } else if (!_scheduleLoaded ||
                     _loadedDay != _scheduleDay ||
                     _loadedCode != widget.participantCode) {
-                  _loadRows(reminders);
+                  _loadRows(data.reminders);
+                  _scheduleWasSaved = data.saved;
                 }
                 return Column(
                   children: [
+                    if (!_scheduleWasSaved) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(8),
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.errorContainer,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'No saved schedule for Day $_scheduleDay yet — '
+                          'this participant cannot start it. '
+                          'Press "Save schedule" to create it.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onErrorContainer,
+                          ),
+                        ),
+                      ),
+                    ],
                     for (var i = 0; i < _rows.length; i++)
                       _buildScheduleRow(theme, i),
                     const SizedBox(height: 8),
@@ -621,8 +707,11 @@ class _ParticipantDetailPageState
     await ref.read(adminParticipantsProvider.notifier).saveSchedule(
         widget.participantCode, _scheduleDay, updated);
     ref.invalidate(participantDetailProvider(widget.participantCode));
-    setState(() => _message =
-        'Schedule saved for day $_scheduleDay (${updated.length} entries).');
+    setState(() {
+      _scheduleWasSaved = true;
+      _message =
+          'Schedule saved for day $_scheduleDay (${updated.length} entries).';
+    });
   }
 }
 

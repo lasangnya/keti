@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../application/admin/admin_auth_provider.dart';
-import '../../../application/app_mode_provider.dart';
+import '../../../core/services/researcher_launcher.dart';
 
 /// Researcher sign-in for the admin backend. The single researcher account
 /// (email/password with the `admin` custom claim) is created via the
@@ -83,12 +83,8 @@ class _AdminLoginPageState extends ConsumerState<AdminLoginPage> {
               ],
               const SizedBox(height: 32),
               TextButton(
-                onPressed: () async {
-                  await ref
-                      .read(appModeStateProvider.notifier)
-                      .setMode(AppMode.participant);
-                },
-                child: const Text('Back to Participant App'),
+                onPressed: () => ResearcherLauncher.closeWindow(),
+                child: const Text('Close window'),
               ),
             ],
           ),

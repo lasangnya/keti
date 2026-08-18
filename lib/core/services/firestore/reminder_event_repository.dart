@@ -71,6 +71,7 @@ class FirestoreReminderEventRepository implements ReminderEventRepository {
       'outcome': event.outcome.wireName,
       'answeredAtLocal': event.answeredAtLocal?.toIso8601String(),
       'responseLatencyMs': event.responseLatencyMs,
+      'cardResponse': event.cardResponse,
       'sessionResumed': event.sessionResumed,
       'updatedAt': FieldValue.serverTimestamp(),
     };

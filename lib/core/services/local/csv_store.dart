@@ -53,6 +53,16 @@ class CsvStore {
     }
   }
 
+  /// Recursively deletes ALL local data for [code] (`keti_data/{code}`) —
+  /// full participant reset.
+  Future<void> deleteParticipantDirectory(String code) async {
+    final dir = await _sessionDir(code, 'day1');
+    final parent = dir.parent;
+    if (parent.existsSync()) {
+      parent.deleteSync(recursive: true);
+    }
+  }
+
   // ── session.csv ──────────────────────────────────────────────────
 
   Future<void> writeSession(StudySession session) async {

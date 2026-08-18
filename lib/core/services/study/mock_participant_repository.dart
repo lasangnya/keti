@@ -3,6 +3,7 @@ import '../../../domain/study/participant.dart';
 import '../../../domain/study/scheduled_reminder.dart';
 import '../../../domain/study/study_config.dart';
 import '../../../domain/study/study_enums.dart';
+import '../../../domain/study/study_links.dart';
 import 'participant_repository.dart';
 
 /// In-memory [ParticipantRepository] used until M3 wires Firestore, and in
@@ -13,6 +14,11 @@ class MockParticipantRepository implements ParticipantRepository {
       : _participants = participants ?? defaultParticipants;
 
   final Map<String, Participant> _participants;
+
+  /// Participants that have a day-1 session (so Day 2 is legitimate).
+  /// Tests that drive day 1 to completion add their code here, or override
+  /// [hasSession] entirely.
+  final Set<String> day1StartedCodes = {'P002'};
 
   static final defaultParticipants = <String, Participant>{
     'P001': const Participant(
@@ -41,30 +47,24 @@ class MockParticipantRepository implements ParticipantRepository {
       activeDay: 1,
       environment: 'dev',
       protocolVersion: '2026-08-v1',
-      questionnaireLinks: QuestionnaireLinks(
-        start:
-            'https://docs.google.com/forms/d/e/override_start/viewform?usp=pp_url&entry.10={participantId}',
-        day1End: null,
-        day2End: null,
-        finalLink:
-            'https://docs.google.com/forms/d/e/override_final/viewform?usp=pp_url&entry.10={participantId}',
-      ),
     ),
   };
 
   static const config = StudyConfig(
     protocolVersion: '2026-08-v1',
-    links: QuestionnaireLinks(
-      start:
-          'https://docs.google.com/forms/d/e/example/viewform?usp=pp_url&entry.10={participantId}',
-      day1End:
-          'https://docs.google.com/forms/d/e/example/viewform?usp=pp_url&entry.10={participantId}&entry.11=day1',
-      day2End:
-          'https://docs.google.com/forms/d/e/example/viewform?usp=pp_url&entry.10={participantId}&entry.11=day2',
-      finalLink:
-          'https://docs.google.com/forms/d/e/example/viewform?usp=pp_url&entry.10={participantId}',
-    ),
     defaultSchedule: kDefaultScheduleTemplate,
+  );
+
+  /// Global link templates used by the participant app in tests.
+  static const linkTemplates = StudyLinkTemplates(
+    preStudy:
+        'https://docs.google.com/forms/d/e/example/viewform?usp=pp_url&entry.10={participantId}',
+    endOfDayType1:
+        'https://docs.google.com/forms/d/e/example/viewform?usp=pp_url&entry.10={participantId}&entry.11=ambient',
+    endOfDayType2:
+        'https://docs.google.com/forms/d/e/example/viewform?usp=pp_url&entry.10={participantId}&entry.11=character',
+    finalLink:
+        'https://docs.google.com/forms/d/e/example/viewform?usp=pp_url&entry.10={participantId}',
   );
 
   @override
@@ -89,4 +89,11 @@ class MockParticipantRepository implements ParticipantRepository {
       reminders: kDefaultScheduleTemplate,
     );
   }
+
+  @override
+  Future<StudyLinkTemplates> fetchLinkTemplates() async => linkTemplates;
+
+  @override
+  Future<bool> hasSession(String participantCode, int dayNumber) async =>
+      day1StartedCodes.contains(participantCode) && dayNumber == 1;
 }

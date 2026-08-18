@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'study_enums.dart';
-import 'study_config.dart';
+import 'study_links.dart';
 
 /// A pseudonymous study participant (plan §7.2 `participants/{code}`).
 ///
@@ -18,7 +18,9 @@ class Participant {
     required this.environment,
     required this.protocolVersion,
     this.resetDay1At,
-    this.questionnaireLinks,
+    this.resetDay2At,
+    this.resetAllAt,
+    this.linkFlags = const ParticipantLinkFlags.allOn(),
   });
 
   /// Pseudonymous code, e.g. `P014`. Document key and the only identifier
@@ -45,9 +47,19 @@ class Participant {
   /// Server-signal to wipe local Day 1 data.
   final DateTime? resetDay1At;
 
-  /// Per-participant questionnaire link templates; null means fall back to
-  /// the shared [QuestionnaireLinks] in [StudyConfig]. Admin-written.
-  final QuestionnaireLinks? questionnaireLinks;
+  /// Server-signal to wipe local Day 2 data (same mechanism as
+  /// [resetDay1At], for the day-2 schedule).
+  final DateTime? resetDay2At;
+
+  /// Server-signal for a FULL participant reset: wipes ALL local device data
+  /// (both day sessions, the tutorial-seen flag and cached docs) so the same
+  /// participant code starts over as a fresh participant.
+  final DateTime? resetAllAt;
+
+  /// Per-participant switches deciding which questionnaires are offered
+  /// (prestudy / end-of-day 1 / end-of-day 2 / final). Admin-written;
+  /// defaults to all-on when absent.
+  final ParticipantLinkFlags linkFlags;
 
   /// Accepts codes like `P001`…`P9999` (case-insensitive).
   static bool isValidCode(String code) =>
@@ -62,8 +74,9 @@ class Participant {
         'environment': environment,
         'protocolVersion': protocolVersion,
         'resetDay1At': resetDay1At?.toIso8601String(),
-        if (questionnaireLinks != null)
-          'questionnaireLinks': questionnaireLinks!.toJson(),
+        'resetDay2At': resetDay2At?.toIso8601String(),
+        'resetAllAt': resetAllAt?.toIso8601String(),
+        'linkFlags': linkFlags.toJson(),
       };
 
   factory Participant.fromJson(Map<String, Object?> json) {
@@ -91,10 +104,10 @@ class Participant {
       environment: json['environment'] as String? ?? 'dev',
       protocolVersion: json['protocolVersion'] as String? ?? 'unknown',
       resetDay1At: parseDate('resetDay1At'),
-      questionnaireLinks: json['questionnaireLinks'] != null
-          ? QuestionnaireLinks.fromJson(
-              (json['questionnaireLinks'] as Map).cast<String, Object?>())
-          : null,
+      resetDay2At: parseDate('resetDay2At'),
+      resetAllAt: parseDate('resetAllAt'),
+      linkFlags: ParticipantLinkFlags.fromJson(
+          (json['linkFlags'] as Map?)?.cast<String, Object?>()),
     );
   }
 
@@ -108,7 +121,7 @@ class Participant {
     'activeDay',
     'environment',
     'protocolVersion',
-    'questionnaireLinks',
+    'linkFlags',
   ];
 
   List<Object?> toCsvRow() => [
@@ -119,8 +132,6 @@ class Participant {
         activeDay,
         environment,
         protocolVersion,
-        questionnaireLinks != null
-            ? jsonEncode(questionnaireLinks!.toJson())
-            : null,
+        jsonEncode(linkFlags.toJson()),
       ];
 }

@@ -1,8 +1,16 @@
 import Cocoa
 import FlutterMacOS
 
-class MainFlutterWindow: NSWindow {
+class MainFlutterWindow: NSWindow, NSWindowDelegate {
+    /// Frame to restore when leaving the app's manual full-screen mode.
+    private var preFullScreenFrame: NSRect?
+
     override func awakeFromNib() {
+        // Manual full screen: the green button zooms to the screen instead of
+        // entering system full screen, so the menu bar stays controllable.
+        collectionBehavior = collectionBehavior.subtracting(.fullScreenPrimary)
+        delegate = self
+
         let flutterViewController = FlutterViewController()
         let windowFrame = self.frame
 
@@ -103,6 +111,8 @@ class MainFlutterWindow: NSWindow {
         sessionChannel.setMethodCallHandler { (call, result) in
             if call.method == PlatformChannels.methodSetSessionActive, let active = call.arguments as? Bool {
                 (NSApp.delegate as? AppDelegate)?.setSessionActive(active)
+            } else if call.method == PlatformChannels.methodCloseWindow {
+                self.performClose(nil)
             }
             result(nil)
         }
@@ -111,5 +121,25 @@ class MainFlutterWindow: NSWindow {
         self.setFrame(windowFrame, display: true)
         RegisterGeneratedPlugins(registry: flutterViewController)
         super.awakeFromNib()
+    }
+
+    // ── Manual full screen (NSWindowDelegate) ──────────────────────
+
+    func windowShouldZoom(_ window: NSWindow) -> Bool { true }
+
+    /// Zoom-in covers the whole screen (menu-bar strip included — the bar is
+    /// hidden by [FullScreenManager]); zoom-out restores the exact previous
+    /// frame instead of the system's standard frame.
+    func windowWillUseStandardFrame(_ window: NSWindow, defaultFrame newFrame: NSRect) -> NSRect {
+        guard let screen = window.screen ?? NSScreen.main else { return newFrame }
+        if window.isZoomed {
+            return preFullScreenFrame ?? newFrame
+        }
+        preFullScreenFrame = window.frame
+        return screen.frame
+    }
+
+    func windowDidZoom(_ notification: Notification) {
+        FullScreenManager.setFullScreen(isZoomed)
     }
 }

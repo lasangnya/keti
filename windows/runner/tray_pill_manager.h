@@ -12,11 +12,11 @@
 namespace keti {
 
 // Windows equivalent of the macOS TrayPillManager.
-// Maintains a system tray icon and shows a dropped-card overlay underneath it
-// that plays a PNG sequence.
+// Maintains a system tray icon and shows a top-right pill overlay that plays a
+// PNG sequence (positioned to match the macOS menu bar, for study consistency).
 class TrayPillManager {
  public:
-  using DismissCallback = std::function<void()>;
+  using Callback = std::function<void()>;
 
   TrayPillManager();
   ~TrayPillManager();
@@ -32,12 +32,17 @@ class TrayPillManager {
   // Remove the tray icon.
   void Teardown();
 
+  // Shows the dropped-card overlay and plays the PNG sequence once.
+  // |on_shown| fires after the card is on screen; |on_hidden| fires exactly
+  // once when it is dismissed (animation finished, mouse-shake, or a
+  // clobbering Show).
   void Show(const std::wstring& assets_path,
             const std::wstring& resource_name,
             int width,
             int height,
             int frame_count,
-            DismissCallback on_dismissed);
+            Callback on_shown,
+            Callback on_hidden);
 
   void Dismiss();
   bool IsShowing() const;
@@ -50,8 +55,9 @@ class TrayPillManager {
 
  private:
   void AdvanceFrame();
-  void PositionCardUnderTray();
-  void OnDismiss();
+  void PositionCardTopRight();
+  void FireShown();
+  void FireHidden();
 
   HINSTANCE instance_;
   HWND message_hwnd_;
@@ -64,7 +70,8 @@ class TrayPillManager {
   int current_frame_;
   UINT_PTR timer_id_;
   bool has_finished_;
-  DismissCallback on_dismissed_;
+  Callback on_shown_;
+  Callback on_hidden_;
 
   static constexpr UINT kTrayIconId = 1;
   static constexpr UINT kFrameTimerId = 4;

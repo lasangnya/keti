@@ -4,10 +4,11 @@ import '../../../domain/study/day_schedule.dart';
 import '../../../domain/study/participant.dart';
 import '../../../domain/study/study_config.dart';
 import '../../../domain/study/study_enums.dart';
+import '../../../domain/study/study_links.dart';
 import '../study/participant_repository.dart';
 
 /// Firestore-backed [ParticipantRepository] (plan §7.1):
-/// reads `participants/{code}`, `config/study`, and
+/// reads `participants/{code}`, `config/study`, `links/templates`, and
 /// `participants/{code}/schedules/day{N}` — all client read-only by rules.
 class FirestoreParticipantRepository implements ParticipantRepository {
   FirestoreParticipantRepository(this._firestore);
@@ -43,9 +44,26 @@ class FirestoreParticipantRepository implements ParticipantRepository {
         .doc('day$dayNumber')
         .get();
     if (!snap.exists) {
-      throw StateError(
-          'No schedule document for $participantCode day$dayNumber.');
+      throw ScheduleNotFoundException(participantCode, dayNumber);
     }
     return DaySchedule.fromJson(snap.data()!, style: style);
+  }
+
+  @override
+  Future<StudyLinkTemplates> fetchLinkTemplates() async {
+    final snap = await _firestore.collection('links').doc('templates').get();
+    if (!snap.exists) return const StudyLinkTemplates();
+    return StudyLinkTemplates.fromJson(snap.data()!);
+  }
+
+  @override
+  Future<bool> hasSession(String participantCode, int dayNumber) async {
+    final snap = await _firestore
+        .collection('participants')
+        .doc(participantCode)
+        .collection('studySessions')
+        .doc('day$dayNumber')
+        .get();
+    return snap.exists;
   }
 }

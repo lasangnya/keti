@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../domain/study/study_config.dart';
+import '../../domain/study/study_links.dart';
 import 'admin_providers.dart';
 
 part 'study_config_provider.g.dart';
@@ -10,9 +11,20 @@ class AdminStudyConfig extends _$AdminStudyConfig {
   @override
   Future<StudyConfig> build() =>
       ref.watch(adminRepositoryProvider).getConfig();
+}
 
-  Future<void> saveLinks(QuestionnaireLinks links) async {
-    await ref.read(adminRepositoryProvider).saveQuestionnaireLinks(links);
+/// The global questionnaire link templates (`links/templates`).
+///
+/// Watched by the Links page, so the notifier stays alive and
+/// [AdminLinkTemplates.save] can safely invalidate itself after the await.
+@riverpod
+class AdminLinkTemplates extends _$AdminLinkTemplates {
+  @override
+  Future<StudyLinkTemplates> build() =>
+      ref.watch(adminRepositoryProvider).getLinkTemplates();
+
+  Future<void> save(StudyLinkTemplates templates) async {
+    await ref.read(adminRepositoryProvider).saveLinkTemplates(templates);
     ref.invalidateSelf();
   }
 }

@@ -12,42 +12,44 @@ struct ComplianceCardView: View {
     @State private var isVisible = false
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
             Text(question)
-                .font(.system(size: 14, weight: .medium))
+                .font(.system(size: 17, weight: .semibold))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
 
-            HStack(spacing: 8) {
+            HStack(spacing: 12) {
                 Button(action: { onAction("completed") }) {
                     Text(button1Text)
-                        .font(.system(size: 12, weight: .bold))
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 12)
-                        .frame(minWidth: 80)
-                        .background(Color.white.opacity(0.15))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.black)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 24)
+                        .frame(minWidth: 120)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
                 .buttonStyle(.plain)
 
                 Button(action: { onAction("dismissed") }) {
                     Text(button2Text)
-                        .font(.system(size: 12, weight: .bold))
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 12)
-                        .frame(minWidth: 80)
-                        .background(Color.white.opacity(0.15))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.black)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 24)
+                        .frame(minWidth: 120)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(16)
+        .padding(24)
         .background(
             Color.black.opacity(0.9)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .clipShape(RoundedRectangle(cornerRadius: 20))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: 20)
                         .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
                 )
         )

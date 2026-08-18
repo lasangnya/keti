@@ -29,20 +29,11 @@ class QuestionnaireLinks {
   String? endLinkForDay(int dayNumber) =>
       dayNumber == 1 ? day1End : day2End;
 
-  /// Returns a new [QuestionnaireLinks] where each field that is non-null in
-  /// [override] wins over the corresponding field in `this`. This implements
-  /// per-field fallback: a null override field means "use the shared config".
-  QuestionnaireLinks resolvedWith(QuestionnaireLinks? override) {
-    if (override == null) return this;
-    return QuestionnaireLinks(
-      start: override.start ?? start,
-      day1End: override.day1End ?? day1End,
-      day2End: override.day2End ?? day2End,
-      finalLink: override.finalLink ?? finalLink,
-    );
-  }
-
-  /// Substitutes `{participantId}` and `{day}` placeholders in [template].
+  /// Substitutes placeholders in [template]:
+  ///  - `{participantId}` → the participant code (e.g. `P014`)
+  ///  - `{day}` → the day number (e.g. `1`)
+  ///  - `{session}` → `Session 1` / `Session 2` from [day] (for Google Forms
+  ///    multiple-choice prefill; the value is URL-encoded)
   static String fill(
     String template, {
     required String participantId,
@@ -50,7 +41,10 @@ class QuestionnaireLinks {
   }) =>
       template
           .replaceAll('{participantId}', participantId)
-          .replaceAll('{day}', day?.toString() ?? '');
+          .replaceAll('{day}', day?.toString() ?? '')
+          .replaceAll(
+              '{session}',
+              day == null ? '' : Uri.encodeQueryComponent('Session $day'));
 
   Map<String, Object?> toJson() => {
         'start': start,
@@ -72,28 +66,21 @@ class QuestionnaireLinks {
 class StudyConfig {
   const StudyConfig({
     required this.protocolVersion,
-    required this.links,
     required this.defaultSchedule,
   });
 
   final String protocolVersion;
-  final QuestionnaireLinks links;
 
   /// Template copied into each new participant's per-day schedule docs.
   final List<ScheduledReminder> defaultSchedule;
 
   Map<String, Object?> toJson() => {
         'protocolVersion': protocolVersion,
-        'questionnaireLinks': links.toJson(),
         'defaultSchedule': defaultSchedule.map((r) => r.toJson()).toList(),
       };
 
   factory StudyConfig.fromJson(Map<String, Object?> json) => StudyConfig(
         protocolVersion: json['protocolVersion'] as String? ?? 'unknown',
-        links: json['questionnaireLinks'] != null
-            ? QuestionnaireLinks.fromJson(
-                (json['questionnaireLinks'] as Map).cast<String, Object?>())
-            : const QuestionnaireLinks(),
         defaultSchedule: [
           if (json['defaultSchedule'] != null)
             for (final r in json['defaultSchedule'] as List)

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../core/constants/app_config.dart';
@@ -11,6 +12,7 @@ import '../../domain/study/reminder_content_resolver.dart';
 import '../../domain/study/reminder_event.dart';
 import '../../domain/study/schedule_evaluator.dart';
 import '../../domain/study/scheduled_reminder.dart';
+import '../../domain/study/study_config.dart';
 import '../../domain/study/study_enums.dart';
 import '../../domain/study/study_session.dart';
 import '../reminders/reminder_orchestrator.dart';
@@ -93,13 +95,16 @@ class SessionController extends _$SessionController {
   Future<void> startDay() async {
     final entry = ref.read(participantEntryProvider);
     if (!entry.isReady || state.active) return;
+    // Never start over an unfinished session: a second start would reuse the
+    // same event doc IDs in Firestore (rejected as an update by the rules,
+    // leaving mixed data). Resuming is the only legitimate path; a full
+    // restart requires a researcher reset.
+    if (entry.resumableDayId != null) return;
     final participant = entry.participant!;
     final schedule = entry.daySchedule!;
-    final config = entry.config!;
 
     final now = _now();
-    final resolvedLinks =
-        config.links.resolvedWith(participant.questionnaireLinks);
+    final resolvedLinks = entry.links ?? const QuestionnaireLinks();
     final session = StudySession(
       participantCode: participant.participantCode,
       dayNumber: schedule.dayNumber,
@@ -227,6 +232,38 @@ class SessionController extends _$SessionController {
   /// Test seam: wait until all in-flight reminder sequences have finished.
   Future<void> debugAwaitIdle() => Future.wait(_inFlight.toList());
 
+  /// Participant tapped Exit during an active session. Records the event
+  /// locally and in Firestore, then terminates the app. The session itself
+  /// stays active, so a relaunch offers Resume (same as a window close).
+  Future<void> requestExit() async {
+    final session = state.session;
+    if (session == null || !state.active) return;
+    final code = session.participantCode;
+    final dayId = session.dayId;
+
+    // CSV-first: local record is ground truth.
+    final csv = ref.read(csvStoreProvider);
+    await csv.appendEventLog(
+      code,
+      dayId,
+      EventLogEntry(
+        timestamp: _now(),
+        eventId: 'session',
+        transition: 'participant_exit_requested',
+      ),
+    );
+    try {
+      await ref
+          .read(sessionRepositoryProvider)
+          .markParticipantExit(code, dayId)
+          // Best effort: never block the exit on a slow/unreachable network.
+          .timeout(const Duration(seconds: 3));
+    } catch (e) {
+      debugPrint('Firestore exit marker failed: $e');
+    }
+    await SessionLifecycleService.exitApp();
+  }
+
   final Set<Future<void>> _inFlight = {};
 
   void _trackInFlight(Future<void> future) {
@@ -312,6 +349,7 @@ class SessionController extends _$SessionController {
         button1Text: AppStrings.complianceButton1,
         button2Text: AppStrings.complianceButton2,
         visibilityMs: AppConfig.reminderVisibilityMs,
+        cardDelayMs: AppConfig.complianceCardDelayMs,
         cardTimeoutMs: AppConfig.complianceCardTimeoutMs,
         onDelivered: () async {
           if (!ref.mounted) return;
@@ -340,25 +378,38 @@ class SessionController extends _$SessionController {
         onCardShown: () async {
           if (!ref.mounted) return;
           final current = _eventById(event.eventId);
+          final shown = current.markCardShown(_now());
+          debugPrint('ComplianceCard: ${event.eventId} card shown at '
+              '${shown.cardShownAtLocal?.toIso8601String()}');
           await _persistEvent(
             code,
             session.dayId,
-            current.markCardShown(_now()),
+            shown,
             'card_shown',
           );
         },
         onCardAnswered: (action) async {
           if (!ref.mounted) return;
           final current = _eventById(event.eventId);
+          final isCompleted = action == 'completed';
+          final answered = current.markAnswered(
+            outcome: isCompleted
+                ? ResponseOutcome.completed
+                : ResponseOutcome.dismissed,
+            answeredAtLocal: _now(),
+            // The actual label the participant saw and pressed.
+            cardResponse: isCompleted
+                ? AppStrings.complianceButton1
+                : AppStrings.complianceButton2,
+          );
+          debugPrint('ComplianceCard: ${event.eventId} answered action=$action '
+              'outcome=${answered.outcome.wireName} '
+              'cardResponse=${answered.cardResponse} '
+              'latencyMs=${answered.responseLatencyMs}');
           await _persistEvent(
             code,
             session.dayId,
-            current.markAnswered(
-              outcome: action == 'completed'
-                  ? ResponseOutcome.completed
-                  : ResponseOutcome.dismissed,
-              answeredAtLocal: _now(),
-            ),
+            answered,
             'answered',
           );
           await _completeDayIfDone();
@@ -366,10 +417,14 @@ class SessionController extends _$SessionController {
         onCardTimedOut: () async {
           if (!ref.mounted) return;
           final current = _eventById(event.eventId);
+          final timedOut = current.markTimedOut(_now());
+          debugPrint('ComplianceCard: ${event.eventId} timed out — '
+              'outcome=${timedOut.outcome.wireName} '
+              'cardResponse=${timedOut.cardResponse}');
           await _persistEvent(
             code,
             session.dayId,
-            current.markTimedOut(_now()),
+            timedOut,
             'timed_out',
           );
           await _completeDayIfDone();
@@ -434,7 +489,9 @@ class SessionController extends _$SessionController {
       await ref
           .read(reminderEventRepositoryProvider)
           .updateEventLifecycle(code, dayId, updated);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Firestore sync FAILED for $transition ${updated.eventId}: $e');
+    }
   }
 
   /// An event is final when it left the scheduled state AND — for delivered

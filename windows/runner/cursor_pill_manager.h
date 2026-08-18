@@ -17,7 +17,7 @@ namespace keti {
 // the user's work.
 class CursorPillManager {
  public:
-  using DismissCallback = std::function<void()>;
+  using Callback = std::function<void()>;
 
   CursorPillManager();
   ~CursorPillManager();
@@ -26,6 +26,10 @@ class CursorPillManager {
   CursorPillManager(const CursorPillManager&) = delete;
   CursorPillManager& operator=(const CursorPillManager&) = delete;
 
+  // Shows the pill and plays the PNG sequence once, following the cursor.
+  // |on_shown| fires after the window is on screen; |on_hidden| fires exactly
+  // once when it is dismissed (animation finished, mouse-shake, or a
+  // clobbering Show).
   void Show(HINSTANCE instance,
             const std::wstring& assets_path,
             const std::wstring& resource_name,
@@ -34,7 +38,8 @@ class CursorPillManager {
             int offset_x,
             int offset_y,
             int frame_count,
-            DismissCallback on_dismissed);
+            Callback on_shown,
+            Callback on_hidden);
 
   void Dismiss();
   bool IsShowing() const;
@@ -42,7 +47,8 @@ class CursorPillManager {
  private:
   void AdvanceFrame();
   void UpdateCursorPosition();
-  void OnDismiss();
+  void FireShown();
+  void FireHidden();
 
   OverlayWindow window_;
   PngSequence sequence_;
@@ -52,7 +58,8 @@ class CursorPillManager {
   UINT_PTR frame_timer_id_;
   UINT_PTR cursor_timer_id_;
   bool has_finished_;
-  DismissCallback on_dismissed_;
+  Callback on_shown_;
+  Callback on_hidden_;
 
   static constexpr UINT kFrameTimerId = 2;
   static constexpr UINT kCursorTimerId = 3;

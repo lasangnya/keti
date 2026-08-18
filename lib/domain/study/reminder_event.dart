@@ -40,6 +40,7 @@ class ReminderEvent {
     this.cardShownAtLocal,
     this.answeredAtLocal,
     this.responseLatencyMs,
+    this.cardResponse,
   });
 
   // ── Identity & schedule (write-once) ─────────────────────────────
@@ -73,6 +74,11 @@ class ReminderEvent {
   final ResponseOutcome outcome;
   final DateTime? answeredAtLocal;
   final int? responseLatencyMs;
+
+  /// The participant-visible response on the card: the label of the button
+  /// they pressed (e.g. `Done` / `Not now`), or `Ignored` when the card
+  /// auto-dismissed without a response.
+  final String? cardResponse;
 
   // ── Audit ────────────────────────────────────────────────────────
   final bool sessionResumed;
@@ -138,24 +144,29 @@ class ReminderEvent {
 
   /// Records a button outcome ([ResponseOutcome.completed] or
   /// [ResponseOutcome.dismissed]) and computes response latency from
-  /// [cardShownAtLocal] when available.
+  /// [cardShownAtLocal] when available. [cardResponse] is the label of the
+  /// button the participant actually pressed.
   ReminderEvent markAnswered({
     required ResponseOutcome outcome,
     required DateTime answeredAtLocal,
+    required String cardResponse,
   }) {
     final cardShown = cardShownAtLocal;
     return _copy(
       outcome: outcome,
       answeredAtLocal: answeredAtLocal,
+      cardResponse: cardResponse,
       responseLatencyMs: cardShown == null
           ? null
           : answeredAtLocal.difference(cardShown).inMilliseconds,
     );
   }
 
+  /// The card auto-dismissed without a response — recorded as `Ignored`.
   ReminderEvent markTimedOut(DateTime atLocal) => _copy(
         outcome: ResponseOutcome.timedOut,
         answeredAtLocal: atLocal,
+        cardResponse: 'Ignored',
       );
 
   ReminderEvent markSuppressed(String reason) => _copy(
@@ -187,6 +198,7 @@ class ReminderEvent {
     ResponseOutcome? outcome,
     DateTime? answeredAtLocal,
     int? responseLatencyMs,
+    String? cardResponse,
     bool? sessionResumed,
   }) =>
       ReminderEvent(
@@ -216,6 +228,7 @@ class ReminderEvent {
         outcome: outcome ?? this.outcome,
         answeredAtLocal: answeredAtLocal ?? this.answeredAtLocal,
         responseLatencyMs: responseLatencyMs ?? this.responseLatencyMs,
+        cardResponse: cardResponse ?? this.cardResponse,
         sessionResumed: sessionResumed ?? this.sessionResumed,
       );
 
@@ -250,6 +263,7 @@ class ReminderEvent {
     'environment',
     'appVersion',
     'protocolVersion',
+    'cardResponse',
   ];
 
   List<Object?> toCsvRow() => [
@@ -279,16 +293,24 @@ class ReminderEvent {
         environment,
         appVersion,
         protocolVersion,
+        cardResponse,
       ];
 
   /// Positional decode of one CSV row in [csvHeader] order. Empty strings
-  /// decode as `null` for nullable fields.
+  /// decode as `null` for nullable fields. Older rows without the trailing
+  /// [cardResponse] column are tolerated (it decodes as null).
   factory ReminderEvent.fromCsvRow(List<String> row) {
-    String at(int i) => row[i];
-    String? nullable(int i) => row[i].isEmpty ? null : row[i];
-    DateTime? dateAt(int i) =>
-        row[i].isEmpty ? null : DateTime.parse(row[i]);
-    int? intAt(int i) => row[i].isEmpty ? null : int.parse(row[i]);
+    String at(int i) => i < row.length ? row[i] : '';
+    String? nullable(int i) => i < row.length && row[i].isNotEmpty ? row[i] : null;
+    DateTime? dateAt(int i) {
+      final raw = nullable(i);
+      return raw == null ? null : DateTime.parse(raw);
+    }
+
+    int? intAt(int i) {
+      final raw = nullable(i);
+      return raw == null ? null : int.parse(raw);
+    }
 
     return ReminderEvent(
       eventId: at(0),
@@ -317,6 +339,7 @@ class ReminderEvent {
       environment: at(23),
       appVersion: at(24),
       protocolVersion: at(25),
+      cardResponse: nullable(26),
     );
   }
 
@@ -349,6 +372,7 @@ class ReminderEvent {
         'environment': environment,
         'appVersion': appVersion,
         'protocolVersion': protocolVersion,
+        'cardResponse': cardResponse,
       };
 
   factory ReminderEvent.fromJson(Map<String, Object?> json) {
@@ -388,6 +412,7 @@ class ReminderEvent {
       environment: json['environment'] as String,
       appVersion: json['appVersion'] as String,
       protocolVersion: json['protocolVersion'] as String,
+      cardResponse: json['cardResponse'] as String?,
     );
   }
 }

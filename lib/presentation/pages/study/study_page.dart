@@ -1,8 +1,6 @@
 import 'dart:async';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../application/study/participant_entry_provider.dart';
@@ -12,13 +10,20 @@ import '../../../core/constants/app_config.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/services/link_launcher_service.dart';
 import '../../../domain/study/study_config.dart';
-import '../../../domain/study/study_enums.dart';
+import '../../../domain/study/study_session.dart';
 import '../../widgets/page_title.dart';
+import '../../widgets/technical_problem_dialog.dart';
+import 'participant_tutorial.dart';
 
-/// Home of the participant build (plan §3.2): enter the participant code,
-/// load the day's schedule from the (currently mocked) backend, and land on
-/// the day-start overview. Session start and questionnaire buttons are wired
-/// in later milestones.
+/// Participant study flow (plan §3.2 + design/in_app_participant_tutorial_v2.md):
+///
+/// 1. No participant yet, or tutorial not seen → [ParticipantTutorial]
+///    (Welcome → Participant ID → prepare → info steps → Start session).
+/// 2. Tutorial seen, day not started → day overview (resume/start).
+/// 3. Session running → live status with countdown.
+/// 4. Day complete → end-of-session questionnaire; Day 1 additionally offers
+///    Start Day 2 once the researcher activates it; Day 2 reveals the
+///    end-of-study questionnaire.
 class StudyPage extends ConsumerStatefulWidget {
   const StudyPage({super.key});
 
@@ -27,123 +32,68 @@ class StudyPage extends ConsumerStatefulWidget {
 }
 
 class _StudyPageState extends ConsumerState<StudyPage> {
-  final _codeController = TextEditingController();
-  bool _prefilled = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _prefillLastCode();
-  }
-
-  Future<void> _prefillLastCode() async {
-    final store = await ref.read(localStoreProvider.future);
-    final last = store.lastParticipantCode;
-    if (!mounted || _prefilled || last == null) return;
-    setState(() {
-      _codeController.text = last;
-      _prefilled = true;
-    });
-  }
-
-  @override
-  void dispose() {
-    _codeController.dispose();
-    super.dispose();
-  }
+  bool _autoCheckedDay2 = false;
 
   @override
   Widget build(BuildContext context) {
     final entry = ref.watch(participantEntryProvider);
     final session = ref.watch(sessionControllerProvider);
+    final store = ref.watch(localStoreProvider).asData?.value;
+
+    final tutorialSeen = entry.participant != null &&
+        (store?.isTutorialSeen(entry.participant!.participantCode) ?? false);
+
+    // The tutorial wizard gets the "Guidelines" title; the day overview and
+    // completion screens keep the "Study" heading.
+    final showingTutorial = !entry.isReady ||
+        (!tutorialSeen && !session.active && !session.completed);
+
+    // Reset the auto-check flag whenever a new participant is entered, so
+    // each day-1 completion screen triggers a fresh activation check.
+    if (entry.participant == null) {
+      _autoCheckedDay2 = false;
+    }
+
+    // When the day-1 completion screen shows, refresh the participant once
+    // so the Start Day 2 button reflects a fresh researcher activation
+    // without requiring a manual "Check again" tap. Manual re-checks are
+    // still available via the "Check again" button.
+    if (entry.dayAlreadyCompleted &&
+        entry.daySchedule?.dayNumber == 1 &&
+        !session.active &&
+        !_autoCheckedDay2) {
+      _autoCheckedDay2 = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(participantEntryProvider.notifier).refreshParticipant();
+        }
+      });
+    }
+
+    // The active-session screen is a standalone full-window layout (centered
+    // status + Exit button), so it renders outside the shared page scaffold.
+    if (session.active) return _buildSessionView(context, session);
 
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const PageTitle(title: AppStrings.study),
-          if (!entry.isReady) _buildEntryForm(context, entry),
-          if (entry.isReady && !session.active && !session.completed)
+          PageTitle(title: showingTutorial ? AppStrings.guidelines : AppStrings.study),
+          if (!entry.isReady)
+            ParticipantTutorial(onStartSession: _startSession)
+          else if (!tutorialSeen && !session.active && !session.completed)
+            ParticipantTutorial(onStartSession: _startSession)
+          else if (session.completed || entry.dayAlreadyCompleted)
+            _buildCompletedView(context, entry, session)
+          else
             _buildDayOverview(context, entry, session),
-          if (session.active) _buildSessionView(context, session),
-          if (session.completed) _buildCompletedView(context, session),
         ],
       ),
     );
   }
 
-  Widget _buildEntryForm(BuildContext context, ParticipantEntryState entry) {
-    final theme = Theme.of(context);
-    final user = FirebaseAuth.instance.currentUser;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (AppConfig.environment == 'dev') ...[
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(user != null ? Icons.lock_open : Icons.lock, size: 16),
-                  const SizedBox(width: 8),
-                  Text(
-                    user != null ? 'Authenticated: ${user.uid.substring(0, 8)}...' : 'Not Authenticated',
-                    style: theme.textTheme.labelSmall,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-          Text(AppStrings.startStudySession,
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: 280,
-            child: TextField(
-              controller: _codeController,
-              textCapitalization: TextCapitalization.characters,
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-                LengthLimitingTextInputFormatter(5),
-              ],
-              decoration: const InputDecoration(
-                labelText: AppStrings.participantCode,
-                hintText: AppStrings.participantCodeHint,
-                border: OutlineInputBorder(),
-              ),
-              onSubmitted: (_) => _submit(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: entry.isLoading ? null : _submit,
-            child: entry.isLoading
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text(AppStrings.continueLabel),
-          ),
-          if (entry.errorMessage != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              entry.errorMessage!,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: theme.colorScheme.error),
-            ),
-          ],
-        ],
-      ),
-    );
+  Future<void> _startSession() async {
+    await ref.read(sessionControllerProvider.notifier).startDay();
   }
 
   Widget _buildDayOverview(
@@ -196,14 +146,19 @@ class _StudyPageState extends ConsumerState<StudyPage> {
               child: Text('Resume Day ${schedule.dayNumber}'),
             ),
             const SizedBox(height: 8),
-          ],
-          FilledButton.tonal(
-            onPressed: entry.dayAlreadyCompleted
-                ? null
-                : () =>
-                    ref.read(sessionControllerProvider.notifier).startDay(),
-            child: Text('${AppStrings.startDay} ${schedule.dayNumber}'),
-          ),
+            // No "Start" button while an unfinished session exists: starting
+            // again would reuse the same event doc IDs in Firestore, which
+            // the rules treat as an update and reject — leaving the old
+            // session's data in Firestore mixed with the new one's. A
+            // restart is only legitimate via a researcher reset.
+          ] else
+            FilledButton.tonal(
+              onPressed: entry.dayAlreadyCompleted
+                  ? null
+                  : () =>
+                      ref.read(sessionControllerProvider.notifier).startDay(),
+              child: Text('${AppStrings.startDay} ${schedule.dayNumber}'),
+            ),
           if (entry.errorMessage != null) ...[
             const SizedBox(height: 12),
             Text(
@@ -224,68 +179,107 @@ class _StudyPageState extends ConsumerState<StudyPage> {
     );
   }
 
+  /// Session-active screen: status, remaining-time countdown and the
+  /// participant support route, centered in the window. The Exit button sits
+  /// at the bottom-left; it records the exit request and terminates the app.
   Widget _buildSessionView(BuildContext context, StudySessionState session) {
     final theme = Theme.of(context);
     final s = session.session!;
-    final next = session.nextFireTime;
+    final end = _sessionEndTime(s);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Session active — Day ${s.dayNumber}',
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text(s.participantCode, style: theme.textTheme.bodyMedium),
-                  if (next != null) ...[
-                    const SizedBox(height: 4),
-                    _CountdownText(target: next),
-                  ],
-                ],
-              ),
+    return Stack(
+      children: [
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'SESSION ${s.dayNumber} ACTIVE',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${AppStrings.sessionParticipantIdLabel}${s.participantCode}',
+                  style: theme.textTheme.bodyLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                Text(
+                  'Please continue with your usual work.\n'
+                  'Health reminders may appear occasionally.',
+                  style: theme.textTheme.bodyLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.help_outline, size: 16),
+                  label: const Text(AppStrings.tutorialReportProblem),
+                  onPressed: () => showTechnicalProblemDialog(context),
+                ),
+                const SizedBox(height: 40),
+                Text(
+                  AppStrings.sessionActiveFor,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                if (end != null) _SessionCountdown(end: end),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
-          for (final event in session.events)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 110,
-                    child: Text('Reminder ${event.reminderNumber}',
-                        style: theme.textTheme.bodyMedium),
-                  ),
-                  Text(
-                    event.deliveryStatus.wireName,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: event.deliveryStatus == DeliveryStatus.delivered
-                          ? theme.colorScheme.primary
-                          : theme.textTheme.bodySmall?.color,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
+        ),
+        Positioned(
+          left: 16,
+          bottom: 16,
+          child: TextButton.icon(
+            icon: const Icon(Icons.logout, size: 16),
+            label: const Text(AppStrings.exitSession),
+            onPressed: () =>
+                ref.read(sessionControllerProvider.notifier).requestExit(),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildCompletedView(BuildContext context, StudySessionState session) {
+  /// When the session is expected to finish: the last reminder's fire time
+  /// plus the full reminder → compliance-card sequence duration.
+  DateTime? _sessionEndTime(StudySession s) {
+    final reminders = s.schedule.reminders;
+    if (reminders.isEmpty) return null;
+    var lastOffset = reminders.first.offset;
+    for (final r in reminders) {
+      if (r.offset > lastOffset) lastOffset = r.offset;
+    }
+    return s.startedAtLocal.add(
+      lastOffset +
+          const Duration(
+            milliseconds: AppConfig.reminderVisibilityMs +
+                AppConfig.complianceCardDelayMs +
+                AppConfig.complianceCardTimeoutMs,
+          ),
+    );
+  }
+
+  Widget _buildCompletedView(
+    BuildContext context,
+    ParticipantEntryState entry,
+    StudySessionState session,
+  ) {
     final theme = Theme.of(context);
-    final s = session.session!;
-    final links = s.links;
-    final endLink = links.endLinkForDay(s.dayNumber);
-    final finalLink = s.dayNumber == 2 ? links.finalLink : null;
+    final s = session.session;
+    final dayNumber = s?.dayNumber ?? entry.daySchedule?.dayNumber ?? 1;
+    final code = s?.participantCode ?? entry.participant?.participantCode ?? '';
+    final links = s?.links ?? entry.links;
+    final endLink = links?.endLinkForDay(dayNumber);
+    final finalLink = dayNumber == 2 ? links?.finalLink : null;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -298,49 +292,67 @@ class _StudyPageState extends ConsumerState<StudyPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Day ${s.dayNumber} complete',
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    dayNumber == 1
+                        ? AppStrings.sessionCompleteTitle
+                        : AppStrings.studyCompleteTitle,
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 4),
                   Text(
-                    'Thank you! All reminders for today are recorded.',
+                    dayNumber == 1
+                        ? AppStrings.sessionCompleteBody
+                        : AppStrings.studyCompleteBody,
                     style: theme.textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '${AppStrings.yourParticipantId} $code',
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 16),
-          if (endLink != null)
+          if (endLink != null) ...[
             FilledButton.icon(
               icon: const Icon(Icons.open_in_new),
-              label: const Text('Complete end of day questionnaire'),
+              label: Text(
+                  'Open Session $dayNumber End-of-Session Questionnaire'),
               onPressed: () => LinkLauncherService.open(
                 QuestionnaireLinks.fill(
                   endLink,
-                  participantId: s.participantCode,
-                  day: s.dayNumber,
-                ),
-              ),
-            ),
-          if (finalLink != null) ...[
-            const SizedBox(height: 8),
-            FilledButton.tonalIcon(
-              icon: const Icon(Icons.open_in_new),
-              label: const Text('Complete final questionnaire'),
-              onPressed: () => LinkLauncherService.open(
-                QuestionnaireLinks.fill(
-                  finalLink,
-                  participantId: s.participantCode,
+                  participantId: code,
+                  day: dayNumber,
                 ),
               ),
             ),
           ],
-          if (endLink == null && finalLink == null)
+          if (endLink == null)
             Text(
               'No questionnaire links are configured yet.',
               style: theme.textTheme.bodySmall,
             ),
+          if (dayNumber == 1) ...[
+            const SizedBox(height: 16),
+            _buildStartDay2(theme, code),
+          ],
+          if (dayNumber == 2 && finalLink != null) ...[
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              icon: const Icon(Icons.open_in_new),
+              label: const Text(AppStrings.openEndOfStudyQuestionnaire),
+              onPressed: () => LinkLauncherService.open(
+                QuestionnaireLinks.fill(
+                  finalLink,
+                  participantId: code,
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           TextButton(
             onPressed: () {
@@ -353,22 +365,73 @@ class _StudyPageState extends ConsumerState<StudyPage> {
     );
   }
 
-  void _submit() {
-    ref.read(participantEntryProvider.notifier).enterCode(_codeController.text);
+  Widget _buildStartDay2(ThemeData theme, String code) {
+    final day2Activated = ref
+            .watch(participantEntryProvider)
+            .participant
+            ?.activeDay ==
+        2;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FilledButton.icon(
+          icon: const Icon(Icons.play_arrow),
+          label: const Text(AppStrings.startDay2),
+          // Always tappable: clicking re-checks activation and always gives
+          // visible feedback (snackbar) instead of a silent no-op.
+          onPressed: () async {
+            debugPrint('Start Day 2 tapped');
+            // Check activation FIRST. The finished day-1 session must not be
+            // cleared unless day 2 actually loads — otherwise a not-activated
+            // press wipes the only "day 1 completed" flag (session state) and
+            // the page falls back to the day-1 overview/start flow.
+            await ref
+                .read(participantEntryProvider.notifier)
+                .loadDay2();
+            if (!mounted) return;
+            // If loadDay2 could not proceed, tell the researcher why and
+            // stay on the day-1 completion screen.
+            final msg = ref.read(participantEntryProvider).errorMessage;
+            debugPrint('Start Day 2 after load: errorMessage=$msg');
+            if (msg != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(msg)),
+              );
+              return;
+            }
+            // Day 2 is loaded and ready: start it in one step — the session
+            // controller's own guards (active session / resumable day) hold
+            // at this point, so the intermediate day-2 overview is skipped.
+            await ref.read(sessionControllerProvider.notifier).startDay();
+          },
+        ),
+        if (!day2Activated) ...[
+          const SizedBox(height: 8),
+          Text(AppStrings.day2NotActivated, style: theme.textTheme.bodySmall),
+          TextButton.icon(
+            icon: const Icon(Icons.refresh, size: 16),
+            label: const Text('Check again'),
+            onPressed: () =>
+                ref.read(participantEntryProvider.notifier).refreshParticipant(),
+          ),
+        ],
+      ],
+    );
   }
 }
 
-/// Self-contained per-second countdown to the next reminder.
-class _CountdownText extends StatefulWidget {
-  const _CountdownText({required this.target});
+/// Live countdown of the remaining session time, in HH:MM:SS.
+class _SessionCountdown extends StatefulWidget {
+  const _SessionCountdown({required this.end});
 
-  final DateTime target;
+  final DateTime end;
 
   @override
-  State<_CountdownText> createState() => _CountdownTextState();
+  State<_SessionCountdown> createState() => _SessionCountdownState();
 }
 
-class _CountdownTextState extends State<_CountdownText> {
+class _SessionCountdownState extends State<_SessionCountdown> {
   Timer? _timer;
 
   @override
@@ -387,16 +450,19 @@ class _CountdownTextState extends State<_CountdownText> {
 
   @override
   Widget build(BuildContext context) {
-    final remaining = widget.target.difference(DateTime.now());
     final theme = Theme.of(context);
-    if (remaining.isNegative) {
-      return Text('Reminder arriving…', style: theme.textTheme.bodySmall);
-    }
-    final minutes = remaining.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = remaining.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final remaining = widget.end.difference(DateTime.now());
+    final clamped = remaining.isNegative ? Duration.zero : remaining;
+    final h = clamped.inHours.toString().padLeft(2, '0');
+    final m = clamped.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final sec = clamped.inSeconds.remainder(60).toString().padLeft(2, '0');
     return Text(
-      'Next reminder in $minutes:$seconds',
-      style: theme.textTheme.bodySmall,
+      '$h:$m:$sec',
+      style: theme.textTheme.displayMedium?.copyWith(
+        fontWeight: FontWeight.w600,
+        fontFeatures: const [FontFeature.tabularFigures()],
+        color: theme.colorScheme.primary,
+      ),
     );
   }
 }

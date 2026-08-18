@@ -23,6 +23,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /links/{doc} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
     match /participants/{pid} {
       allow read: if signedIn();
       allow create, update, delete: if isAdmin();   // styleOrder, activeDay: admin-owned
@@ -42,7 +47,8 @@ service cloud.firestore {
           && request.resource.data.status != 'voided';
         allow update: if isAdmin() || (signedIn()
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['status','completedAt','resumedCount']));
+               .hasOnly(['status','completedAt','resumedCount',
+                         'participantExitRequestedAt']));
         allow delete: if isAdmin();
 
         match /reminderEvents/{eventId} {
@@ -53,7 +59,8 @@ service cloud.firestore {
                  ['reminderShownAt','reminderShownAtLocal','reminderHiddenAtLocal',
                   'deliveryLatenessMs','deliveryStatus','failureReason','suppressionReason',
                   'usedFallback','cardShownAtLocal','outcome','answeredAt',
-                  'responseLatencyMs','sessionResumed','updatedAt']);
+                  'answeredAtLocal','responseLatencyMs','cardResponse','sessionResumed',
+                  'updatedAt']);
           allow delete: if isAdmin();
         }
       }

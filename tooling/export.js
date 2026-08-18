@@ -27,6 +27,7 @@ const P_HEADER = [
 const S_HEADER = [
   'participantCode','dayId','dayNumber','style','status','startedAtLocal',
   'completedAtLocal','resumedCount','scheduleJson','linksJson',
+  'participantExitRequestedAt',
 ];
 const E_HEADER = [
   'eventId','participantCode','dayId','dayNumber','reminderNumber',
@@ -35,7 +36,7 @@ const E_HEADER = [
   'reminderKind','contentVariantId','deliveryStatus','failureReason',
   'suppressionReason','usedFallback','cardShownAtLocal','outcome',
   'answeredAtLocal','responseLatencyMs','sessionResumed','environment',
-  'appVersion','protocolVersion',
+  'appVersion','protocolVersion','cardResponse',
 ];
 
 function csvRow(fields) {
@@ -71,6 +72,9 @@ async function main() {
         sdata.resumedCount ?? 0,
         JSON.stringify(sdata.scheduleSnapshot ?? []),
         JSON.stringify(sdata.linksSnapshot ?? {}),
+        sdata.participantExitRequestedAt
+          ? sdata.participantExitRequestedAt.toDate().toISOString()
+          : '',
       ]));
 
       const events = await sdoc.ref.collection('reminderEvents')
@@ -86,7 +90,7 @@ async function main() {
           d.failureReason, d.suppressionReason, d.usedFallback,
           d.cardShownAtLocal, d.outcome, d.answeredAtLocal,
           d.responseLatencyMs, d.sessionResumed, d.environment,
-          d.appVersion, d.protocolVersion,
+          d.appVersion, d.protocolVersion, d.cardResponse,
         ]));
       }
     }

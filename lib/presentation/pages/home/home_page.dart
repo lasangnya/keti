@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../application/app_mode_provider.dart';
-import '../../../application/navigation/navigation_provider.dart';
+import '../../../core/services/researcher_launcher.dart';
+import '../study/study_page.dart';
 
+/// Participant shell (study build): the Study flow is the only content —
+/// no side panel. The Researcher Access entry stays pinned bottom-right and
+/// opens the admin console in a SEPARATE app window/process so participant
+/// and researcher run in parallel.
 class KetiHomePage extends ConsumerStatefulWidget {
   const KetiHomePage({super.key});
 
@@ -11,51 +15,45 @@ class KetiHomePage extends ConsumerStatefulWidget {
 }
 
 class _KetiHomePageState extends ConsumerState<KetiHomePage> {
+  bool _launching = false;
+
+  Future<void> _openResearcherWindow() async {
+    if (_launching) return;
+    setState(() => _launching = true);
+    final ok = await ResearcherLauncher.launch();
+    if (!mounted) return;
+    setState(() => _launching = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          ok
+              ? 'Researcher window opened.'
+              : 'Could not open the researcher window.',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-
-    final navNotifier = ref.watch(navigationProvider.notifier);
-    final selectedIndex = ref.watch(navigationProvider);
-    final currentItem = navNotifier.currentItem;
-
     return Scaffold(
       body: SafeArea(
         child: Stack(
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                NavigationRail(
-                  selectedIndex: selectedIndex,
-                  destinations: navNotifier.allItems
-                      .map((item) => NavigationRailDestination(
-                            icon: Icon(item.icon),
-                            selectedIcon: Icon(item.selectedIcon),
-                            label: Text(item.label),
-                          ))
-                      .toList(),
-                  onDestinationSelected: (index) => navNotifier.setIndex(index),
-                ),
-                const VerticalDivider(width: 1),
-                Expanded(
-                  child: currentItem.page,
-                ),
-              ],
-            ),
+            const Positioned.fill(child: StudyPage()),
             Align(
               alignment: Alignment.bottomRight,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: TextButton(
-                  onPressed: () {
-                    ref
-                        .read(appModeStateProvider.notifier)
-                        .setMode(AppMode.admin);
-                  },
+                  onPressed: _launching ? null : _openResearcherWindow,
                   child: Text(
-                    'Researcher Access',
+                    _launching ? 'Opening…' : 'Researcher Access',
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.5),
                       fontSize: 12,
                     ),
                   ),

@@ -5,6 +5,7 @@ import '../../../domain/study/reminder_event.dart';
 import '../../../domain/study/scheduled_reminder.dart';
 import '../../../domain/study/study_config.dart';
 import '../../../domain/study/study_enums.dart';
+import '../../../domain/study/study_links.dart';
 import '../../../domain/study/study_session.dart';
 import '../../constants/app_config.dart';
 
@@ -15,8 +16,11 @@ abstract class AdminRepository {
 
   Future<StudyConfig> getConfig();
 
-  /// Replaces the four questionnaire link templates in `config/study`.
-  Future<void> saveQuestionnaireLinks(QuestionnaireLinks links);
+  /// Reads the global questionnaire link templates (`links/templates`).
+  Future<StudyLinkTemplates> getLinkTemplates();
+
+  /// Replaces the four questionnaire link templates in `links/templates`.
+  Future<void> saveLinkTemplates(StudyLinkTemplates templates);
 
   /// Creates the participant document plus both per-day schedule documents
   /// (copied from the config's default schedule template). The code is
@@ -31,21 +35,37 @@ abstract class AdminRepository {
   /// pilot corrections).
   Future<void> setActiveDay(String participantCode, int day);
 
-  /// Deletes the day1 session and its events, and marks the participant
-  /// for a local wipe.
-  Future<void> resetDay1(String participantCode);
+  /// Deletes the [day] session and its events (Firestore), stamps a
+  /// per-day reset signal (`resetDay{1,2}At`) that wipes the same day on the
+  /// participant device on its next code entry, and moves the active-day
+  /// gate back to [day] so the participant can redo it.
+  Future<void> resetDay(String participantCode, int day);
+
+  /// FULL participant reset: deletes both days' sessions and events
+  /// (Firestore), stamps a full reset signal (`resetAllAt` + both per-day
+  /// signals) that wipes ALL local device data on the participant's next
+  /// code entry — sessions, tutorial-seen flag and caches — and moves the
+  /// active-day gate back to day 1, so the same code starts over as a
+  /// fresh participant. Identity, condition assignment and schedules are
+  /// kept.
+  Future<void> resetParticipant(String participantCode);
 
   /// Admin-only order change — the UI blocks it once Day 1 has started.
   Future<void> setStyleOrder(String participantCode, StyleOrder order,
       {required bool assignmentOverride});
 
-  /// Writes per-participant questionnaire link overrides to the participant
-  /// document. Pass null [links] to clear the override (fall back to config).
-  Future<void> saveParticipantQuestionnaireLinks(
-      String participantCode, QuestionnaireLinks? links);
+  /// Writes the per-participant questionnaire switches to the participant
+  /// document (`linkFlags`), deciding which links the app offers.
+  Future<void> saveParticipantLinkFlags(
+      String participantCode, ParticipantLinkFlags flags);
 
   Future<List<ScheduledReminder>> getSchedule(
       String participantCode, int dayNumber);
+
+  /// True when a schedule document exists for the participant/day (i.e. the
+  /// researcher has actually saved it — a missing doc silently falls back to
+  /// the template in [getSchedule]).
+  Future<bool> hasSavedSchedule(String participantCode, int dayNumber);
 
   Future<void> saveSchedule(String participantCode, int dayNumber,
       List<ScheduledReminder> reminders);
@@ -83,7 +103,6 @@ class FirestoreAdminRepository implements AdminRepository {
     if (!snap.exists) {
       return const StudyConfig(
         protocolVersion: AppConfig.protocolVersion,
-        links: QuestionnaireLinks(),
         defaultSchedule: kDefaultScheduleTemplate,
       );
     }
@@ -91,14 +110,19 @@ class FirestoreAdminRepository implements AdminRepository {
   }
 
   @override
-  Future<void> saveQuestionnaireLinks(QuestionnaireLinks links) =>
-      _firestore.collection('config').doc('study').set({
-        'protocolVersion': AppConfig.protocolVersion,
-        'questionnaireLinks': links.toJson(),
-        'defaultSchedule':
-            kDefaultScheduleTemplate.map((r) => r.toJson()).toList(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+  Future<StudyLinkTemplates> getLinkTemplates() async {
+    final snap = await _firestore.collection('links').doc('templates').get();
+    if (!snap.exists) return const StudyLinkTemplates();
+    return StudyLinkTemplates.fromJson(snap.data()!);
+  }
+
+  @override
+  Future<void> saveLinkTemplates(StudyLinkTemplates templates) async {
+    await _firestore.collection('links').doc('templates').set({
+      ...templates.toJson(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
 
   @override
   Future<Participant> createParticipant({
@@ -145,26 +169,77 @@ class FirestoreAdminRepository implements AdminRepository {
       _participant(participantCode).update({'activeDay': day});
 
   @override
-  Future<void> resetDay1(String participantCode) async {
+  Future<void> resetDay(String participantCode, int day) async {
     final batch = _firestore.batch();
 
-    // 1. Delete Day 1 session.
+    // 1. Delete the day's session.
     final sessionRef = _participant(participantCode)
         .collection('studySessions')
-        .doc('day1');
+        .doc('day$day');
     batch.delete(sessionRef);
 
-    // 2. Delete all reminderEvents in Day 1.
+    // 2. Delete all reminderEvents for that day.
     final eventsRef = sessionRef.collection('reminderEvents');
     final eventsSnap = await eventsRef.get();
     for (final doc in eventsSnap.docs) {
       batch.delete(doc.reference);
     }
 
-    // 3. Mark the participant for local wipe and return to Day 1.
+    // 3. The active-day gate points at the first day that still needs to be
+    //    done: resetting Day 1 always returns to Day 1; resetting Day 2 only
+    //    stays on Day 2 when Day 1 is still completed — otherwise (e.g. both
+    //    days reset) it falls back to Day 1 so the participant restarts from
+    //    the beginning.
+    var nextActiveDay = 1;
+    if (day == 2) {
+      final day1Snap = await _participant(participantCode)
+          .collection('studySessions')
+          .doc('day1')
+          .get();
+      final Map<String, dynamic>? day1Data = day1Snap.exists ? day1Snap.data() : null;
+      final Object? rawStatus = day1Data?['status'];
+      final day1Status = rawStatus as String?;
+      if (day1Status == StudySessionStatus.completed.wireName) {
+        nextActiveDay = 2;
+      }
+    }
+
+    // 4. Stamp the per-day reset signal (wipes the same day locally on the
+    //    device) and move the active-day gate.
+    batch.update(_participant(participantCode), {
+      'activeDay': nextActiveDay,
+      'resetDay$day' 'At': FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
+  }
+
+  @override
+  Future<void> resetParticipant(String participantCode) async {
+    final batch = _firestore.batch();
+
+    // Delete both days' sessions and every reminder event under them.
+    for (final day in const [1, 2]) {
+      final sessionRef = _participant(participantCode)
+          .collection('studySessions')
+          .doc('day$day');
+      final eventsRef = sessionRef.collection('reminderEvents');
+      final eventsSnap = await eventsRef.get();
+      for (final doc in eventsSnap.docs) {
+        batch.delete(doc.reference);
+      }
+      batch.delete(sessionRef);
+    }
+
+    // Back to a fresh state: day-1 gate, default link flags, and full +
+    // per-day reset signals so the participant device wipes everything on
+    // its next code entry.
     batch.update(_participant(participantCode), {
       'activeDay': 1,
+      'linkFlags': const ParticipantLinkFlags.allOn().toJson(),
       'resetDay1At': FieldValue.serverTimestamp(),
+      'resetDay2At': FieldValue.serverTimestamp(),
+      'resetAllAt': FieldValue.serverTimestamp(),
     });
 
     await batch.commit();
@@ -179,11 +254,9 @@ class FirestoreAdminRepository implements AdminRepository {
       });
 
   @override
-  Future<void> saveParticipantQuestionnaireLinks(
-          String participantCode, QuestionnaireLinks? links) =>
-      _participant(participantCode).update(links == null
-          ? {'questionnaireLinks': FieldValue.delete()}
-          : {'questionnaireLinks': links.toJson()});
+  Future<void> saveParticipantLinkFlags(
+          String participantCode, ParticipantLinkFlags flags) =>
+      _participant(participantCode).update({'linkFlags': flags.toJson()});
 
   @override
   Future<List<ScheduledReminder>> getSchedule(
@@ -195,6 +268,10 @@ class FirestoreAdminRepository implements AdminRepository {
         ScheduledReminder.fromJson((r as Map).cast<String, Object?>()),
     ];
   }
+
+  @override
+  Future<bool> hasSavedSchedule(String participantCode, int dayNumber) async =>
+      (await _scheduleDoc(participantCode, dayNumber).get()).exists;
 
   @override
   Future<void> saveSchedule(String participantCode, int dayNumber,

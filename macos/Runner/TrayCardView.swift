@@ -2,8 +2,9 @@ import SwiftUI
 
 /// Card dropped under the tray item: plays the animation once, then the
 /// out-animation triggers immediately when the last frame is reached.
+/// Text is intentionally hidden — the ambient/character animation alone
+/// carries the reminder.
 struct TrayCardView: View {
-    let message: String
     let resourceName: String
     let totalFrames: Int
     let visibilityMs: Int
@@ -38,11 +39,6 @@ struct TrayCardView: View {
                         }
                     }
                 }
-
-            Text(message)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.white)
-                .multilineTextAlignment(.leading)
         }
         .padding(.leading, 8)
         .padding(.trailing, 12)

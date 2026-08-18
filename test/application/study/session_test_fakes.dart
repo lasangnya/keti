@@ -13,6 +13,7 @@ class FakeSessionRepository implements SessionRepository {
   int createCalls = 0;
   int resumeCalls = 0;
   int completeCalls = 0;
+  int exitMarkCalls = 0;
 
   @override
   Future<void> createSession(StudySession session) async {
@@ -36,6 +37,11 @@ class FakeSessionRepository implements SessionRepository {
   @override
   Future<void> completeSession(String code, String dayId) async {
     completeCalls++;
+  }
+
+  @override
+  Future<void> markParticipantExit(String code, String dayId) async {
+    exitMarkCalls++;
   }
 }
 
@@ -82,6 +88,7 @@ class FakeReminderOrchestrator extends ReminderOrchestrator {
     required String button1Text,
     required String button2Text,
     required int visibilityMs,
+    required int cardDelayMs,
     required int cardTimeoutMs,
     required Future<void> Function() onDelivered,
     required Future<void> Function() onReminderHidden,

@@ -63,6 +63,7 @@ void main() {
         .markAnswered(
           outcome: ResponseOutcome.completed,
           answeredAtLocal: DateTime.parse('2026-08-03T10:03:05+02:00'),
+          cardResponse: 'Done',
         );
     await repository.updateEventLifecycle('P014', 'day1', answered);
 
@@ -76,6 +77,7 @@ void main() {
         .get();
     final data = snap.data()!;
     expect(data['outcome'], 'COMPLETED');
+    expect(data['cardResponse'], 'Done');
     expect(data['responseLatencyMs'], 7000);
     expect(data['deliveryStatus'], 'DELIVERED');
     expect(data['updatedAt'], isNotNull);
@@ -84,6 +86,33 @@ void main() {
     expect(data['placement'], 'CURSOR_PROXIMATE');
     expect(data['style'], 'CHARACTER_BASED');
     expect(data['reminderNumber'], 4);
+  });
+
+  test('updateEventLifecycle persists the Ignored label on card timeout',
+      () async {
+    final events = buildEvents();
+    await repository.createScheduledEvents('P014', 'day1', events);
+
+    final timedOut = events[5]
+        .markDelivered(
+          shownAtLocal: DateTime.parse('2026-08-03T10:02:13+02:00'),
+          latenessMs: 900,
+        )
+        .markCardShown(DateTime.parse('2026-08-03T10:02:58+02:00'))
+        .markTimedOut(DateTime.parse('2026-08-03T10:03:13+02:00'));
+    await repository.updateEventLifecycle('P014', 'day1', timedOut);
+
+    final snap = await firestore
+        .collection('participants')
+        .doc('P014')
+        .collection('studySessions')
+        .doc('day1')
+        .collection('reminderEvents')
+        .doc('reminder06')
+        .get();
+    final data = snap.data()!;
+    expect(data['outcome'], 'TIMED_OUT');
+    expect(data['cardResponse'], 'Ignored');
   });
 
   test('scheduled event update carries no server show/answer stamps', () async {

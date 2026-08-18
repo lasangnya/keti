@@ -11,13 +11,24 @@ namespace keti {
 
 namespace {
 
-// Returns the monitor info for the monitor containing the given point.
-MONITORINFO GetMonitorInfoAtPoint(POINT pt) {
-  HMONITOR monitor = MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
+// The tray reminder is presented as a top-right pill (matching the macOS
+// menu-bar position) rather than dropping from the Windows taskbar tray.
+constexpr int kCardWidth = 140;
+constexpr int kCardHeight = 125;
+constexpr int kEdgeMargin = 28;
+
+// Returns the work area of the primary monitor.
+RECT GetPrimaryWorkArea() {
+  POINT pt = {0, 0};
+  HMONITOR monitor = MonitorFromPoint(pt, MONITOR_DEFAULTTOPRIMARY);
   MONITORINFO info = {};
   info.cbSize = sizeof(info);
-  GetMonitorInfoW(monitor, &info);
-  return info;
+  if (GetMonitorInfoW(monitor, &info)) {
+    return info.rcWork;
+  }
+  RECT fallback;
+  SystemParametersInfoW(SPI_GETWORKAREA, 0, &fallback, 0);
+  return fallback;
 }
 
 }  // namespace
@@ -33,6 +44,8 @@ TrayPillManager::TrayPillManager()
       has_finished_(false) {}
 
 TrayPillManager::~TrayPillManager() {
+  on_shown_ = nullptr;
+  on_hidden_ = nullptr;
   Teardown();
 }
 
@@ -96,39 +109,44 @@ void TrayPillManager::Show(const std::wstring& assets_path,
                            int width,
                            int height,
                            int frame_count,
-                           DismissCallback on_dismissed) {
+                           Callback on_shown,
+                           Callback on_hidden) {
+  // Clobber any active reminder, notifying its hidden callback (macOS parity).
   Dismiss();
 
   if (!tray_icon_added_) {
-    if (on_dismissed) {
-      on_dismissed();
+    if (on_hidden) {
+      on_hidden();
     }
     return;
   }
 
   if (!sequence_.Load(assets_path, resource_name, frame_count)) {
-    if (on_dismissed) {
-      on_dismissed();
+    if (on_hidden) {
+      on_hidden();
     }
     return;
   }
 
-  on_dismissed_ = std::move(on_dismissed);
+  on_shown_ = std::move(on_shown);
+  on_hidden_ = std::move(on_hidden);
   current_frame_ = 0;
   has_finished_ = false;
 
-  if (!card_window_.Create(instance_, L"KetiTrayCard", width, height,
+  if (!card_window_.Create(instance_, L"KetiTrayCard", kCardWidth, kCardHeight,
                            /*layered=*/true,
                            /*transparent_for_mouse=*/false,
                            /*topmost=*/true,
                            /*tool_window=*/true,
                            /*no_activate=*/true)) {
     sequence_.Clear();
-    if (on_dismissed_) {
-      on_dismissed_();
-    }
+    FireHidden();
     return;
   }
+
+  // Present the reminder as a rounded black pill (macOS TrayCardView parity).
+  // corner_diameter == window height gives a full capsule shape; 217 ≈ 85%.
+  card_window_.SetRoundedBackground(kCardHeight, 217);
 
   card_window_.SetMessageHandler(
       [this](HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) -> bool {
@@ -136,20 +154,18 @@ void TrayPillManager::Show(const std::wstring& assets_path,
           AdvanceFrame();
           return true;
         }
-        if (msg == WM_LBUTTONUP) {
-          OnDismiss();
-          return true;
-        }
         return false;
       });
 
-  PositionCardUnderTray();
+  PositionCardTopRight();
 
   const PngFrame* frame = sequence_.GetFrame(0);
   if (frame != nullptr) {
     card_window_.UpdateLayeredContent(frame->dc, frame->width, frame->height);
   }
   card_window_.Show();
+
+  FireShown();
 
   timer_id_ = SetTimer(card_window_.handle(), kFrameTimerId, kFrameIntervalMs,
                        nullptr);
@@ -164,21 +180,33 @@ void TrayPillManager::Dismiss() {
   sequence_.Clear();
   current_frame_ = 0;
   has_finished_ = false;
-  on_dismissed_ = nullptr;
+  FireHidden();
 }
 
 bool TrayPillManager::IsShowing() const {
   return card_window_.IsVisible();
 }
 
-void TrayPillManager::HandleTrayMessage(WPARAM wparam, LPARAM lparam) {
-  // wparam holds the icon ID; lparam holds the notification.
-  if (LOWORD(lparam) == WM_LBUTTONUP) {
-    // Clicking the tray icon dismisses any active card.
-    if (IsShowing()) {
-      OnDismiss();
-    }
+void TrayPillManager::FireShown() {
+  auto callback = std::move(on_shown_);
+  on_shown_ = nullptr;
+  if (callback) {
+    callback();
   }
+}
+
+void TrayPillManager::FireHidden() {
+  on_shown_ = nullptr;
+  auto callback = std::move(on_hidden_);
+  on_hidden_ = nullptr;
+  if (callback) {
+    callback();
+  }
+}
+
+void TrayPillManager::HandleTrayMessage(WPARAM wparam, LPARAM lparam) {
+  // The tray icon is passive on macOS (the status item has no click handler),
+  // so no action is taken here beyond acknowledging the notification.
 }
 
 void TrayPillManager::AdvanceFrame() {
@@ -188,7 +216,7 @@ void TrayPillManager::AdvanceFrame() {
 
   int frame_count = sequence_.frame_count();
   if (frame_count == 0) {
-    OnDismiss();
+    Dismiss();
     return;
   }
 
@@ -200,73 +228,17 @@ void TrayPillManager::AdvanceFrame() {
     }
   } else {
     has_finished_ = true;
-    OnDismiss();
+    Dismiss();
   }
 }
 
-void TrayPillManager::PositionCardUnderTray() {
-  NOTIFYICONIDENTIFIER nii = {};
-  nii.cbSize = sizeof(nii);
-  nii.hWnd = message_hwnd_;
-  nii.uID = kTrayIconId;
-
-  RECT icon_rect;
-  HRESULT hr = Shell_NotifyIconGetRect(&nii, &icon_rect);
-
-  HWND hwnd = card_window_.handle();
-  RECT window_rect = {};
-  if (hwnd != nullptr) {
-    GetWindowRect(hwnd, &window_rect);
-  }
-  int window_width = window_rect.right - window_rect.left;
-  int window_height = window_rect.bottom - window_rect.top;
-  if (window_width <= 0) window_width = 200;
-  if (window_height <= 0) window_height = 200;
-
-  int x = 0;
-  int y = 0;
-
-  if (SUCCEEDED(hr)) {
-    POINT icon_center_pt = {(icon_rect.left + icon_rect.right) / 2,
-                            (icon_rect.top + icon_rect.bottom) / 2};
-    MONITORINFO mi = GetMonitorInfoAtPoint(icon_center_pt);
-
-    x = icon_center_pt.x - (window_width / 2);
-
-    // If icon is near the bottom of the work area, show above.
-    if (icon_rect.bottom + window_height + 10 > mi.rcWork.bottom) {
-      y = icon_rect.top - window_height - 4;
-    } else {
-      y = icon_rect.bottom + 4;
-    }
-
-    // Clamp X to screen work area
-    x = std::clamp(x, (int)mi.rcWork.left + 5, (int)mi.rcWork.right - window_width - 5);
-  } else {
-    POINT pt;
-    if (GetCursorPos(&pt)) {
-      MONITORINFO mi = GetMonitorInfoAtPoint(pt);
-      x = pt.x - (window_width / 2);
-
-      if (pt.y + window_height + 20 > mi.rcWork.bottom) {
-        y = pt.y - window_height - 10;
-      } else {
-        y = pt.y + 10;
-      }
-
-      x = std::clamp(x, (int)mi.rcWork.left + 5, (int)mi.rcWork.right - window_width - 5);
-    }
-  }
-
+void TrayPillManager::PositionCardTopRight() {
+  // Anchor to the top-right corner of the primary monitor's work area, matching
+  // the macOS menu-bar position (where the status item sits).
+  RECT work = GetPrimaryWorkArea();
+  int x = work.right - kCardWidth - kEdgeMargin;
+  int y = work.top + kEdgeMargin;
   card_window_.SetPosition(x, y);
-}
-
-void TrayPillManager::OnDismiss() {
-  auto callback = std::move(on_dismissed_);
-  Dismiss();
-  if (callback) {
-    callback();
-  }
 }
 
 }  // namespace keti

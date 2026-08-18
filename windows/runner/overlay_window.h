@@ -52,6 +52,12 @@ class OverlayWindow {
                             int source_width,
                             int source_height);
 
+  // Enables a black rounded-rect background behind the frames: the window is
+  // clipped to a rounded rect (corner ellipse of diameter |corner_diameter|)
+  // and each frame is composited over the semi-transparent black background.
+  // Call once after Create() and before the first UpdateLayeredContent().
+  void SetRoundedBackground(int corner_diameter, BYTE alpha);
+
   // Optional callback invoked for every window message before the default
   // handler. Return true from the callback to stop further handling.
   using MessageHandler = std::function<bool(HWND, UINT, WPARAM, LPARAM)>;
@@ -69,6 +75,9 @@ class OverlayWindow {
   int height_;
   bool transparent_;
   bool topmost_;
+  bool has_background_ = false;
+  int corner_diameter_ = 0;
+  BYTE background_alpha_ = 0;
   MessageHandler message_handler_;
 };
 

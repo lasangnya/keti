@@ -33,7 +33,7 @@ final class AdminStudyConfigProvider
   AdminStudyConfig create() => AdminStudyConfig();
 }
 
-String _$adminStudyConfigHash() => r'cabaefba94f2c9745a724126e4a0f7a1b8a99350';
+String _$adminStudyConfigHash() => r'428969f3e9467d66a53953625b000d9804f37d26';
 
 abstract class _$AdminStudyConfig extends $AsyncNotifier<StudyConfig> {
   FutureOr<StudyConfig> build();
@@ -46,6 +46,70 @@ abstract class _$AdminStudyConfig extends $AsyncNotifier<StudyConfig> {
             as $ClassProviderElement<
               AnyNotifier<AsyncValue<StudyConfig>, StudyConfig>,
               AsyncValue<StudyConfig>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// The global questionnaire link templates (`links/templates`).
+///
+/// Watched by the Links page, so the notifier stays alive and
+/// [AdminLinkTemplates.save] can safely invalidate itself after the await.
+
+@ProviderFor(AdminLinkTemplates)
+final adminLinkTemplatesProvider = AdminLinkTemplatesProvider._();
+
+/// The global questionnaire link templates (`links/templates`).
+///
+/// Watched by the Links page, so the notifier stays alive and
+/// [AdminLinkTemplates.save] can safely invalidate itself after the await.
+final class AdminLinkTemplatesProvider
+    extends $AsyncNotifierProvider<AdminLinkTemplates, StudyLinkTemplates> {
+  /// The global questionnaire link templates (`links/templates`).
+  ///
+  /// Watched by the Links page, so the notifier stays alive and
+  /// [AdminLinkTemplates.save] can safely invalidate itself after the await.
+  AdminLinkTemplatesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'adminLinkTemplatesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$adminLinkTemplatesHash();
+
+  @$internal
+  @override
+  AdminLinkTemplates create() => AdminLinkTemplates();
+}
+
+String _$adminLinkTemplatesHash() =>
+    r'a27cf668ccd667ebb083a6a871b63ec8fb174ec2';
+
+/// The global questionnaire link templates (`links/templates`).
+///
+/// Watched by the Links page, so the notifier stays alive and
+/// [AdminLinkTemplates.save] can safely invalidate itself after the await.
+
+abstract class _$AdminLinkTemplates extends $AsyncNotifier<StudyLinkTemplates> {
+  FutureOr<StudyLinkTemplates> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref as $Ref<AsyncValue<StudyLinkTemplates>, StudyLinkTemplates>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<StudyLinkTemplates>, StudyLinkTemplates>,
+              AsyncValue<StudyLinkTemplates>,
               Object?,
               Object?
             >;
