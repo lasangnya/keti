@@ -66,42 +66,89 @@ class ResearcherLauncher {
     return false;
   }
 
-  /// Opens a second instance through LaunchServices (`open -n`), which
-  /// forces a new instance and launches it with system-granted activation —
-  /// a directly spawned process is never activated, its window is reported
-  /// occluded, and the Flutter surface stays black.
+  /// Opens a second instance of this app in **researcher mode** so the
+  /// participant and researcher run in parallel.
   ///
-  /// The marker file carries the researcher flag (written before `open`);
-  /// LaunchServices does not propagate env/argv to the new process.
+  /// The researcher flag travels via the marker file, which the fresh
+  /// instance consumes on startup — neither env vars nor argv are reliably
+  /// visible to a directly-spawned second instance.
+  ///
+  /// macOS goes through LaunchServices (`open -n`) for system-granted
+  /// activation; Windows/Linux spawn the same executable directly.
   ///
   /// Returns false (and logs) when the launch fails.
   static Future<bool> launch() async {
     if (kIsWeb) return false;
     try {
-      final bundle = _appBundlePath(Platform.resolvedExecutable);
-      if (bundle == null) {
-        debugPrint('ResearcherLauncher: could not locate the .app bundle for '
-            '${Platform.resolvedExecutable}');
-        return false;
-      }
       // Marker first — the new instance reads it before/independent of any
       // env/argv quirks of the launch mechanism.
       File(markerPath).writeAsStringSync('1');
-      final result = await Process.run('open', ['-n', bundle]);
-      if (result.exitCode != 0) {
-        debugPrint('ResearcherLauncher: open failed (${result.exitCode}): '
-            '${result.stderr}');
-        // Do not leave a stale marker behind — a later launch of the
-        // participant app would consume it and boot into admin mode.
-        try {
-          File(markerPath).deleteSync();
-        } catch (_) {}
-        return false;
+
+      if (Platform.isMacOS) {
+        return _launchMacos();
       }
-      return true;
+      return _launchNative();
     } catch (e) {
       debugPrint('ResearcherLauncher: failed to launch: $e');
+      _clearMarker();
       return false;
+    }
+  }
+
+  /// Launches a second instance through LaunchServices (`open -n`), which
+  /// forces a new instance with system-granted activation — a directly
+  /// spawned process is never activated, its window is reported occluded,
+  /// and the Flutter surface stays black.
+  static Future<bool> _launchMacos() async {
+    final bundle = _appBundlePath(Platform.resolvedExecutable);
+    if (bundle == null) {
+      debugPrint('ResearcherLauncher: could not locate the .app bundle for '
+          '${Platform.resolvedExecutable}');
+      _clearMarker();
+      return false;
+    }
+    final result = await Process.run('open', ['-n', bundle]);
+    if (result.exitCode != 0) {
+      debugPrint('ResearcherLauncher: open failed (${result.exitCode}): '
+          '${result.stderr}');
+      _clearMarker();
+      return false;
+    }
+    return true;
+  }
+
+  /// Spawns a second instance of the current executable (Windows/Linux). The
+  /// researcher flag is carried by the marker file, not argv — the fresh
+  /// instance consumes it on startup.
+  ///
+  /// The parent's engine switches must not be inherited: `flutter run` passes
+  /// debug flags (notably `start-paused` and `vm-service-port`) via
+  /// `FLUTTER_ENGINE_SWITCH*` environment variables. A second instance that
+  /// inherits `start-paused=true` waits for a debugger that never connects and
+  /// never renders a frame, so no window appears.
+  static Future<bool> _launchNative() async {
+    final environment = Map<String, String>.from(Platform.environment)
+      ..removeWhere((key, _) => key.startsWith('FLUTTER_ENGINE_SWITCH'));
+    final process = await Process.start(
+      Platform.resolvedExecutable,
+      const <String>[],
+      environment: environment,
+      includeParentEnvironment: false,
+      mode: ProcessStartMode.detached,
+    );
+    return process.pid > 0;
+  }
+
+  /// Removes a stale marker so a later participant launch can't consume it
+  /// and accidentally boot into admin mode.
+  static void _clearMarker() {
+    try {
+      final marker = File(markerPath);
+      if (marker.existsSync()) {
+        marker.deleteSync();
+      }
+    } catch (_) {
+      // Best effort — nothing else we can do if the marker can't be removed.
     }
   }
 
