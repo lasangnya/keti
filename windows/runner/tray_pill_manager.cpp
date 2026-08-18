@@ -11,13 +11,24 @@ namespace keti {
 
 namespace {
 
-// Returns the monitor info for the monitor containing the given point.
-MONITORINFO GetMonitorInfoAtPoint(POINT pt) {
-  HMONITOR monitor = MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
+// The tray reminder is presented as a top-right pill (matching the macOS
+// menu-bar position) rather than dropping from the Windows taskbar tray.
+constexpr int kCardWidth = 140;
+constexpr int kCardHeight = 125;
+constexpr int kEdgeMargin = 28;
+
+// Returns the work area of the primary monitor.
+RECT GetPrimaryWorkArea() {
+  POINT pt = {0, 0};
+  HMONITOR monitor = MonitorFromPoint(pt, MONITOR_DEFAULTTOPRIMARY);
   MONITORINFO info = {};
   info.cbSize = sizeof(info);
-  GetMonitorInfoW(monitor, &info);
-  return info;
+  if (GetMonitorInfoW(monitor, &info)) {
+    return info.rcWork;
+  }
+  RECT fallback;
+  SystemParametersInfoW(SPI_GETWORKAREA, 0, &fallback, 0);
+  return fallback;
 }
 
 }  // namespace
@@ -122,7 +133,7 @@ void TrayPillManager::Show(const std::wstring& assets_path,
   current_frame_ = 0;
   has_finished_ = false;
 
-  if (!card_window_.Create(instance_, L"KetiTrayCard", width, height,
+  if (!card_window_.Create(instance_, L"KetiTrayCard", kCardWidth, kCardHeight,
                            /*layered=*/true,
                            /*transparent_for_mouse=*/false,
                            /*topmost=*/true,
@@ -133,6 +144,10 @@ void TrayPillManager::Show(const std::wstring& assets_path,
     return;
   }
 
+  // Present the reminder as a rounded black pill (macOS TrayCardView parity).
+  // corner_diameter == window height gives a full capsule shape; 217 ≈ 85%.
+  card_window_.SetRoundedBackground(kCardHeight, 217);
+
   card_window_.SetMessageHandler(
       [this](HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) -> bool {
         if (msg == WM_TIMER && wparam == kFrameTimerId) {
@@ -142,7 +157,7 @@ void TrayPillManager::Show(const std::wstring& assets_path,
         return false;
       });
 
-  PositionCardUnderTray();
+  PositionCardTopRight();
 
   const PngFrame* frame = sequence_.GetFrame(0);
   if (frame != nullptr) {
@@ -217,60 +232,12 @@ void TrayPillManager::AdvanceFrame() {
   }
 }
 
-void TrayPillManager::PositionCardUnderTray() {
-  NOTIFYICONIDENTIFIER nii = {};
-  nii.cbSize = sizeof(nii);
-  nii.hWnd = message_hwnd_;
-  nii.uID = kTrayIconId;
-
-  RECT icon_rect;
-  HRESULT hr = Shell_NotifyIconGetRect(&nii, &icon_rect);
-
-  HWND hwnd = card_window_.handle();
-  RECT window_rect = {};
-  if (hwnd != nullptr) {
-    GetWindowRect(hwnd, &window_rect);
-  }
-  int window_width = window_rect.right - window_rect.left;
-  int window_height = window_rect.bottom - window_rect.top;
-  if (window_width <= 0) window_width = 200;
-  if (window_height <= 0) window_height = 200;
-
-  int x = 0;
-  int y = 0;
-
-  if (SUCCEEDED(hr)) {
-    POINT icon_center_pt = {(icon_rect.left + icon_rect.right) / 2,
-                            (icon_rect.top + icon_rect.bottom) / 2};
-    MONITORINFO mi = GetMonitorInfoAtPoint(icon_center_pt);
-
-    x = icon_center_pt.x - (window_width / 2);
-
-    // If icon is near the bottom of the work area, show above.
-    if (icon_rect.bottom + window_height + 10 > mi.rcWork.bottom) {
-      y = icon_rect.top - window_height - 4;
-    } else {
-      y = icon_rect.bottom + 4;
-    }
-
-    // Clamp X to screen work area
-    x = std::clamp(x, (int)mi.rcWork.left + 5, (int)mi.rcWork.right - window_width - 5);
-  } else {
-    POINT pt;
-    if (GetCursorPos(&pt)) {
-      MONITORINFO mi = GetMonitorInfoAtPoint(pt);
-      x = pt.x - (window_width / 2);
-
-      if (pt.y + window_height + 20 > mi.rcWork.bottom) {
-        y = pt.y - window_height - 10;
-      } else {
-        y = pt.y + 10;
-      }
-
-      x = std::clamp(x, (int)mi.rcWork.left + 5, (int)mi.rcWork.right - window_width - 5);
-    }
-  }
-
+void TrayPillManager::PositionCardTopRight() {
+  // Anchor to the top-right corner of the primary monitor's work area, matching
+  // the macOS menu-bar position (where the status item sits).
+  RECT work = GetPrimaryWorkArea();
+  int x = work.right - kCardWidth - kEdgeMargin;
+  int y = work.top + kEdgeMargin;
   card_window_.SetPosition(x, y);
 }
 

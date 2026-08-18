@@ -12,8 +12,8 @@
 namespace keti {
 
 // Windows equivalent of the macOS TrayPillManager.
-// Maintains a system tray icon and shows a dropped-card overlay underneath it
-// that plays a PNG sequence.
+// Maintains a system tray icon and shows a top-right pill overlay that plays a
+// PNG sequence (positioned to match the macOS menu bar, for study consistency).
 class TrayPillManager {
  public:
   using Callback = std::function<void()>;
@@ -55,7 +55,7 @@ class TrayPillManager {
 
  private:
   void AdvanceFrame();
-  void PositionCardUnderTray();
+  void PositionCardTopRight();
   void FireShown();
   void FireHidden();
 

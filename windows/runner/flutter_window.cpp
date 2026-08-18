@@ -228,6 +228,9 @@ void FlutterWindow::RegisterReminderChannels() {
             if (total_frames <= 0) {
               total_frames = 120;
             }
+            // Render the notch card 50% larger than the configured size.
+            width = static_cast<int>(width * 1.5);
+            height = static_cast<int>(height * 1.5);
 
             island_manager_.Show(
                 instance, assets_path, resource_name, width, height,
@@ -282,9 +285,9 @@ void FlutterWindow::RegisterReminderChannels() {
               total_frames = 120;
             }
             // Render the cursor pill larger than the configured size
-            // (20%, then a further 20% — cumulative ×1.44).
-            width = static_cast<int>(width * 1.44);
-            height = static_cast<int>(height * 1.44);
+            // (cumulative ×1.872: +20%, +20%, +30%).
+            width = static_cast<int>(width * 1.872);
+            height = static_cast<int>(height * 1.872);
             // Per-style cursor-pill positioning (overrides the config offsets
             // on Windows). Default (character): right of the cursor, vertically
             // centered on it. The window is positioned by its top-left corner,

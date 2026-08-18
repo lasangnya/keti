@@ -67,6 +67,9 @@ void IslandManager::Show(HINSTANCE instance,
     return;
   }
 
+  // Black rounded-rect background (macOS IslandView: black @ 0.9, radius 12).
+  window_.SetRoundedBackground(24, 230);
+
   window_.SetMessageHandler(
       [this](HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) -> bool {
         if (msg == WM_TIMER && wparam == kFrameTimerId) {
