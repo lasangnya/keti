@@ -11,15 +11,7 @@ class TestMode extends _$TestMode {
 
   @override
   TestModeState build() {
-    return TestModeState(
-      isActive: false,
-      selectedStyle: 'ambient',
-      selectedType: 'cursor',
-    );
-  }
-
-  void toggleActive(bool value) {
-    state = state.copyWith(isActive: value);
+    return TestModeState(selectedStyle: 'ambient', selectedType: 'cursor');
   }
 
   void setStyle(String style) {
@@ -61,8 +53,8 @@ class TestMode extends _$TestMode {
 
   PresentationStyle get _selectedPresentationStyle =>
       state.selectedStyle == 'character'
-          ? PresentationStyle.characterBased
-          : PresentationStyle.ambient;
+      ? PresentationStyle.characterBased
+      : PresentationStyle.ambient;
 
   /// Content for Break (micro-break) reminders in the selected style,
   /// resolved via the shared study resolver.
@@ -75,31 +67,26 @@ class TestMode extends _$TestMode {
       _resolve(ReminderKind.hydration, notchPreset);
 
   ReminderContent _resolve(ReminderKind kind, String? notchPreset) {
-    final resolved = _resolver.resolve(kind, _selectedPresentationStyle).content;
+    final resolved = _resolver
+        .resolve(kind, _selectedPresentationStyle)
+        .content;
     if (notchPreset == null) return resolved;
-    final (nWidth, nHeight) = _getNotchDimensions(notchPreset, state.selectedStyle);
+    final (nWidth, nHeight) = _getNotchDimensions(
+      notchPreset,
+      state.selectedStyle,
+    );
     return resolved.copyWith(notchWidth: nWidth, notchHeight: nHeight);
   }
 }
 
 class TestModeState {
-  final bool isActive;
   final String selectedStyle;
   final String selectedType;
 
-  TestModeState({
-    required this.isActive,
-    required this.selectedStyle,
-    required this.selectedType,
-  });
+  TestModeState({required this.selectedStyle, required this.selectedType});
 
-  TestModeState copyWith({
-    bool? isActive,
-    String? selectedStyle,
-    String? selectedType,
-  }) {
+  TestModeState copyWith({String? selectedStyle, String? selectedType}) {
     return TestModeState(
-      isActive: isActive ?? this.isActive,
       selectedStyle: selectedStyle ?? this.selectedStyle,
       selectedType: selectedType ?? this.selectedType,
     );

@@ -24,7 +24,6 @@ class AppStrings {
   static const String complianceButton2 = 'Not now';
 
   static const String testMode = 'Test Mode';
-  static const String testModeActive = 'Test Mode Active';
   static const String reminderStyle = 'Reminder Style';
   static const String ambient = 'Ambient';
   static const String ambientSubtitle = 'Gentle visual reminders without disrupting focus';
