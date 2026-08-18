@@ -277,11 +277,28 @@ void FlutterWindow::RegisterReminderChannels() {
             if (height <= 0) {
               height = 150;
             }
-            int offset_x = static_cast<int>(GetDoubleValue(args, kKeyOffsetX));
-            int offset_y = static_cast<int>(GetDoubleValue(args, kKeyOffsetY));
             int total_frames = GetIntValue(args, kKeyTotalFrames);
             if (total_frames <= 0) {
               total_frames = 120;
+            }
+            // Render the cursor pill larger than the configured size
+            // (20%, then a further 20% — cumulative ×1.44).
+            width = static_cast<int>(width * 1.44);
+            height = static_cast<int>(height * 1.44);
+            // Per-style cursor-pill positioning (overrides the config offsets
+            // on Windows). Default (character): right of the cursor, vertically
+            // centered on it. The window is positioned by its top-left corner,
+            // so a negative half-height Y offset centers it on the cursor.
+            int offset_x = 20;
+            int offset_y = -(height / 2);
+            if (resource_name.find(L"ambient_break") == 0) {
+              // Break ambient: closer to the cursor, and lowered a bit more.
+              offset_x = 8;
+              offset_y = -(height / 4);
+            } else if (resource_name.find(L"ambient_hydration") == 0) {
+              // Hydration ambient: more gap to the cursor, and lowered a bit.
+              offset_x = 32;
+              offset_y = -(height / 3);
             }
 
             cursor_pill_manager_.Show(

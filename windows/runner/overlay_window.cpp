@@ -1,5 +1,8 @@
 #include "overlay_window.h"
 
+#include <algorithm>
+#include <cstring>
+
 #include <windowsx.h>
 
 namespace keti {
@@ -172,24 +175,66 @@ void OverlayWindow::UpdateLayeredContent(HDC source_dc,
     return;
   }
 
-  POINT dst_pos = {0, 0};
+  // UpdateLayeredWindow does not scale — it blits the top-left window-sized
+  // region of the source bitmap. When a frame differs from the window size,
+  // scale it into a window-sized, premultiplied-alpha bitmap first (aspect-fit,
+  // centered), matching the macOS SwiftUI
+  // `Image.resizable().aspectRatio(contentMode: .fit)`.
+  HDC blit_dc = source_dc;
+  HBITMAP scaled_bitmap = nullptr;
+  HGDIOBJ old_scaled_bitmap = nullptr;
+
+  if (source_width > 0 && source_height > 0 &&
+      (source_width != width_ || source_height != height_)) {
+    const double scale = (std::min)(
+        static_cast<double>(width_) / source_width,
+        static_cast<double>(height_) / source_height);
+    const int fit_width =
+        (std::max)(1, static_cast<int>(source_width * scale));
+    const int fit_height =
+        (std::max)(1, static_cast<int>(source_height * scale));
+    const int fit_x = (width_ - fit_width) / 2;
+    const int fit_y = (height_ - fit_height) / 2;
+
+    BITMAPINFO bmi = {};
+    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth = width_;
+    bmi.bmiHeader.biHeight = -height_;  // top-down DIB
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    void* bits = nullptr;
+    scaled_bitmap =
+        CreateDIBSection(screen_dc, &bmi, DIB_RGB_COLORS, &bits, nullptr, 0);
+    if (scaled_bitmap != nullptr) {
+      blit_dc = CreateCompatibleDC(screen_dc);
+      old_scaled_bitmap = SelectObject(blit_dc, scaled_bitmap);
+      // Clear to fully transparent (premultiplied alpha = 0) so letterbox
+      // borders don't show stale pixels.
+      memset(bits, 0, static_cast<size_t>(width_) * height_ * 4);
+      SetStretchBltMode(blit_dc, COLORONCOLOR);
+      StretchBlt(blit_dc, fit_x, fit_y, fit_width, fit_height, source_dc, 0, 0,
+                 source_width, source_height, SRCCOPY);
+    }
+  }
+
   SIZE dst_size = {width_, height_};
   POINT src_pos = {0, 0};
-  SIZE src_size = {source_width, source_height};
-
   BLENDFUNCTION blend = {};
   blend.BlendOp = AC_SRC_OVER;
   blend.SourceConstantAlpha = 255;
   blend.AlphaFormat = AC_SRC_ALPHA;
 
-  // If the source bitmap is a different size than the window, scale via
-  // StretchBlt into a temporary compatible DC first. For simplicity and to
-  // match macOS behavior where content size equals window size, we assume
-  // they match and call UpdateLayeredWindow directly.
-  // Passing nullptr for pptDst ensures the window stays at its current position.
-  UpdateLayeredWindow(hwnd_, screen_dc, nullptr, &dst_size,
-                      source_dc, &src_pos, 0, &blend, ULW_ALPHA);
+  // Passing nullptr for pptDst keeps the window at its current position.
+  UpdateLayeredWindow(hwnd_, screen_dc, nullptr, &dst_size, blit_dc, &src_pos, 0,
+                      &blend, ULW_ALPHA);
 
+  if (scaled_bitmap != nullptr) {
+    SelectObject(blit_dc, old_scaled_bitmap);
+    DeleteObject(scaled_bitmap);
+    DeleteDC(blit_dc);
+  }
   ReleaseDC(nullptr, screen_dc);
 }
 
