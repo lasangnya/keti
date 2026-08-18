@@ -11,6 +11,8 @@ CursorPillManager::CursorPillManager()
       has_finished_(false) {}
 
 CursorPillManager::~CursorPillManager() {
+  on_shown_ = nullptr;
+  on_hidden_ = nullptr;
   Dismiss();
 }
 
@@ -22,17 +24,20 @@ void CursorPillManager::Show(HINSTANCE instance,
                              int offset_x,
                              int offset_y,
                              int frame_count,
-                             DismissCallback on_dismissed) {
+                             Callback on_shown,
+                             Callback on_hidden) {
+  // Clobber any active reminder, notifying its hidden callback (macOS parity).
   Dismiss();
 
   if (!sequence_.Load(assets_path, resource_name, frame_count)) {
-    if (on_dismissed) {
-      on_dismissed();
+    if (on_hidden) {
+      on_hidden();
     }
     return;
   }
 
-  on_dismissed_ = std::move(on_dismissed);
+  on_shown_ = std::move(on_shown);
+  on_hidden_ = std::move(on_hidden);
   offset_x_ = offset_x;
   offset_y_ = offset_y;
   current_frame_ = 0;
@@ -45,9 +50,7 @@ void CursorPillManager::Show(HINSTANCE instance,
                       /*tool_window=*/true,
                       /*no_activate=*/true)) {
     sequence_.Clear();
-    if (on_dismissed_) {
-      on_dismissed_();
-    }
+    FireHidden();
     return;
   }
 
@@ -72,6 +75,8 @@ void CursorPillManager::Show(HINSTANCE instance,
   }
   window_.Show();
 
+  FireShown();
+
   frame_timer_id_ = SetTimer(window_.handle(), kFrameTimerId, kFrameIntervalMs,
                              nullptr);
   cursor_timer_id_ = SetTimer(window_.handle(), kCursorTimerId,
@@ -91,11 +96,28 @@ void CursorPillManager::Dismiss() {
   sequence_.Clear();
   current_frame_ = 0;
   has_finished_ = false;
-  on_dismissed_ = nullptr;
+  FireHidden();
 }
 
 bool CursorPillManager::IsShowing() const {
   return window_.IsVisible();
+}
+
+void CursorPillManager::FireShown() {
+  auto callback = std::move(on_shown_);
+  on_shown_ = nullptr;
+  if (callback) {
+    callback();
+  }
+}
+
+void CursorPillManager::FireHidden() {
+  on_shown_ = nullptr;
+  auto callback = std::move(on_hidden_);
+  on_hidden_ = nullptr;
+  if (callback) {
+    callback();
+  }
 }
 
 void CursorPillManager::AdvanceFrame() {
@@ -105,7 +127,7 @@ void CursorPillManager::AdvanceFrame() {
 
   int frame_count = sequence_.frame_count();
   if (frame_count == 0) {
-    OnDismiss();
+    Dismiss();
     return;
   }
 
@@ -117,7 +139,7 @@ void CursorPillManager::AdvanceFrame() {
     }
   } else {
     has_finished_ = true;
-    OnDismiss();
+    Dismiss();
   }
 }
 
@@ -127,14 +149,6 @@ void CursorPillManager::UpdateCursorPosition() {
     return;
   }
   window_.SetPosition(pt.x + offset_x_, pt.y + offset_y_);
-}
-
-void CursorPillManager::OnDismiss() {
-  auto callback = std::move(on_dismissed_);
-  Dismiss();
-  if (callback) {
-    callback();
-  }
 }
 
 }  // namespace keti

@@ -25,19 +25,32 @@ std::wstring Utf8ToWide(const std::string& utf8) {
 constexpr char kChannelNotchHook[] = "app.keti/notch_hook";
 constexpr char kChannelCursorPill[] = "app.keti/cursor_pill";
 constexpr char kChannelTrayPill[] = "app.keti/tray_pill";
+constexpr char kChannelComplianceCard[] = "app.keti/compliance_card";
+constexpr char kChannelSessionLifecycle[] = "app.keti/session_lifecycle";
 
 constexpr char kMethodShowIsland[] = "showIsland";
 constexpr char kMethodShowCursorPill[] = "showPill";
 constexpr char kMethodShowTrayPill[] = "showPill";
-constexpr char kMethodOnDismissed[] = "onDismissed";
+constexpr char kMethodShowComplianceCard[] = "showComplianceCard";
+constexpr char kMethodSetSessionActive[] = "setSessionActive";
+constexpr char kMethodCloseWindow[] = "closeWindow";
+constexpr char kMethodOnShown[] = "onShown";
+constexpr char kMethodOnHidden[] = "onHidden";
+constexpr char kMethodOnCardAction[] = "onCardAction";
+constexpr char kMethodOnCardTimeout[] = "onCardTimeout";
 
-constexpr char kKeyMessage[] = "message";
 constexpr char kKeyResourceName[] = "resourceName";
 constexpr char kKeyWidth[] = "width";
 constexpr char kKeyHeight[] = "height";
 constexpr char kKeyOffsetX[] = "offsetX";
 constexpr char kKeyOffsetY[] = "offsetY";
 constexpr char kKeyTotalFrames[] = "totalFrames";
+constexpr char kKeyReminderId[] = "reminderId";
+constexpr char kKeyTimeoutMs[] = "timeoutMs";
+constexpr char kKeyQuestion[] = "question";
+constexpr char kKeyButton1Text[] = "button1Text";
+constexpr char kKeyButton2Text[] = "button2Text";
+constexpr char kKeyAction[] = "action";
 
 double GetDoubleValue(const flutter::EncodableMap* args, const char* key) {
   auto it = args->find(flutter::EncodableValue(key));
@@ -55,7 +68,32 @@ double GetDoubleValue(const flutter::EncodableMap* args, const char* key) {
   return 0.0;
 }
 
+std::string GetStringValue(const flutter::EncodableMap* args, const char* key) {
+  auto it = args->find(flutter::EncodableValue(key));
+  if (it != args->end() && !it->second.IsNull() &&
+      std::holds_alternative<std::string>(it->second)) {
+    return std::get<std::string>(it->second);
+  }
+  return std::string();
 }
+
+int GetIntValue(const flutter::EncodableMap* args, const char* key) {
+  auto it = args->find(flutter::EncodableValue(key));
+  if (it != args->end() && !it->second.IsNull()) {
+    if (std::holds_alternative<int32_t>(it->second)) {
+      return std::get<int32_t>(it->second);
+    }
+    if (std::holds_alternative<int64_t>(it->second)) {
+      return static_cast<int>(std::get<int64_t>(it->second));
+    }
+    if (std::holds_alternative<double>(it->second)) {
+      return static_cast<int>(std::get<double>(it->second));
+    }
+  }
+  return 0;
+}
+
+}  // namespace
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -97,7 +135,10 @@ bool FlutterWindow::OnCreate() {
 
 void FlutterWindow::OnDestroy() {
   mouse_shake_detector_.Stop();
+  island_manager_.Dismiss();
+  cursor_pill_manager_.Dismiss();
   tray_pill_manager_.Teardown();
+  compliance_card_manager_.Dismiss();
 
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
@@ -153,6 +194,10 @@ void FlutterWindow::RegisterReminderChannels() {
       messenger, kChannelCursorPill, &codec);
   tray_channel_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
       messenger, kChannelTrayPill, &codec);
+  compliance_channel_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+      messenger, kChannelComplianceCard, &codec);
+  session_channel_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+      messenger, kChannelSessionLifecycle, &codec);
 
   HINSTANCE instance = GetModuleHandle(nullptr);
   std::wstring assets_path = GetAssetsPath();
@@ -164,35 +209,39 @@ void FlutterWindow::RegisterReminderChannels() {
         if (call.method_name() == kMethodShowIsland) {
           const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
           if (args != nullptr) {
-            std::wstring resource_name;
-            auto it = args->find(flutter::EncodableValue(kKeyResourceName));
-            if (it != args->end()) {
-              resource_name = Utf8ToWide(
-                  std::get<std::string>(it->second));
+            std::string reminder_id = GetStringValue(args, kKeyReminderId);
+            if (reminder_id.empty()) {
+              reminder_id = "unknown";
             }
+            std::wstring resource_name =
+                Utf8ToWide(GetStringValue(args, kKeyResourceName));
 
-            int width = 400;
-            int height = 100;
-            int total_frames = 120;
-
-            it = args->find(flutter::EncodableValue(kKeyWidth));
-            if (it != args->end()) {
-              width = static_cast<int>(GetDoubleValue(args, kKeyWidth));
+            int width = static_cast<int>(GetDoubleValue(args, kKeyWidth));
+            if (width <= 0) {
+              width = 400;
             }
-            it = args->find(flutter::EncodableValue(kKeyHeight));
-            if (it != args->end()) {
-              height = static_cast<int>(GetDoubleValue(args, kKeyHeight));
+            int height = static_cast<int>(GetDoubleValue(args, kKeyHeight));
+            if (height <= 0) {
+              height = 100;
             }
-            it = args->find(flutter::EncodableValue(kKeyTotalFrames));
-            if (it != args->end()) {
-              total_frames = static_cast<int>(GetDoubleValue(args, kKeyTotalFrames));
+            int total_frames = GetIntValue(args, kKeyTotalFrames);
+            if (total_frames <= 0) {
+              total_frames = 120;
             }
 
             island_manager_.Show(
                 instance, assets_path, resource_name, width, height,
-                total_frames, [this]() {
+                total_frames,
+                [this, reminder_id]() {
+                  notch_channel_->InvokeMethod(
+                      kMethodOnShown,
+                      std::make_unique<flutter::EncodableValue>(reminder_id));
+                },
+                [this, reminder_id]() {
                   mouse_shake_detector_.Stop();
-                  notch_channel_->InvokeMethod(kMethodOnDismissed, nullptr);
+                  notch_channel_->InvokeMethod(
+                      kMethodOnHidden,
+                      std::make_unique<flutter::EncodableValue>(reminder_id));
                 });
             if (island_manager_.IsShowing()) {
               mouse_shake_detector_.Start(GetHandle(), [this]() {
@@ -213,45 +262,41 @@ void FlutterWindow::RegisterReminderChannels() {
         if (call.method_name() == kMethodShowCursorPill) {
           const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
           if (args != nullptr) {
-            std::wstring resource_name;
-            auto it = args->find(flutter::EncodableValue(kKeyResourceName));
-            if (it != args->end()) {
-              resource_name = Utf8ToWide(
-                  std::get<std::string>(it->second));
+            std::string reminder_id = GetStringValue(args, kKeyReminderId);
+            if (reminder_id.empty()) {
+              reminder_id = "unknown";
             }
+            std::wstring resource_name =
+                Utf8ToWide(GetStringValue(args, kKeyResourceName));
 
-            int width = 150;
-            int height = 150;
-            int offset_x = 0;
-            int offset_y = 0;
-            int total_frames = 120;
-
-            it = args->find(flutter::EncodableValue(kKeyWidth));
-            if (it != args->end()) {
-              width = static_cast<int>(GetDoubleValue(args, kKeyWidth));
+            int width = static_cast<int>(GetDoubleValue(args, kKeyWidth));
+            if (width <= 0) {
+              width = 150;
             }
-            it = args->find(flutter::EncodableValue(kKeyHeight));
-            if (it != args->end()) {
-              height = static_cast<int>(GetDoubleValue(args, kKeyHeight));
+            int height = static_cast<int>(GetDoubleValue(args, kKeyHeight));
+            if (height <= 0) {
+              height = 150;
             }
-            it = args->find(flutter::EncodableValue(kKeyOffsetX));
-            if (it != args->end()) {
-              offset_x = static_cast<int>(GetDoubleValue(args, kKeyOffsetX));
-            }
-            it = args->find(flutter::EncodableValue(kKeyOffsetY));
-            if (it != args->end()) {
-              offset_y = static_cast<int>(GetDoubleValue(args, kKeyOffsetY));
-            }
-            it = args->find(flutter::EncodableValue(kKeyTotalFrames));
-            if (it != args->end()) {
-              total_frames = static_cast<int>(GetDoubleValue(args, kKeyTotalFrames));
+            int offset_x = static_cast<int>(GetDoubleValue(args, kKeyOffsetX));
+            int offset_y = static_cast<int>(GetDoubleValue(args, kKeyOffsetY));
+            int total_frames = GetIntValue(args, kKeyTotalFrames);
+            if (total_frames <= 0) {
+              total_frames = 120;
             }
 
             cursor_pill_manager_.Show(
                 instance, assets_path, resource_name, width, height, offset_x,
-                offset_y, total_frames, [this]() {
+                offset_y, total_frames,
+                [this, reminder_id]() {
+                  cursor_channel_->InvokeMethod(
+                      kMethodOnShown,
+                      std::make_unique<flutter::EncodableValue>(reminder_id));
+                },
+                [this, reminder_id]() {
                   mouse_shake_detector_.Stop();
-                  cursor_channel_->InvokeMethod(kMethodOnDismissed, nullptr);
+                  cursor_channel_->InvokeMethod(
+                      kMethodOnHidden,
+                      std::make_unique<flutter::EncodableValue>(reminder_id));
                 });
             if (cursor_pill_manager_.IsShowing()) {
               mouse_shake_detector_.Start(GetHandle(), [this]() {
@@ -271,41 +316,116 @@ void FlutterWindow::RegisterReminderChannels() {
         if (call.method_name() == kMethodShowTrayPill) {
           const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
           if (args != nullptr) {
-            std::wstring resource_name;
-            auto it = args->find(flutter::EncodableValue(kKeyResourceName));
-            if (it != args->end()) {
-              resource_name = Utf8ToWide(
-                  std::get<std::string>(it->second));
+            std::string reminder_id = GetStringValue(args, kKeyReminderId);
+            if (reminder_id.empty()) {
+              reminder_id = "unknown";
             }
+            std::wstring resource_name =
+                Utf8ToWide(GetStringValue(args, kKeyResourceName));
 
-            int width = 22;
-            int height = 22;
-            int total_frames = 120;
-
-            it = args->find(flutter::EncodableValue(kKeyWidth));
-            if (it != args->end()) {
-              width = static_cast<int>(GetDoubleValue(args, kKeyWidth));
+            int width = static_cast<int>(GetDoubleValue(args, kKeyWidth));
+            if (width <= 0) {
+              width = 22;
             }
-            it = args->find(flutter::EncodableValue(kKeyHeight));
-            if (it != args->end()) {
-              height = static_cast<int>(GetDoubleValue(args, kKeyHeight));
+            int height = static_cast<int>(GetDoubleValue(args, kKeyHeight));
+            if (height <= 0) {
+              height = 22;
             }
-            it = args->find(flutter::EncodableValue(kKeyTotalFrames));
-            if (it != args->end()) {
-              total_frames = static_cast<int>(GetDoubleValue(args, kKeyTotalFrames));
+            int total_frames = GetIntValue(args, kKeyTotalFrames);
+            if (total_frames <= 0) {
+              total_frames = 120;
             }
 
             tray_pill_manager_.Show(
                 assets_path, resource_name, width, height, total_frames,
-                [this]() {
+                [this, reminder_id]() {
+                  tray_channel_->InvokeMethod(
+                      kMethodOnShown,
+                      std::make_unique<flutter::EncodableValue>(reminder_id));
+                },
+                [this, reminder_id]() {
                   mouse_shake_detector_.Stop();
-                  tray_channel_->InvokeMethod(kMethodOnDismissed, nullptr);
+                  tray_channel_->InvokeMethod(
+                      kMethodOnHidden,
+                      std::make_unique<flutter::EncodableValue>(reminder_id));
                 });
             if (tray_pill_manager_.IsShowing()) {
               mouse_shake_detector_.Start(GetHandle(), [this]() {
                 tray_pill_manager_.Dismiss();
               });
             }
+          }
+          result->Success();
+          return;
+        }
+        result->NotImplemented();
+      });
+
+  compliance_channel_->SetMethodCallHandler(
+      [this, instance](const flutter::MethodCall<flutter::EncodableValue>& call,
+                       std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+        if (call.method_name() == kMethodShowComplianceCard) {
+          const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+          if (args != nullptr) {
+            std::string reminder_id = GetStringValue(args, kKeyReminderId);
+            if (reminder_id.empty()) {
+              reminder_id = "unknown";
+            }
+            std::string question = GetStringValue(args, kKeyQuestion);
+            if (question.empty()) {
+              question = "Did you do it?";
+            }
+            std::string button1 = GetStringValue(args, kKeyButton1Text);
+            if (button1.empty()) {
+              button1 = "Done";
+            }
+            std::string button2 = GetStringValue(args, kKeyButton2Text);
+            if (button2.empty()) {
+              button2 = "Not now";
+            }
+            int timeout_ms = GetIntValue(args, kKeyTimeoutMs);
+            if (timeout_ms <= 0) {
+              timeout_ms = 120000;
+            }
+
+            compliance_card_manager_.Show(
+                instance, GetHandle(), question, button1, button2, timeout_ms,
+                [this, reminder_id](const std::string& action) {
+                  flutter::EncodableMap outcome;
+                  outcome[flutter::EncodableValue(kKeyReminderId)] =
+                      flutter::EncodableValue(reminder_id);
+                  outcome[flutter::EncodableValue(kKeyAction)] =
+                      flutter::EncodableValue(action);
+                  compliance_channel_->InvokeMethod(
+                      kMethodOnCardAction,
+                      std::make_unique<flutter::EncodableValue>(outcome));
+                },
+                [this, reminder_id]() {
+                  compliance_channel_->InvokeMethod(
+                      kMethodOnCardTimeout,
+                      std::make_unique<flutter::EncodableValue>(reminder_id));
+                });
+          }
+          result->Success();
+          return;
+        }
+        result->NotImplemented();
+      });
+
+  session_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+        if (call.method_name() == kMethodSetSessionActive) {
+          // Windows has no App Nap to suppress and the scheduler keeps running
+          // while the message loop is alive, so this is an acknowledgment-only
+          // no-op (macOS parity for the channel contract).
+          result->Success();
+          return;
+        }
+        if (call.method_name() == kMethodCloseWindow) {
+          HWND hwnd = GetHandle();
+          if (hwnd != nullptr) {
+            PostMessage(hwnd, WM_CLOSE, 0, 0);
           }
           result->Success();
           return;

@@ -17,7 +17,7 @@ namespace keti {
 // dismissed by clicking anywhere on the overlay.
 class IslandManager {
  public:
-  using DismissCallback = std::function<void()>;
+  using Callback = std::function<void()>;
 
   IslandManager();
   ~IslandManager();
@@ -26,27 +26,33 @@ class IslandManager {
   IslandManager(const IslandManager&) = delete;
   IslandManager& operator=(const IslandManager&) = delete;
 
+  // Shows the island and plays the PNG sequence once. |on_shown| fires after
+  // the window is on screen; |on_hidden| fires exactly once when it is
+  // dismissed (animation finished, mouse-shake, or a clobbering Show).
   void Show(HINSTANCE instance,
             const std::wstring& assets_path,
             const std::wstring& resource_name,
             int width,
             int height,
             int frame_count,
-            DismissCallback on_dismissed);
+            Callback on_shown,
+            Callback on_hidden);
 
   void Dismiss();
   bool IsShowing() const;
 
  private:
   void AdvanceFrame();
-  void OnDismiss();
+  void FireShown();
+  void FireHidden();
 
   OverlayWindow window_;
   PngSequence sequence_;
   int current_frame_;
   UINT_PTR timer_id_;
   bool has_finished_;
-  DismissCallback on_dismissed_;
+  Callback on_shown_;
+  Callback on_hidden_;
 
   static constexpr UINT kFrameTimerId = 1;
   static constexpr UINT kFrameIntervalMs = 33;  // ~30 fps

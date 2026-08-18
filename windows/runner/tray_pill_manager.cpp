@@ -33,6 +33,8 @@ TrayPillManager::TrayPillManager()
       has_finished_(false) {}
 
 TrayPillManager::~TrayPillManager() {
+  on_shown_ = nullptr;
+  on_hidden_ = nullptr;
   Teardown();
 }
 
@@ -96,24 +98,27 @@ void TrayPillManager::Show(const std::wstring& assets_path,
                            int width,
                            int height,
                            int frame_count,
-                           DismissCallback on_dismissed) {
+                           Callback on_shown,
+                           Callback on_hidden) {
+  // Clobber any active reminder, notifying its hidden callback (macOS parity).
   Dismiss();
 
   if (!tray_icon_added_) {
-    if (on_dismissed) {
-      on_dismissed();
+    if (on_hidden) {
+      on_hidden();
     }
     return;
   }
 
   if (!sequence_.Load(assets_path, resource_name, frame_count)) {
-    if (on_dismissed) {
-      on_dismissed();
+    if (on_hidden) {
+      on_hidden();
     }
     return;
   }
 
-  on_dismissed_ = std::move(on_dismissed);
+  on_shown_ = std::move(on_shown);
+  on_hidden_ = std::move(on_hidden);
   current_frame_ = 0;
   has_finished_ = false;
 
@@ -124,9 +129,7 @@ void TrayPillManager::Show(const std::wstring& assets_path,
                            /*tool_window=*/true,
                            /*no_activate=*/true)) {
     sequence_.Clear();
-    if (on_dismissed_) {
-      on_dismissed_();
-    }
+    FireHidden();
     return;
   }
 
@@ -134,10 +137,6 @@ void TrayPillManager::Show(const std::wstring& assets_path,
       [this](HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) -> bool {
         if (msg == WM_TIMER && wparam == kFrameTimerId) {
           AdvanceFrame();
-          return true;
-        }
-        if (msg == WM_LBUTTONUP) {
-          OnDismiss();
           return true;
         }
         return false;
@@ -150,6 +149,8 @@ void TrayPillManager::Show(const std::wstring& assets_path,
     card_window_.UpdateLayeredContent(frame->dc, frame->width, frame->height);
   }
   card_window_.Show();
+
+  FireShown();
 
   timer_id_ = SetTimer(card_window_.handle(), kFrameTimerId, kFrameIntervalMs,
                        nullptr);
@@ -164,21 +165,33 @@ void TrayPillManager::Dismiss() {
   sequence_.Clear();
   current_frame_ = 0;
   has_finished_ = false;
-  on_dismissed_ = nullptr;
+  FireHidden();
 }
 
 bool TrayPillManager::IsShowing() const {
   return card_window_.IsVisible();
 }
 
-void TrayPillManager::HandleTrayMessage(WPARAM wparam, LPARAM lparam) {
-  // wparam holds the icon ID; lparam holds the notification.
-  if (LOWORD(lparam) == WM_LBUTTONUP) {
-    // Clicking the tray icon dismisses any active card.
-    if (IsShowing()) {
-      OnDismiss();
-    }
+void TrayPillManager::FireShown() {
+  auto callback = std::move(on_shown_);
+  on_shown_ = nullptr;
+  if (callback) {
+    callback();
   }
+}
+
+void TrayPillManager::FireHidden() {
+  on_shown_ = nullptr;
+  auto callback = std::move(on_hidden_);
+  on_hidden_ = nullptr;
+  if (callback) {
+    callback();
+  }
+}
+
+void TrayPillManager::HandleTrayMessage(WPARAM wparam, LPARAM lparam) {
+  // The tray icon is passive on macOS (the status item has no click handler),
+  // so no action is taken here beyond acknowledging the notification.
 }
 
 void TrayPillManager::AdvanceFrame() {
@@ -188,7 +201,7 @@ void TrayPillManager::AdvanceFrame() {
 
   int frame_count = sequence_.frame_count();
   if (frame_count == 0) {
-    OnDismiss();
+    Dismiss();
     return;
   }
 
@@ -200,7 +213,7 @@ void TrayPillManager::AdvanceFrame() {
     }
   } else {
     has_finished_ = true;
-    OnDismiss();
+    Dismiss();
   }
 }
 
@@ -259,14 +272,6 @@ void TrayPillManager::PositionCardUnderTray() {
   }
 
   card_window_.SetPosition(x, y);
-}
-
-void TrayPillManager::OnDismiss() {
-  auto callback = std::move(on_dismissed_);
-  Dismiss();
-  if (callback) {
-    callback();
-  }
 }
 
 }  // namespace keti
