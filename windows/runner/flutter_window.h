@@ -8,6 +8,7 @@
 
 #include <memory>
 
+#include "compliance_card_manager.h"
 #include "cursor_pill_manager.h"
 #include "island_manager.h"
 #include "mouse_shake_detector.h"
@@ -45,11 +46,16 @@ class FlutterWindow : public Win32Window {
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> notch_channel_;
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> cursor_channel_;
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> tray_channel_;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
+      compliance_channel_;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
+      session_channel_;
 
   // Native managers for each reminder presentation type.
   keti::IslandManager island_manager_;
   keti::CursorPillManager cursor_pill_manager_;
   keti::TrayPillManager tray_pill_manager_;
+  keti::ComplianceCardManager compliance_card_manager_;
 
   // Detects a quick mouse shake while a reminder overlay is showing.
   keti::MouseShakeDetector mouse_shake_detector_;

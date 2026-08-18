@@ -1,6 +1,11 @@
 #include "overlay_window.h"
 
+#include <algorithm>
+#include <cstring>
+
 #include <windowsx.h>
+
+#pragma comment(lib, "msimg32.lib")  // AlphaBlend
 
 namespace keti {
 
@@ -8,9 +13,26 @@ namespace {
 
 constexpr wchar_t kBaseClassName[] = L"KetiOverlayWindow";
 
+// Inset for the frame inside a rounded background so the animation doesn't
+// touch the rounded corners.
+constexpr int kBackgroundPadding = 8;
+
 int GenerateClassId() {
   static int counter = 0;
   return ++counter;
+}
+
+// Fills a 32bpp premultiplied-alpha BGRA buffer with opaque black at |alpha|
+// (RGB stays 0 since black premultiplies to 0).
+void FillPremultipliedBlack(void* bits, int width, int height, BYTE alpha) {
+  unsigned char* px = static_cast<unsigned char*>(bits);
+  for (int i = 0; i < width * height; ++i) {
+    px[0] = 0;      // B
+    px[1] = 0;      // G
+    px[2] = 0;      // R
+    px[3] = alpha;  // A
+    px += 4;
+  }
 }
 
 }  // namespace
@@ -116,13 +138,16 @@ void OverlayWindow::Show() {
     return;
   }
 
-  UINT flags = SWP_SHOWWINDOW | SWP_NOACTIVATE | SWP_FRAMECHANGED;
+  // SWP_NOMOVE | SWP_NOSIZE preserve the position chosen via SetPosition
+  // (top-center for the island, cursor-relative for the cursor pill, top-right
+  // for the tray pill) — without them this resets the window to (0, 0).
+  UINT flags = SWP_SHOWWINDOW | SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_NOMOVE |
+               SWP_NOSIZE;
   if (!topmost_) {
     flags |= SWP_NOZORDER;
   }
 
-  SetWindowPos(hwnd_, topmost_ ? HWND_TOPMOST : nullptr,
-               0, 0, width_, height_, flags);
+  SetWindowPos(hwnd_, topmost_ ? HWND_TOPMOST : nullptr, 0, 0, 0, 0, flags);
 }
 
 void OverlayWindow::Hide() {
@@ -172,25 +197,97 @@ void OverlayWindow::UpdateLayeredContent(HDC source_dc,
     return;
   }
 
-  POINT dst_pos = {0, 0};
+  const bool needs_scaling =
+      source_width > 0 && source_height > 0 &&
+      (source_width != width_ || source_height != height_);
+
+  // Compose a window-sized bitmap whenever a pill background is requested or
+  // the frame must be scaled (UpdateLayeredWindow does neither).
+  HDC blit_dc = source_dc;
+  HBITMAP composed_bitmap = nullptr;
+  HGDIOBJ old_composed = nullptr;
+
+  if (has_background_ || needs_scaling) {
+    BITMAPINFO bmi = {};
+    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth = width_;
+    bmi.bmiHeader.biHeight = -height_;  // top-down DIB
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    void* bits = nullptr;
+    composed_bitmap =
+        CreateDIBSection(screen_dc, &bmi, DIB_RGB_COLORS, &bits, nullptr, 0);
+    if (composed_bitmap != nullptr) {
+      blit_dc = CreateCompatibleDC(screen_dc);
+      old_composed = SelectObject(blit_dc, composed_bitmap);
+
+      // Aspect-fit the frame, inset by the pill padding when a pill background
+      // is drawn so the animation doesn't touch the rounded ends.
+      int fit_width = width_;
+      int fit_height = height_;
+      int fit_x = 0;
+      int fit_y = 0;
+      if (source_width > 0 && source_height > 0) {
+        const int avail_w =
+            has_background_ ? width_ - 2 * kBackgroundPadding : width_;
+        const int avail_h =
+            has_background_ ? height_ - 2 * kBackgroundPadding : height_;
+        const double scale = (std::min)(
+            static_cast<double>(avail_w) / source_width,
+            static_cast<double>(avail_h) / source_height);
+        fit_width = (std::max)(1, static_cast<int>(source_width * scale));
+        fit_height = (std::max)(1, static_cast<int>(source_height * scale));
+        fit_x = (width_ - fit_width) / 2;
+        fit_y = (height_ - fit_height) / 2;
+      }
+
+      if (has_background_) {
+        // Semi-transparent black rounded background, then composite the frame
+        // over it using per-pixel alpha (the frames are premultiplied, which
+        // AC_SRC_OVER expects).
+        FillPremultipliedBlack(bits, width_, height_, background_alpha_);
+        BLENDFUNCTION blend = {AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
+        AlphaBlend(blit_dc, fit_x, fit_y, fit_width, fit_height, source_dc, 0,
+                   0, source_width, source_height, blend);
+      } else {
+        // Transparent background + aspect-fit copy (letterboxed).
+        memset(bits, 0, static_cast<size_t>(width_) * height_ * 4);
+        SetStretchBltMode(blit_dc, COLORONCOLOR);
+        StretchBlt(blit_dc, fit_x, fit_y, fit_width, fit_height, source_dc, 0, 0,
+                   source_width, source_height, SRCCOPY);
+      }
+    }
+  }
+
   SIZE dst_size = {width_, height_};
   POINT src_pos = {0, 0};
-  SIZE src_size = {source_width, source_height};
+  BLENDFUNCTION blend = {AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
 
-  BLENDFUNCTION blend = {};
-  blend.BlendOp = AC_SRC_OVER;
-  blend.SourceConstantAlpha = 255;
-  blend.AlphaFormat = AC_SRC_ALPHA;
+  // Passing nullptr for pptDst keeps the window at its current position.
+  UpdateLayeredWindow(hwnd_, screen_dc, nullptr, &dst_size, blit_dc, &src_pos, 0,
+                      &blend, ULW_ALPHA);
 
-  // If the source bitmap is a different size than the window, scale via
-  // StretchBlt into a temporary compatible DC first. For simplicity and to
-  // match macOS behavior where content size equals window size, we assume
-  // they match and call UpdateLayeredWindow directly.
-  // Passing nullptr for pptDst ensures the window stays at its current position.
-  UpdateLayeredWindow(hwnd_, screen_dc, nullptr, &dst_size,
-                      source_dc, &src_pos, 0, &blend, ULW_ALPHA);
-
+  if (composed_bitmap != nullptr) {
+    SelectObject(blit_dc, old_composed);
+    DeleteObject(composed_bitmap);
+    DeleteDC(blit_dc);
+  }
   ReleaseDC(nullptr, screen_dc);
+}
+
+void OverlayWindow::SetRoundedBackground(int corner_diameter, BYTE alpha) {
+  has_background_ = true;
+  corner_diameter_ = corner_diameter;
+  background_alpha_ = alpha;
+  if (hwnd_ != nullptr) {
+    // Clip the window to the rounded rect so the background has rounded
+    // corners (a capsule uses corner_diameter == window height).
+    HRGN region = CreateRoundRectRgn(0, 0, width_, height_, corner_diameter,
+                                     corner_diameter);
+    SetWindowRgn(hwnd_, region, TRUE);
+  }
 }
 
 LRESULT CALLBACK OverlayWindow::WndProc(HWND hwnd,
