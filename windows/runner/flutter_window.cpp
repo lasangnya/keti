@@ -226,7 +226,7 @@ void FlutterWindow::RegisterReminderChannels() {
             }
             int total_frames = GetIntValue(args, kKeyTotalFrames);
             if (total_frames <= 0) {
-              total_frames = 120;
+              total_frames = 250;
             }
             // Render the notch card 50% larger than the configured size.
             width = static_cast<int>(width * 1.5);
@@ -282,7 +282,7 @@ void FlutterWindow::RegisterReminderChannels() {
             }
             int total_frames = GetIntValue(args, kKeyTotalFrames);
             if (total_frames <= 0) {
-              total_frames = 120;
+              total_frames = 250;
             }
             // Render the cursor pill larger than the configured size
             // (cumulative ×1.872: +20%, +20%, +30%).
@@ -353,7 +353,7 @@ void FlutterWindow::RegisterReminderChannels() {
             }
             int total_frames = GetIntValue(args, kKeyTotalFrames);
             if (total_frames <= 0) {
-              total_frames = 120;
+              total_frames = 250;
             }
 
             tray_pill_manager_.Show(
