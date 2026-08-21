@@ -39,7 +39,7 @@ class ReminderManager extends _$ReminderManager {
 
     // Test-mode displays are fire-and-forget; the study sequence (reminder +
     // compliance card) is driven by the ReminderOrchestrator instead.
-    final visibilityMs = (request.content.totalFrames / 25 * 1000).toInt() + 800;
+    final visibilityMs = (request.content.totalFrames / 30 * 1000).toInt() + 800;
     final reminderId = 'test-${_testReminderCounter++}';
 
     try {

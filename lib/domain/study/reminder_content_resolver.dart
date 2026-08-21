@@ -79,7 +79,7 @@ class ReminderContentResolver {
           notchHeight: _ambientNotchHeight,
           trayWidth: 22,
           trayHeight: 4,
-          totalFrames: 100, // 25 fps → 4 s sequence
+          totalFrames: 250, // 30 fps → ~8.3 s sequence (matches character)
         ),
       );
 
@@ -98,7 +98,7 @@ class ReminderContentResolver {
           notchHeight: _ambientNotchHeight,
           trayWidth: 4,
           trayHeight: 22,
-          totalFrames: 100, // 25 fps → 4 s sequence
+          totalFrames: 250, // 30 fps → ~8.3 s sequence (matches character)
         ),
       );
 
@@ -117,7 +117,7 @@ class ReminderContentResolver {
           notchHeight: _characterNotchHeight,
           trayWidth: 22,
           trayHeight: 22,
-          totalFrames: 250, // 25 fps → 10 s sequence
+          totalFrames: 250, // 30 fps → ~8.3 s sequence
         ),
       );
 
@@ -136,7 +136,7 @@ class ReminderContentResolver {
           notchHeight: _characterNotchHeight,
           trayWidth: 22,
           trayHeight: 22,
-          totalFrames: 250, // 25 fps → 10 s sequence
+          totalFrames: 250, // 30 fps → ~8.3 s sequence
         ),
       );
 }
