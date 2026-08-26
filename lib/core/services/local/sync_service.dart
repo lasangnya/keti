@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../application/study/participant_providers.dart';
 import '../../../domain/study/reminder_event.dart';
 import '../../../domain/study/study_session.dart';
 import '../../services/firebase/firestore_providers.dart';

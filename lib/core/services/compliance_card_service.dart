@@ -1,5 +1,11 @@
 import 'package:flutter/services.dart';
 import 'package:keti/core/constants/platform_channels.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+part 'compliance_card_service.g.dart';
+
+@riverpod
+ComplianceCardService complianceCardService(Ref ref) => ComplianceCardService();
 
 /// Shows the uniform compliance card (plan §5.4): same look, position
 /// (top-right of the screen), and behavior for every reminder, placement,
@@ -8,7 +14,7 @@ import 'package:keti/core/constants/platform_channels.dart';
 class ComplianceCardService {
   static const _channel = MethodChannel(PlatformChannels.complianceCard);
 
-  static Future<void> show({
+  Future<void> show({
     required String reminderId,
     required String question,
     required String button1Text,

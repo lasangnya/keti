@@ -30,8 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_riverpod: ^3.3.2
-  riverpod_annotation: ^4.0.3
+  flutter_riverpod: ^3.4.2
+  riverpod_annotation: ^4.0.6
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   firebase_core: ^4.12.1
@@ -45,8 +45,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  riverpod_generator: ^4.0.4
-  build_runner: ^2.15.0
+  riverpod_generator: ^4.0.8
+  build_runner: ^2.16.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -55,6 +55,10 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   fake_cloud_firestore: ^4.2.0
+  # Declared explicitly so test/helpers/firebase_mock.dart can import the
+  # platform interfaces directly without `depend_on_referenced_packages`.
+  firebase_core_platform_interface: ^8.1.0
+  firebase_auth_platform_interface: ^9.0.6
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

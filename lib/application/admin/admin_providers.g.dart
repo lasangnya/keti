@@ -144,3 +144,87 @@ final class AdminExportServiceProvider
 
 String _$adminExportServiceHash() =>
     r'2feebadbf583ba1db2c41855d39459e58f6c4a8a';
+
+@ProviderFor(participantSchedule)
+final participantScheduleProvider = ParticipantScheduleFamily._();
+
+final class ParticipantScheduleProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<({List<ScheduledReminder> reminders, bool saved})>,
+          ({List<ScheduledReminder> reminders, bool saved}),
+          FutureOr<({List<ScheduledReminder> reminders, bool saved})>
+        >
+    with
+        $FutureModifier<({List<ScheduledReminder> reminders, bool saved})>,
+        $FutureProvider<({List<ScheduledReminder> reminders, bool saved})> {
+  ParticipantScheduleProvider._({
+    required ParticipantScheduleFamily super.from,
+    required (String, int) super.argument,
+  }) : super(
+         retry: null,
+         name: r'participantScheduleProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$participantScheduleHash();
+
+  @override
+  String toString() {
+    return r'participantScheduleProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<({List<ScheduledReminder> reminders, bool saved})>
+  $createElement($ProviderPointer pointer) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<({List<ScheduledReminder> reminders, bool saved})> create(Ref ref) {
+    final argument = this.argument as (String, int);
+    return participantSchedule(ref, argument.$1, argument.$2);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ParticipantScheduleProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$participantScheduleHash() =>
+    r'dfba7b7e6653075b6deb8c9540d60a9f8f94fbc6';
+
+final class ParticipantScheduleFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<({List<ScheduledReminder> reminders, bool saved})>,
+          (String, int)
+        > {
+  ParticipantScheduleFamily._()
+    : super(
+        retry: null,
+        name: r'participantScheduleProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  ParticipantScheduleProvider call(String participantCode, int dayNumber) =>
+      ParticipantScheduleProvider._(
+        argument: (participantCode, dayNumber),
+        from: this,
+      );
+
+  @override
+  String toString() => r'participantScheduleProvider';
+}

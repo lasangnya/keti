@@ -29,10 +29,6 @@ class _ParticipantDetailPageState
   /// 8-entry template when none exists). Rows can be added/removed freely;
   /// [ScheduledReminder.reminderNumber] is renumbered 1..N on save.
   final List<_ScheduleRow> _rows = [];
-  Future<({List<ScheduledReminder> reminders, bool saved})>? _scheduleFuture;
-  int? _futureDay;
-  String? _futureCode;
-  bool _scheduleLoaded = false;
   bool _scheduleWasSaved = false;
   int _scheduleDay = 1;
   String? _message;
@@ -465,21 +461,31 @@ class _ParticipantDetailPageState
   }
 
   Widget _buildScheduleCard(ThemeData theme) {
-    final future = _scheduleFuture;
-    if (future == null ||
-        _futureDay != _scheduleDay ||
-        _futureCode != widget.participantCode) {
-      final repo = ref.read(adminRepositoryProvider);
-      _scheduleFuture = () async {
-        final reminders =
-            await repo.getSchedule(widget.participantCode, _scheduleDay);
-        final saved =
-            await repo.hasSavedSchedule(widget.participantCode, _scheduleDay);
-        return (reminders: reminders, saved: saved);
-      }();
-      _futureDay = _scheduleDay;
-      _futureCode = widget.participantCode;
-    }
+    final scheduleAsync = ref.watch(
+        participantScheduleProvider(widget.participantCode, _scheduleDay));
+
+    // Seed/refresh the editable rows and saved flag once the schedule for the
+    // current (participant, day) resolves. Guarded so a template reset or an
+    // in-progress edit is not clobbered by a late value for a stale day.
+    ref.listen(
+        participantScheduleProvider(widget.participantCode, _scheduleDay),
+        (previous, next) {
+      final data = next.value;
+      if (data == null) return;
+      if (_loadedDay == _scheduleDay &&
+          _loadedCode == widget.participantCode) {
+        return;
+      }
+      _loadRows(data.reminders);
+      _scheduleWasSaved = data.saved;
+    });
+
+    final data = scheduleAsync.value;
+    final showLoading = data == null &&
+        (_rows.isEmpty ||
+            _loadedDay != _scheduleDay ||
+            _loadedCode != widget.participantCode);
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -504,71 +510,54 @@ class _ParticipantDetailPageState
               ],
             ),
             const SizedBox(height: 8),
-            FutureBuilder<({List<ScheduledReminder> reminders, bool saved})>(
-              future: _scheduleFuture,
-              builder: (context, snapshot) {
-                final data = snapshot.data;
-                if (data == null) {
-                  // Waiting for data: show loading unless we already have
-                  // rows for this exact day/participant.
-                  if (_rows.isEmpty ||
-                      _loadedDay != _scheduleDay ||
-                      _loadedCode != widget.participantCode) {
-                    return const Text('Loading schedule…');
-                  }
-                } else if (!_scheduleLoaded ||
-                    _loadedDay != _scheduleDay ||
-                    _loadedCode != widget.participantCode) {
-                  _loadRows(data.reminders);
-                  _scheduleWasSaved = data.saved;
-                }
-                return Column(
-                  children: [
-                    if (!_scheduleWasSaved) ...[
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(8),
-                        margin: const EdgeInsets.only(bottom: 8),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.errorContainer,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'No saved schedule for Day $_scheduleDay yet — '
-                          'this participant cannot start it. '
-                          'Press "Save schedule" to create it.',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onErrorContainer,
-                          ),
-                        ),
-                      ),
-                    ],
-                    for (var i = 0; i < _rows.length; i++)
-                      _buildScheduleRow(theme, i),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        FilledButton(
-                          onPressed: () => _saveSchedule(),
-                          child: const Text('Save schedule'),
-                        ),
-                        const SizedBox(width: 8),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.add, size: 16),
-                          label: const Text('Add entry'),
-                          onPressed: _addRow,
-                        ),
-                        const SizedBox(width: 8),
-                        TextButton(
-                          onPressed: () => _loadRows(kDefaultScheduleTemplate),
-                          child: const Text('Reset to template'),
-                        ),
-                      ],
+            if (showLoading)
+              const Text('Loading schedule…')
+            else ...[
+              if (scheduleAsync.hasError)
+                Text('Failed to load schedule: ${scheduleAsync.error}',
+                    style: theme.textTheme.bodySmall),
+              if (!_scheduleWasSaved) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(8),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'No saved schedule for Day $_scheduleDay yet — '
+                    'this participant cannot start it. '
+                    'Press "Save schedule" to create it.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onErrorContainer,
                     ),
-                  ],
-                );
-              },
-            ),
+                  ),
+                ),
+              ],
+              for (var i = 0; i < _rows.length; i++)
+                _buildScheduleRow(theme, i),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  FilledButton(
+                    onPressed: () => _saveSchedule(),
+                    child: const Text('Save schedule'),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Add entry'),
+                    onPressed: _addRow,
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: () => _loadRows(kDefaultScheduleTemplate),
+                    child: const Text('Reset to template'),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -663,7 +652,6 @@ class _ParticipantDetailPageState
             variantNumber: r.variantNumber,
           ),
       ]);
-    _scheduleLoaded = true;
     _loadedDay = _scheduleDay;
     _loadedCode = widget.participantCode;
   }
@@ -707,6 +695,8 @@ class _ParticipantDetailPageState
     await ref.read(adminParticipantsProvider.notifier).saveSchedule(
         widget.participantCode, _scheduleDay, updated);
     ref.invalidate(participantDetailProvider(widget.participantCode));
+    ref.invalidate(
+        participantScheduleProvider(widget.participantCode, _scheduleDay));
     setState(() {
       _scheduleWasSaved = true;
       _message =

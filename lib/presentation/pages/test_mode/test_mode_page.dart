@@ -42,7 +42,7 @@ class TestModePage extends ConsumerWidget {
               showRadio: false,
               button1Text: 'Trigger hydration card',
               onButton1Pressed: () {
-                ComplianceCardService.show(
+                ref.read(complianceCardServiceProvider).show(
                   reminderId: 'test-compliance-hydration',
                   question: AppStrings.complianceHydrationQuestion,
                   button1Text: AppStrings.complianceButton1,
@@ -52,7 +52,7 @@ class TestModePage extends ConsumerWidget {
               },
               button2Text: 'Trigger break card',
               onButton2Pressed: () {
-                ComplianceCardService.show(
+                ref.read(complianceCardServiceProvider).show(
                   reminderId: 'test-compliance-break',
                   question: AppStrings.complianceBreakQuestion,
                   button1Text: AppStrings.complianceButton1,

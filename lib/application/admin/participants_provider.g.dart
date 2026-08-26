@@ -36,7 +36,7 @@ final class AdminParticipantsProvider
   AdminParticipants create() => AdminParticipants();
 }
 
-String _$adminParticipantsHash() => r'05203f836f2c5cf1acf03ffd9b270d442ef18dc2';
+String _$adminParticipantsHash() => r'7c042da6c22723020e841c8395ffaf7dad77a765';
 
 /// Participant list with admin actions. Refresh after each mutation.
 

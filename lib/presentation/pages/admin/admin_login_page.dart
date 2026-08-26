@@ -83,7 +83,7 @@ class _AdminLoginPageState extends ConsumerState<AdminLoginPage> {
               ],
               const SizedBox(height: 32),
               TextButton(
-                onPressed: () => ResearcherLauncher.closeWindow(),
+                onPressed: () => ref.read(researcherLauncherProvider).closeWindow(),
                 child: const Text('Close window'),
               ),
             ],

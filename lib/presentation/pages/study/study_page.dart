@@ -322,7 +322,7 @@ class _StudyPageState extends ConsumerState<StudyPage> {
               icon: const Icon(Icons.open_in_new),
               label: Text(
                   'Open Session $dayNumber End-of-Session Questionnaire'),
-              onPressed: () => LinkLauncherService.open(
+              onPressed: () => ref.read(linkLauncherServiceProvider).open(
                 QuestionnaireLinks.fill(
                   endLink,
                   participantId: code,
@@ -345,7 +345,7 @@ class _StudyPageState extends ConsumerState<StudyPage> {
             FilledButton.icon(
               icon: const Icon(Icons.open_in_new),
               label: const Text(AppStrings.openEndOfStudyQuestionnaire),
-              onPressed: () => LinkLauncherService.open(
+              onPressed: () => ref.read(linkLauncherServiceProvider).open(
                 QuestionnaireLinks.fill(
                   finalLink,
                   participantId: code,

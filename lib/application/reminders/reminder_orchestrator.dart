@@ -11,7 +11,8 @@ import '../../domain/study/study_enums.dart';
 part 'reminder_orchestrator.g.dart';
 
 @riverpod
-ReminderOrchestrator reminderOrchestrator(Ref ref) => ReminderOrchestrator();
+ReminderOrchestrator reminderOrchestrator(Ref ref) =>
+    ReminderOrchestrator(complianceCard: ref.watch(complianceCardServiceProvider));
 
 /// Lifecycle callbacks for one reminder's full sequence. Each is awaited in
 /// turn; the orchestrator guarantees order and exactly-one-terminal-outcome.
@@ -32,6 +33,11 @@ typedef ReminderOutcomeCallback = Future<void> Function(String action);
 /// This is the single place the sequence exists — study sessions and the
 /// (journal-only) test mode both go through it, so behavior can't diverge.
 class ReminderOrchestrator {
+  ReminderOrchestrator({ComplianceCardService? complianceCard})
+      : _complianceCard = complianceCard ?? ComplianceCardService();
+
+  final ComplianceCardService _complianceCard;
+
   Future<void> runReminderSequence({
     required String reminderId,
     required ReminderContent content,
@@ -82,7 +88,7 @@ class ReminderOrchestrator {
 
       await Future.delayed(Duration(milliseconds: cardDelayMs));
 
-      await ComplianceCardService.show(
+      await _complianceCard.show(
         reminderId: reminderId,
         question: question,
         button1Text: button1Text,

@@ -27,13 +27,13 @@ void main() {
     });
 
     test('launch writes the marker and goes through open -n', () async {
-      final ok = await ResearcherLauncher.launch();
+      final ok = await ResearcherLauncher().launch();
       expect(ok, isA<bool>());
     });
 
     test('closeWindow invokes the session-lifecycle channel without throwing',
         () async {
-      await ResearcherLauncher.closeWindow();
+      await ResearcherLauncher().closeWindow();
     });
   });
 }
