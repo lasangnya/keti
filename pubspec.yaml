@@ -55,6 +55,10 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   fake_cloud_firestore: ^4.2.0
+  # Declared explicitly so test/helpers/firebase_mock.dart can import the
+  # platform interfaces directly without `depend_on_referenced_packages`.
+  firebase_core_platform_interface: ^8.1.0
+  firebase_auth_platform_interface: ^9.0.6
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

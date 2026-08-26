@@ -19,7 +19,7 @@ void main() {
       expect((c.cursorOffsetX, c.cursorOffsetY), (-10.0, -30.0));
       expect((c.notchWidth, c.notchHeight), (400.0, 100.0));
       expect((c.trayWidth, c.trayHeight), (22.0, 4.0));
-      expect(c.totalFrames, 100);
+      expect(c.totalFrames, 250);
       expect(resolved.fallbackPlacements, {Placement.systemTray});
     });
 
@@ -34,7 +34,7 @@ void main() {
       expect((c.cursorOffsetX, c.cursorOffsetY), (20.0, -55.0));
       expect((c.notchWidth, c.notchHeight), (400.0, 100.0));
       expect((c.trayWidth, c.trayHeight), (4.0, 22.0));
-      expect(c.totalFrames, 100);
+      expect(c.totalFrames, 250);
       expect(resolved.fallbackPlacements, {Placement.systemTray});
     });
 
