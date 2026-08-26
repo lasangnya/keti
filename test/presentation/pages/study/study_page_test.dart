@@ -89,7 +89,7 @@ void main() {
 
   /// Advances the tutorial from Welcome to the Participant-ID step.
   Future<void> continueWelcome(WidgetTester tester) async {
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.text('Begin'));
     await tester.pumpAndSettle();
   }
 
@@ -105,7 +105,10 @@ void main() {
         (tester) async {
       await pumpStudyPage(tester);
       expect(find.text('Guidelines'), findsOneWidget);
-      expect(find.text('Welcome to the health-reminder study'), findsOneWidget);
+      expect(
+        find.text('Welcome to Keti'),
+        findsOneWidget,
+      );
       expect(find.byType(TextField), findsNothing);
 
       await continueWelcome(tester);
@@ -153,10 +156,6 @@ void main() {
       await tester.ensureVisible(find.text('Next'));
       await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
-      expect(find.text('Respond naturally'), findsOneWidget);
-      await tester.ensureVisible(find.text('Next'));
-      await tester.tap(find.text('Next'));
-      await tester.pumpAndSettle();
       expect(find.textContaining('dismiss a reminder quickly'), findsOneWidget);
       await tester.ensureVisible(find.text('Next'));
       await tester.tap(find.text('Next'));
@@ -185,7 +184,10 @@ void main() {
       // Back from the ID step returns to Welcome.
       await tester.tap(find.text('Back'));
       await tester.pumpAndSettle();
-      expect(find.text('Welcome to the health-reminder study'), findsOneWidget);
+      expect(
+        find.text('Welcome to Keti'),
+        findsOneWidget,
+      );
 
       // Forward again, submit a code, then Back from Prepare returns to the
       // ID step with the entered code still in the field.

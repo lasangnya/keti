@@ -46,14 +46,30 @@ class AppStrings {
 
   // ── In-app participant tutorial (design/in_app_participant_tutorial_v2.md) ──
   // Screen 1 — Welcome
-  static const String tutorialWelcomeTitle = 'Welcome to the health-reminder study';
+  static const String tutorialWelcomeTitle = 'Welcome to Keti';
   static const String tutorialWelcomeBody =
-      'Thank you for taking part.\n\n'
-      'In this study, you will use a prototype that provides occasional '
-      'on-screen reminders to support hydration and short movement breaks '
-      'during normal computer work.\n\n'
-      'The session is designed to fit around your usual work. There are no '
-      'right or wrong ways to react to reminders.';
+      'Keti is a health-reminder app designed to deliver brief on-screen '
+      'prompts during computer work.\n\n'
+      'During this session, continue with your usual computer activities. You '
+      'may respond to reminders in whatever way feels natural to you—there '
+      'are no right or wrong responses. click begin when you\'re ready.';
+  static const String tutorialBeginLabel = 'Begin';
+
+  // Screen 1 — "About the name" info card
+  static const String aboutNameTitle = 'About the name';
+  static const String aboutNameWord = 'කෙටි · Keti';
+  static const String aboutNamePronunciation = 'Pronounced: keh-ti';
+  static const String aboutNameBody =
+      'Keti (කෙටි) is a Sinhala word meaning “short” or “brief.” Sinhala is '
+      'one of Sri Lanka’s official languages, alongside Tamil.';
+  static const String aboutNamePurpose =
+      'The name reflects Keti’s purpose: to provide concise health reminders '
+      'that can fit naturally into everyday computer work.';
+  static const String aboutNameExamples = 'Examples in Sinhala';
+  static const String aboutNameExample1 =
+      'කෙටි කතාව (keti kathāwa) — a short story';
+  static const String aboutNameExample2 =
+      'කෙටි මඟක් (keti mangak) — a shortcut';
 
   // Screen 2 — Participant ID
   static const String tutorialIdTitle = 'Enter your Participant ID';
@@ -95,31 +111,21 @@ class AppStrings {
       'short movement break. Reminder appearances may vary during the study. '
       'This is an intended part of the prototype evaluation.\n\n'
       'Please continue with your usual work routine. Do not deliberately '
-      'change how you work for the study.';
-
-  // Screen 5 — How to respond to reminders
-  static const String tutorialRespondTitle = 'Respond naturally';
-  static const String tutorialRespondBody =
-      'When a health reminder appears, respond in the way that feels most '
-      'natural in your current situation.\n\n'
-      '• If it is convenient, you may follow the suggestion.\n'
-      '• If you are busy, you may dismiss or ignore it.\n'
-      '• You do not need to take a break or drink water every time.\n\n'
+      'change how you work for the study.\n\n'
       'Shortly after a reminder, you may see a brief response card asking '
-      'whether you followed the suggested action.\n\n'
-      '• Please answer it honestly based on what you actually did.\n'
-      '• You may skip or ignore the card if you are busy.\n'
-      '• There is no "correct" response.\n\n'
-      'Honest, natural reactions are the most helpful for this study.';
+      'whether you followed the suggested action. Please answer it honestly '
+      'based on what you actually did — you may skip or ignore the card if '
+      'you are busy, and there is no "correct" response. Honest, natural '
+      'reactions are the most helpful for this study.';
 
-  // Screen 6 — Quickly dismissing a reminder
+  // Screen 5 — Quickly dismissing a reminder
   static const String tutorialDismissTitle = 'Need to focus? You can dismiss a reminder quickly';
   static const String tutorialDismissBody =
       'If a reminder is bothering your work or appears at an inconvenient '
       'moment, move the mouse rapidly from side to side (a quick shake).\n\n'
       'This will dismiss the reminder so that you can continue your work.';
 
-  // Screen 7 — Safety and comfort
+  // Screen 6 — Safety and comfort
   static const String tutorialSafetyTitle = 'Your comfort comes first';
   static const String tutorialSafetyBody =
       'Only take a movement break if it is safe and comfortable for you. You '
@@ -131,7 +137,7 @@ class AppStrings {
       'the researcher.';
   static const String tutorialReportProblem = 'Report a problem';
 
-  // Screen 8 — Finishing the session
+  // Screen 7 — Finishing the session
   static const String tutorialFinishTitle = 'At the end of the session';
   static const String tutorialFinishBody =
       'When the session timer ends:\n\n'

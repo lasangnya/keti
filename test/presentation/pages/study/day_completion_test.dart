@@ -101,7 +101,7 @@ void main() {
   }
 
   Future<void> enterCode(WidgetTester tester, String code) async {
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.text('Begin'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), code);
     await tester.tap(find.text('Next'));
@@ -256,7 +256,7 @@ void main() {
 
     // Straight to the active session — no intermediate day-2 overview, and
     // never the tutorial welcome.
-    expect(find.text('Welcome to the health-reminder study'), findsNothing);
+    expect(find.text('Welcome to Keti'), findsNothing);
     expect(find.text('SESSION 2 ACTIVE'), findsOneWidget);
     expect(find.text('Participant ID : P001'), findsOneWidget);
   });
