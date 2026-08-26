@@ -74,16 +74,27 @@ class _StudyPageState extends ConsumerState<StudyPage> {
     // status + Exit button), so it renders outside the shared page scaffold.
     if (session.active) return _buildSessionView(context, session);
 
+    if (showingTutorial) {
+      // The tutorial fills the window so its action bar is pinned at the
+      // bottom; it owns its own scrolling. Day overview and completion keep
+      // the page-scroll layout below.
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          PageTitle(title: AppStrings.guidelines),
+          Expanded(
+            child: ParticipantTutorial(onStartSession: _startSession),
+          ),
+        ],
+      );
+    }
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          PageTitle(title: showingTutorial ? AppStrings.guidelines : AppStrings.study),
-          if (!entry.isReady)
-            ParticipantTutorial(onStartSession: _startSession)
-          else if (!tutorialSeen && !session.active && !session.completed)
-            ParticipantTutorial(onStartSession: _startSession)
-          else if (session.completed || entry.dayAlreadyCompleted)
+          PageTitle(title: AppStrings.study),
+          if (session.completed || entry.dayAlreadyCompleted)
             _buildCompletedView(context, entry, session)
           else
             _buildDayOverview(context, entry, session),

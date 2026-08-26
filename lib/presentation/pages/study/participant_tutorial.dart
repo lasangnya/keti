@@ -28,7 +28,6 @@ enum _Step {
   idEntry,
   prepare,
   during,
-  respond,
   dismiss,
   safety,
   finish,
@@ -57,35 +56,42 @@ class _ParticipantTutorialState extends ConsumerState<ParticipantTutorial> {
     final entry = ref.watch(participantEntryProvider);
     _prefillIdIfNeeded(step);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 640),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _ProgressHeader(step: step),
-            const SizedBox(height: 24),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _titleFor(step),
-                      style: theme.textTheme.titleLarge
-                          ?.copyWith(fontWeight: FontWeight.bold),
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ProgressHeader(step: step),
+                  const SizedBox(height: 24),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _titleFor(step),
+                            style: theme.textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 16),
+                          ..._bodyFor(step, theme, entry),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 16),
-                    ..._bodyFor(step, theme, entry),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
-      ),
+        _footer(step, entry),
+      ],
     );
   }
 
@@ -94,7 +100,6 @@ class _ParticipantTutorialState extends ConsumerState<ParticipantTutorial> {
         _Step.idEntry => AppStrings.tutorialIdTitle,
         _Step.prepare => AppStrings.tutorialPrepareTitle,
         _Step.during => AppStrings.tutorialDuringTitle,
-        _Step.respond => AppStrings.tutorialRespondTitle,
         _Step.dismiss => AppStrings.tutorialDismissTitle,
         _Step.safety => AppStrings.tutorialSafetyTitle,
         _Step.finish => AppStrings.tutorialFinishTitle,
@@ -110,10 +115,7 @@ class _ParticipantTutorialState extends ConsumerState<ParticipantTutorial> {
         return [
           Text(AppStrings.tutorialWelcomeBody, style: theme.textTheme.bodyMedium),
           const SizedBox(height: 20),
-          _stepButtons(
-            nextLabel: AppStrings.nextLabel,
-            onNext: () => setState(() => _step = _Step.idEntry),
-          ),
+          const _AboutNameCard(),
         ];
 
       case _Step.idEntry:
@@ -139,12 +141,6 @@ class _ParticipantTutorialState extends ConsumerState<ParticipantTutorial> {
             ),
             onSubmitted: (_) => _submitId(entry),
           ),
-          const SizedBox(height: 16),
-          _stepButtons(
-            nextLabel: AppStrings.nextLabel,
-            onNext: () => _submitId(entry),
-            backTo: _Step.welcome,
-          ),
         ];
 
       case _Step.prepare:
@@ -162,68 +158,27 @@ class _ParticipantTutorialState extends ConsumerState<ParticipantTutorial> {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
           ],
-          _stepButtons(
-            nextLabel: AppStrings.tutorialPreStudyDone,
-            onNext: () => setState(() => _step = _Step.during),
-            backTo: _Step.idEntry,
-          ),
         ];
 
       case _Step.during:
         return [
           Text(AppStrings.tutorialDuringBody, style: theme.textTheme.bodyMedium),
-          const SizedBox(height: 20),
-          _stepButtons(
-            nextLabel: AppStrings.nextLabel,
-            onNext: () => setState(() => _step = _Step.respond),
-            backTo: _Step.prepare,
-          ),
-        ];
-
-      case _Step.respond:
-        return [
-          Text(AppStrings.tutorialRespondBody, style: theme.textTheme.bodyMedium),
-          const SizedBox(height: 20),
-          _stepButtons(
-            nextLabel: AppStrings.nextLabel,
-            onNext: () => setState(() => _step = _Step.dismiss),
-            backTo: _Step.during,
-          ),
         ];
 
       case _Step.dismiss:
         return [
           Text(AppStrings.tutorialDismissBody, style: theme.textTheme.bodyMedium),
-          const SizedBox(height: 20),
-          _stepButtons(
-            nextLabel: AppStrings.nextLabel,
-            onNext: () => setState(() => _step = _Step.safety),
-            backTo: _Step.respond,
-          ),
         ];
 
       case _Step.safety:
         return [
           Text(AppStrings.tutorialSafetyBody, style: theme.textTheme.bodyMedium),
-          const SizedBox(height: 20),
-          _stepButtons(
-            nextLabel: AppStrings.nextLabel,
-            onNext: () => setState(() => _step = _Step.finish),
-            backTo: _Step.dismiss,
-          ),
         ];
 
       case _Step.finish:
         return [
           Text(AppStrings.tutorialFinishBody, style: theme.textTheme.bodyMedium),
-          const SizedBox(height: 20),
-          _stepButtons(
-            nextLabel: AppStrings.startSession,
-            onNext: _startSession,
-            backTo: _Step.safety,
-          ),
         ];
     }
   }
@@ -255,6 +210,73 @@ class _ParticipantTutorialState extends ConsumerState<ParticipantTutorial> {
           ),
         ),
       ],
+    );
+  }
+
+  /// The step's primary/back action row, rendered in the fixed footer.
+  Widget _actionButtons(_Step step, ParticipantEntryState entry) {
+    switch (step) {
+      case _Step.welcome:
+        return _stepButtons(
+          nextLabel: AppStrings.tutorialBeginLabel,
+          onNext: () => setState(() => _step = _Step.idEntry),
+        );
+      case _Step.idEntry:
+        return _stepButtons(
+          nextLabel: AppStrings.nextLabel,
+          onNext: () => _submitId(entry),
+          backTo: _Step.welcome,
+        );
+      case _Step.prepare:
+        return _stepButtons(
+          nextLabel: AppStrings.tutorialPreStudyDone,
+          onNext: () => setState(() => _step = _Step.during),
+          backTo: _Step.idEntry,
+        );
+      case _Step.during:
+        return _stepButtons(
+          nextLabel: AppStrings.nextLabel,
+          onNext: () => setState(() => _step = _Step.dismiss),
+          backTo: _Step.prepare,
+        );
+      case _Step.dismiss:
+        return _stepButtons(
+          nextLabel: AppStrings.nextLabel,
+          onNext: () => setState(() => _step = _Step.safety),
+          backTo: _Step.during,
+        );
+      case _Step.safety:
+        return _stepButtons(
+          nextLabel: AppStrings.nextLabel,
+          onNext: () => setState(() => _step = _Step.finish),
+          backTo: _Step.dismiss,
+        );
+      case _Step.finish:
+        return _stepButtons(
+          nextLabel: AppStrings.startSession,
+          onNext: _startSession,
+          backTo: _Step.safety,
+        );
+    }
+  }
+
+  /// Fixed bottom action bar — kept outside the scroll view so the primary
+  /// action stays visible regardless of window size or content length.
+  Widget _footer(_Step step, ParticipantEntryState entry) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(32, 12, 32, 16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: theme.colorScheme.outlineVariant),
+        ),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: _actionButtons(step, entry),
+      ),
     );
   }
 
@@ -299,18 +321,92 @@ class _ParticipantTutorialState extends ConsumerState<ParticipantTutorial> {
   }
 }
 
+/// "About the name" callout shown on the welcome step — explains the Sinhala
+/// origin of "keti" (කෙටි, "short"/"brief"). Tinted with the seed color so it
+/// reads as a supplementary note rather than primary tutorial content.
+class _AboutNameCard extends StatelessWidget {
+  const _AboutNameCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.translate, size: 18, color: scheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                AppStrings.aboutNameTitle,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            AppStrings.aboutNameWord,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            AppStrings.aboutNamePronunciation,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(AppStrings.aboutNameBody, style: theme.textTheme.bodyMedium),
+          const SizedBox(height: 8),
+          Text(AppStrings.aboutNamePurpose, style: theme.textTheme.bodyMedium),
+          const SizedBox(height: 16),
+          Text(
+            AppStrings.aboutNameExamples,
+            style: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '• ${AppStrings.aboutNameExample1}',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '• ${AppStrings.aboutNameExample2}',
+            style: theme.textTheme.bodyMedium,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ProgressHeader extends StatelessWidget {
   const _ProgressHeader({required this.step});
 
   final _Step step;
 
-  static const _total = 8;
+  static const _total = 7;
   static const _labels = [
     'Welcome',
     'Your Participant ID',
     'Before you begin',
     'During the session',
-    'Respond naturally',
     'Dismiss a reminder',
     'Safety and comfort',
     'Finishing the session',
