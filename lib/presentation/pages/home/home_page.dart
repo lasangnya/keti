@@ -4,7 +4,7 @@ import '../../../core/services/researcher_launcher.dart';
 import '../study/study_page.dart';
 
 /// Participant shell (study build): the Study flow is the only content —
-/// no side panel. The Researcher Access entry stays pinned bottom-right and
+/// no side panel. The Researcher Access entry stays pinned top-right and
 /// opens the admin console in a SEPARATE app window/process so participant
 /// and researcher run in parallel.
 class KetiHomePage extends ConsumerStatefulWidget {
@@ -42,7 +42,7 @@ class _KetiHomePageState extends ConsumerState<KetiHomePage> {
           children: [
             const Positioned.fill(child: StudyPage()),
             Align(
-              alignment: Alignment.bottomRight,
+              alignment: Alignment.topRight,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: TextButton(

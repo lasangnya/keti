@@ -24,12 +24,12 @@ void main() {
     expect(find.byType(StudyPage), findsOneWidget);
   });
 
-  testWidgets('researcher access entry is pinned bottom-right', (tester) async {
+  testWidgets('researcher access entry is pinned top-right', (tester) async {
     await pumpHome(tester);
     expect(find.text('Researcher Access'), findsOneWidget);
     final element = tester.element(find.widgetWithText(TextButton, 'Researcher Access'));
     final align = element.findAncestorWidgetOfExactType<Align>();
     expect(align, isNotNull);
-    expect(align!.alignment, Alignment.bottomRight);
+    expect(align!.alignment, Alignment.topRight);
   });
 }
