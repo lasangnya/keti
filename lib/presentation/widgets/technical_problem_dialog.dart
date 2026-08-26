@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_strings.dart';
 import '../../core/services/link_launcher_service.dart';
@@ -23,7 +24,9 @@ Future<void> showTechnicalProblemDialog(BuildContext context) {
           icon: const Icon(Icons.mail_outline, size: 16),
           label: const Text(AppStrings.technicalProblemMailto),
           onPressed: () {
-            LinkLauncherService.open('mailto:lasan@uni-bremen.de');
+            ProviderScope.containerOf(context)
+                .read(linkLauncherServiceProvider)
+                .open('mailto:lasan@uni-bremen.de');
           },
         ),
       ],

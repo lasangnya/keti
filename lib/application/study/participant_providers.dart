@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/services/firebase/firestore_providers.dart';
 import '../../core/services/firestore/firestore_participant_repository.dart';
-import '../../core/services/local/csv_store.dart';
 import '../../core/services/local/local_store.dart';
 import '../../core/services/study/participant_repository.dart';
 
@@ -20,6 +19,3 @@ ParticipantRepository participantRepository(Ref ref) =>
 @Riverpod(keepAlive: true)
 Future<LocalStore> localStore(Ref ref) async =>
     LocalStore(await SharedPreferences.getInstance());
-
-@riverpod
-CsvStore csvStore(Ref ref) => CsvStore();

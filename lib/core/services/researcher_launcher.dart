@@ -2,7 +2,14 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
 import '../constants/platform_channels.dart';
+
+part 'researcher_launcher.g.dart';
+
+@riverpod
+ResearcherLauncher researcherLauncher(Ref ref) => ResearcherLauncher();
 
 /// Launches a second instance of this app in **researcher mode** so the
 /// participant and researcher can run in parallel windows/processes.
@@ -77,7 +84,7 @@ class ResearcherLauncher {
   /// activation; Windows/Linux spawn the same executable directly.
   ///
   /// Returns false (and logs) when the launch fails.
-  static Future<bool> launch() async {
+  Future<bool> launch() async {
     if (kIsWeb) return false;
     try {
       // Marker first — the new instance reads it before/independent of any
@@ -168,7 +175,7 @@ class ResearcherLauncher {
   /// "Close window" action — closing the only window terminates this
   /// dedicated researcher process). Best-effort: no-op where the native
   /// handler is missing (e.g. test host).
-  static Future<void> closeWindow() async {
+  Future<void> closeWindow() async {
     if (kIsWeb) return;
     try {
       await const MethodChannel(PlatformChannels.sessionLifecycle)

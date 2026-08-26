@@ -132,7 +132,7 @@ class _LinksSettingsPageState extends ConsumerState<LinksSettingsPage> {
             onPressed: () {
               final template = controller.text.trim();
               if (template.isEmpty) return;
-              LinkLauncherService.open(StudyLinkTemplates.fill(
+              ref.read(linkLauncherServiceProvider).open(StudyLinkTemplates.fill(
                 template,
                 participantId: 'P000',
               ));

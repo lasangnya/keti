@@ -20,7 +20,7 @@ class _KetiHomePageState extends ConsumerState<KetiHomePage> {
   Future<void> _openResearcherWindow() async {
     if (_launching) return;
     setState(() => _launching = true);
-    final ok = await ResearcherLauncher.launch();
+    final ok = await ref.read(researcherLauncherProvider).launch();
     if (!mounted) return;
     setState(() => _launching = false);
     ScaffoldMessenger.of(context).showSnackBar(

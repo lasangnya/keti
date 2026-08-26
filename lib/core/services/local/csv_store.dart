@@ -2,11 +2,19 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../domain/study/csv_codec.dart';
 import '../../../domain/study/event_log_entry.dart';
 import '../../../domain/study/reminder_event.dart';
 import '../../../domain/study/study_session.dart';
+
+part 'csv_store.g.dart';
+
+/// Default [CsvStore] instance. Lives here in the data layer so core services
+/// (e.g. [SyncService]) can depend on it without reaching up into application.
+@riverpod
+CsvStore csvStore(Ref ref) => CsvStore();
 
 /// Per-session on-device CSV store (plan §6.4).
 ///
