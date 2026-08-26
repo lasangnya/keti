@@ -92,9 +92,9 @@ class ResearcherLauncher {
       File(markerPath).writeAsStringSync('1');
 
       if (Platform.isMacOS) {
-        return _launchMacos();
+        return await _launchMacos();
       }
-      return _launchNative();
+      return await _launchNative();
     } catch (e) {
       debugPrint('ResearcherLauncher: failed to launch: $e');
       _clearMarker();
