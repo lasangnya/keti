@@ -280,28 +280,32 @@ void FlutterWindow::RegisterReminderChannels() {
             if (height <= 0) {
               height = 150;
             }
+            // Cursor-pill size and position come from the resolver config. The
+            // window is positioned by its top-left corner; offsetY = -height/2
+            // vertically centers it on the cursor (Windows screen Y grows
+            // downward, so the sign matches macOS).
+            int offset_x = static_cast<int>(GetDoubleValue(args, kKeyOffsetX));
+            int offset_y = static_cast<int>(GetDoubleValue(args, kKeyOffsetY));
+            // Windows-only override: cursor pills render 50% larger than the
+            // macOS baseline, with offsetY scaled by the same 1.5x to preserve
+            // -height/2 centering. The gap differs by style: ambient doubles
+            // its resolver gap (12 → 24), character gets a fixed 24px gap.
+            const bool is_ambient = resource_name.rfind(L"ambient_", 0) == 0;
+            const bool is_character =
+                resource_name.rfind(L"character_", 0) == 0;
+            if (is_ambient || is_character) {
+              width = static_cast<int>(width * 1.5);
+              height = static_cast<int>(height * 1.5);
+              offset_y = static_cast<int>(offset_y * 1.5);
+            }
+            if (is_ambient) {
+              offset_x *= 2;
+            } else if (is_character) {
+              offset_x = 24;
+            }
             int total_frames = GetIntValue(args, kKeyTotalFrames);
             if (total_frames <= 0) {
               total_frames = 250;
-            }
-            // Render the cursor pill larger than the configured size
-            // (cumulative ×1.872: +20%, +20%, +30%).
-            width = static_cast<int>(width * 1.872);
-            height = static_cast<int>(height * 1.872);
-            // Per-style cursor-pill positioning (overrides the config offsets
-            // on Windows). Default (character): right of the cursor, vertically
-            // centered on it. The window is positioned by its top-left corner,
-            // so a negative half-height Y offset centers it on the cursor.
-            int offset_x = 20;
-            int offset_y = -(height / 2);
-            if (resource_name.find(L"ambient_break") == 0) {
-              // Break ambient: closer to the cursor, and lowered a bit more.
-              offset_x = 8;
-              offset_y = -(height / 4);
-            } else if (resource_name.find(L"ambient_hydration") == 0) {
-              // Hydration ambient: more gap to the cursor, and lowered a bit.
-              offset_x = 32;
-              offset_y = -(height / 3);
             }
 
             cursor_pill_manager_.Show(

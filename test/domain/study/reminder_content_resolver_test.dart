@@ -15,10 +15,10 @@ void main() {
       expect(c.cursorResource, 'ambient_break_cursor_pill');
       expect(c.notchResource, 'ambient_break_notch_card');
       expect(c.trayResource, 'ambient_break_cursor_pill');
-      expect((c.cursorWidth, c.cursorHeight), (86.0, 15.0));
-      expect((c.cursorOffsetX, c.cursorOffsetY), (-10.0, -30.0));
+      expect((c.cursorWidth, c.cursorHeight), (48.0, 48.0));
+      expect((c.cursorOffsetX, c.cursorOffsetY), (12.0, -24.0));
       expect((c.notchWidth, c.notchHeight), (400.0, 100.0));
-      expect((c.trayWidth, c.trayHeight), (22.0, 4.0));
+      expect((c.trayWidth, c.trayHeight), (22.0, 22.0));
       expect(c.totalFrames, 250);
       expect(resolved.fallbackPlacements, {Placement.systemTray});
     });
@@ -30,10 +30,10 @@ void main() {
       expect(c.cursorResource, 'ambient_hydration_cursor_pill');
       expect(c.notchResource, 'ambient_hydration_notch_card');
       expect(c.trayResource, 'ambient_hydration_cursor_pill');
-      expect((c.cursorWidth, c.cursorHeight), (15.0, 86.0));
-      expect((c.cursorOffsetX, c.cursorOffsetY), (20.0, -55.0));
+      expect((c.cursorWidth, c.cursorHeight), (48.0, 48.0));
+      expect((c.cursorOffsetX, c.cursorOffsetY), (12.0, -24.0));
       expect((c.notchWidth, c.notchHeight), (400.0, 100.0));
-      expect((c.trayWidth, c.trayHeight), (4.0, 22.0));
+      expect((c.trayWidth, c.trayHeight), (22.0, 22.0));
       expect(c.totalFrames, 250);
       expect(resolved.fallbackPlacements, {Placement.systemTray});
     });
