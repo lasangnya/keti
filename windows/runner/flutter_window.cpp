@@ -280,12 +280,29 @@ void FlutterWindow::RegisterReminderChannels() {
             if (height <= 0) {
               height = 150;
             }
-            // Cursor-pill size and position come straight from the resolver
-            // config, matching macOS. The window is positioned by its top-left
-            // corner; offsetY = -height/2 vertically centers it on the cursor
-            // (Windows screen Y grows downward, so the sign matches macOS).
+            // Cursor-pill size and position come from the resolver config. The
+            // window is positioned by its top-left corner; offsetY = -height/2
+            // vertically centers it on the cursor (Windows screen Y grows
+            // downward, so the sign matches macOS).
             int offset_x = static_cast<int>(GetDoubleValue(args, kKeyOffsetX));
             int offset_y = static_cast<int>(GetDoubleValue(args, kKeyOffsetY));
+            // Windows-only override: cursor pills render 50% larger than the
+            // macOS baseline, with offsetY scaled by the same 1.5x to preserve
+            // -height/2 centering. The gap differs by style: ambient doubles
+            // its resolver gap (12 → 24), character gets a fixed 24px gap.
+            const bool is_ambient = resource_name.rfind(L"ambient_", 0) == 0;
+            const bool is_character =
+                resource_name.rfind(L"character_", 0) == 0;
+            if (is_ambient || is_character) {
+              width = static_cast<int>(width * 1.5);
+              height = static_cast<int>(height * 1.5);
+              offset_y = static_cast<int>(offset_y * 1.5);
+            }
+            if (is_ambient) {
+              offset_x *= 2;
+            } else if (is_character) {
+              offset_x = 24;
+            }
             int total_frames = GetIntValue(args, kKeyTotalFrames);
             if (total_frames <= 0) {
               total_frames = 250;
