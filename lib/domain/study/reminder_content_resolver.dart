@@ -64,6 +64,10 @@ class ReminderContentResolver {
     Placement.systemTray,
   };
 
+  // Ambient cursor pills: a square window matching the square frame assets
+  // (renders at 48px). Vertically centered on the cursor
+  // (offsetY = -height/2) and offset a little to the right of the cursor
+  // (offsetX = 12).
   ResolvedReminderContent _ambientBreak() => ResolvedReminderContent(
         fallbackPlacements: _ambientFallbacks,
         content: const ReminderContent(
@@ -71,10 +75,10 @@ class ReminderContentResolver {
           cursorResource: "ambient_break_cursor_pill",
           notchResource: "ambient_break_notch_card",
           trayResource: "ambient_break_cursor_pill",
-          cursorWidth: 86,
-          cursorHeight: 15,
-          cursorOffsetX: -10,
-          cursorOffsetY: -30,
+          cursorWidth: 48,
+          cursorHeight: 48,
+          cursorOffsetX: 12,
+          cursorOffsetY: -24,
           notchWidth: _ambientNotchWidth,
           notchHeight: _ambientNotchHeight,
           trayWidth: 22,
@@ -90,10 +94,10 @@ class ReminderContentResolver {
           cursorResource: "ambient_hydration_cursor_pill",
           notchResource: "ambient_hydration_notch_card",
           trayResource: "ambient_hydration_cursor_pill",
-          cursorWidth: 15,
-          cursorHeight: 86,
-          cursorOffsetX: 20,
-          cursorOffsetY: -55,
+          cursorWidth: 48,
+          cursorHeight: 48,
+          cursorOffsetX: 12,
+          cursorOffsetY: -24,
           notchWidth: _ambientNotchWidth,
           notchHeight: _ambientNotchHeight,
           trayWidth: 4,
