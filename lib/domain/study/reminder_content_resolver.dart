@@ -82,7 +82,7 @@ class ReminderContentResolver {
           notchWidth: _ambientNotchWidth,
           notchHeight: _ambientNotchHeight,
           trayWidth: 22,
-          trayHeight: 4,
+          trayHeight: 22,
           totalFrames: 250, // 30 fps → ~8.3 s sequence (matches character)
         ),
       );
@@ -100,7 +100,7 @@ class ReminderContentResolver {
           cursorOffsetY: -24,
           notchWidth: _ambientNotchWidth,
           notchHeight: _ambientNotchHeight,
-          trayWidth: 4,
+          trayWidth: 22,
           trayHeight: 22,
           totalFrames: 250, // 30 fps → ~8.3 s sequence (matches character)
         ),
