@@ -33,6 +33,17 @@ class _ParticipantDetailPageState
   int _scheduleDay = 1;
   String? _message;
 
+  /// Sentinel value in the variant dropdown that triggers "+ Add version".
+  static const int _addVersionSentinel = -1;
+
+  /// Per-kind variant ceiling for the dynamic dropdown. Seeded from the
+  /// loaded schedule (via [highestVariantByKind]) so versions added in a
+  /// previous edit are still offered after a reload.
+  final Map<ReminderKind, int> _variantCeilings = {};
+
+  int _variantCeiling(ReminderKind kind) =>
+      _variantCeilings[kind] ?? baseVariantCountFor(kind);
+
   // Links editor state (per-participant on/off switches).
   late bool _preStudyOn;
   late bool _endOfDay1On;
@@ -566,9 +577,15 @@ class _ParticipantDetailPageState
 
   Widget _buildScheduleRow(ThemeData theme, int index) {
     final row = _rows[index];
+    // Wrap (not Row): the variant dropdown widens as versions are added, so
+    // the controls must be allowed to flow onto a second line on narrow
+    // windows instead of overflowing the row.
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 6,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           SizedBox(width: 90, child: Text('No. ${index + 1}')),
           SizedBox(
@@ -584,7 +601,6 @@ class _ParticipantDetailPageState
               ),
             ),
           ),
-          const SizedBox(width: 12),
           DropdownButton<Placement>(
             value: row.placement,
             items: [
@@ -593,7 +609,6 @@ class _ParticipantDetailPageState
             ],
             onChanged: (p) => setState(() => row.placement = p!),
           ),
-          const SizedBox(width: 12),
           DropdownButton<ReminderKind>(
             value: row.kind,
             items: [
@@ -603,21 +618,33 @@ class _ParticipantDetailPageState
             onChanged: (k) {
               setState(() {
                 row.kind = k!;
-                row.variantNumber = row.variantNumber.clamp(
-                    1, maxVariantFor(k)).toInt();
+                row.variantNumber =
+                    row.variantNumber.clamp(1, _variantCeiling(k)).toInt();
               });
             },
           ),
-          const SizedBox(width: 12),
           DropdownButton<int>(
             value: row.variantNumber,
             items: [
-              for (var v = 1; v <= maxVariantFor(row.kind); v++)
+              for (var v = 1; v <= _variantCeiling(row.kind); v++)
                 DropdownMenuItem(value: v, child: Text('v$v')),
+              const DropdownMenuItem(
+                value: _addVersionSentinel,
+                child: Text('+ Add version'),
+              ),
             ],
-            onChanged: (v) => setState(() => row.variantNumber = v!),
+            onChanged: (v) {
+              if (v == _addVersionSentinel) {
+                setState(() {
+                  final next = _variantCeiling(row.kind) + 1;
+                  _variantCeilings[row.kind] = next;
+                  row.variantNumber = next;
+                });
+              } else {
+                setState(() => row.variantNumber = v!);
+              }
+            },
           ),
-          const SizedBox(width: 8),
           IconButton(
             tooltip: 'Remove entry',
             icon: const Icon(Icons.remove_circle_outline, size: 18),
@@ -652,6 +679,17 @@ class _ParticipantDetailPageState
             variantNumber: r.variantNumber,
           ),
       ]);
+
+    // Seed per-kind variant ceilings so versions added in a previous edit
+    // stay selectable after reload (derived from usage — no schema change).
+    final highest = highestVariantByKind(reminders);
+    _variantCeilings
+      ..clear()
+      ..addEntries([
+        for (final k in ReminderKind.values)
+          MapEntry(k, variantCeilingFor(k, highestUsed: highest[k] ?? 0)),
+      ]);
+
     _loadedDay = _scheduleDay;
     _loadedCode = widget.participantCode;
   }
@@ -704,10 +742,6 @@ class _ParticipantDetailPageState
     });
   }
 }
-
-/// Max content-variant counter per kind (hydration 1–5, micro break 1–3).
-int maxVariantFor(ReminderKind kind) =>
-    kind == ReminderKind.hydration ? 5 : 3;
 
 /// One editable schedule row in the admin editor.
 class _ScheduleRow {
