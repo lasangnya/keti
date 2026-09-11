@@ -194,6 +194,14 @@ class _ParticipantDetailPageState
                   foregroundColor: theme.colorScheme.onError),
               onPressed: () => _confirmResetParticipant(context),
             ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.delete_forever_outlined, size: 16),
+              label: const Text('Delete participant'),
+              style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error),
+              onPressed: () => _confirmDeleteParticipant(context),
+            ),
           ],
         ),
       ),
@@ -237,6 +245,47 @@ class _ParticipantDetailPageState
       if (!mounted) return;
       setState(() => _message = 'Participant reset — starts fresh on next '
           'code entry.');
+    }
+  }
+
+  Future<void> _confirmDeleteParticipant(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete participant?'),
+        content: Text(
+            'This permanently removes ${widget.participantCode} and ALL of their '
+            'data from Firebase — schedules, sessions and reminder events. '
+            'The participant code will no longer exist. '
+            'This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text('Delete',
+                style: TextStyle(color: Theme.of(dialogContext).colorScheme.error)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ref
+          .read(adminParticipantsProvider.notifier)
+          .deleteParticipant(widget.participantCode);
+      await ref
+          .read(adminExportServiceProvider)
+          .deleteParticipantExports(widget.participantCode);
+      if (!mounted) return;
+      messenger.showSnackBar(const SnackBar(content: Text('Participant deleted.')));
+      if (!mounted) return;
+      navigator.pop();
     }
   }
 
