@@ -16,6 +16,11 @@ abstract class AdminRepository {
 
   Future<StudyConfig> getConfig();
 
+  /// Replaces the default schedule template in `config/study` — the rows
+  /// copied into every newly created participant's per-day schedule docs.
+  /// The protocol version is preserved.
+  Future<void> saveDefaultSchedule(List<ScheduledReminder> reminders);
+
   /// Reads the global questionnaire link templates (`links/templates`).
   Future<StudyLinkTemplates> getLinkTemplates();
 
@@ -114,6 +119,16 @@ class FirestoreAdminRepository implements AdminRepository {
       );
     }
     return StudyConfig.fromJson(snap.data()!);
+  }
+
+  @override
+  Future<void> saveDefaultSchedule(List<ScheduledReminder> reminders) async {
+    final config = await getConfig();
+    await _firestore.collection('config').doc('study').set({
+      'protocolVersion': config.protocolVersion,
+      'defaultSchedule': reminders.map((r) => r.toJson()).toList(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   @override
