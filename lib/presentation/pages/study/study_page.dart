@@ -192,7 +192,7 @@ class _StudyPageState extends ConsumerState<StudyPage> {
 
   /// Session-active screen: status, remaining-time countdown and the
   /// participant support route, centered in the window. The Exit button sits
-  /// at the bottom-left; it records the exit request and terminates the app.
+  /// at the bottom-left; it asks for confirmation before terminating the app.
   Widget _buildSessionView(BuildContext context, StudySessionState session) {
     final theme = Theme.of(context);
     final s = session.session!;
@@ -252,12 +252,36 @@ class _StudyPageState extends ConsumerState<StudyPage> {
           child: TextButton.icon(
             icon: const Icon(Icons.logout, size: 16),
             label: const Text(AppStrings.exitSession),
-            onPressed: () =>
-                ref.read(sessionControllerProvider.notifier).requestExit(),
+            onPressed: _confirmExit,
           ),
         ),
       ],
     );
+  }
+
+  /// Asks the participant to confirm before ending the app. Declining leaves
+  /// the session running; confirming records the exit and terminates the app.
+  Future<void> _confirmExit() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text(AppStrings.exitConfirmTitle),
+        content: const Text(AppStrings.exitConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text(AppStrings.exitConfirmCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text(AppStrings.exitConfirmConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await ref.read(sessionControllerProvider.notifier).requestExit();
+    }
   }
 
   /// When the session is expected to finish: the last reminder's fire time

@@ -365,7 +365,8 @@ void main() {
       expect(find.text('Exit'), findsOneWidget);
     });
 
-    testWidgets('Exit records the participant exit request', (tester) async {
+    testWidgets('Exit asks for confirmation before recording the exit request',
+        (tester) async {
       final sessionRepo = FakeSessionRepository();
       final store = await mockLocalStore(tutorialSeen: true);
       await pumpStudyPage(
@@ -379,11 +380,41 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('SESSION 1 ACTIVE'), findsOneWidget);
 
+      // Tapping Exit only opens the confirmation dialog — nothing recorded yet.
       await tester.tap(find.text('Exit'));
       await tester.pumpAndSettle();
+      expect(find.text('Exit keti?'), findsOneWidget);
+      expect(sessionRepo.exitMarkCalls, 0);
 
-      // Firestore marker written (the app-termination channel call is mocked).
+      // Confirming records the exit request (the app-termination channel call
+      // is mocked).
+      await tester.tap(find.text('Yes, exit'));
+      await tester.pumpAndSettle();
       expect(sessionRepo.exitMarkCalls, 1);
+    });
+
+    testWidgets('Cancelling the exit dialog keeps the session running',
+        (tester) async {
+      final sessionRepo = FakeSessionRepository();
+      final store = await mockLocalStore(tutorialSeen: true);
+      await pumpStudyPage(
+        tester,
+        localStore: store,
+        sessionRepository: sessionRepo,
+      );
+      await enterCodeAndContinue(tester, 'P001');
+      await tester.ensureVisible(find.text('Start Day 1'));
+      await tester.tap(find.text('Start Day 1'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Exit'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(sessionRepo.exitMarkCalls, 0);
+      expect(find.text('Exit keti?'), findsNothing);
+      expect(find.text('SESSION 1 ACTIVE'), findsOneWidget);
     });
 
     testWidgets('Resume button resumes an unfinished session', (tester) async {
