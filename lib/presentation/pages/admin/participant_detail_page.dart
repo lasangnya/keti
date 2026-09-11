@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../application/admin/admin_providers.dart';
@@ -10,6 +9,7 @@ import '../../../domain/study/scheduled_reminder.dart';
 import '../../../domain/study/study_enums.dart';
 import '../../../domain/study/study_links.dart';
 import '../../../domain/study/study_session.dart';
+import '../../../presentation/widgets/schedule_editor.dart';
 
 /// Per-participant admin: status per day, Activate Day 2, style-order edit
 /// (soft-locked once Day 1 started), schedule editor, CSV download.
@@ -28,7 +28,8 @@ class _ParticipantDetailPageState
   /// Editable schedule rows, seeded from the fetched schedule (or the
   /// 8-entry template when none exists). Rows can be added/removed freely;
   /// [ScheduledReminder.reminderNumber] is renumbered 1..N on save.
-  final List<_ScheduleRow> _rows = [];
+  final List<ScheduleDraft> _rows = [];
+  final VariantCeilings _ceilings = VariantCeilings();
   bool _scheduleWasSaved = false;
   int _scheduleDay = 1;
   String? _message;
@@ -45,7 +46,7 @@ class _ParticipantDetailPageState
   @override
   void dispose() {
     for (final r in _rows) {
-      r.offsetController.dispose();
+      r.dispose();
     }
     super.dispose();
   }
@@ -585,7 +586,19 @@ class _ParticipantDetailPageState
                 ),
               ],
               for (var i = 0; i < _rows.length; i++)
-                _buildScheduleRow(theme, i),
+                ScheduleRowEditor(
+                  index: i,
+                  draft: _rows[i],
+                  ceilingFor: _ceilings.ceilingFor,
+                  onAddVersion: _ceilings.addVersion,
+                  onChanged: () => setState(() {}),
+                  onRemove: _rows.length <= 1
+                      ? null
+                      : () => setState(() {
+                            _rows[i].dispose();
+                            _rows.removeAt(i);
+                          }),
+                ),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -613,94 +626,19 @@ class _ParticipantDetailPageState
     );
   }
 
-  Widget _buildScheduleRow(ThemeData theme, int index) {
-    final row = _rows[index];
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          SizedBox(width: 90, child: Text('No. ${index + 1}')),
-          SizedBox(
-            width: 110,
-            child: TextField(
-              controller: row.offsetController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                labelText: 'Minute',
-                isDense: true,
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          DropdownButton<Placement>(
-            value: row.placement,
-            items: [
-              for (final p in Placement.values)
-                DropdownMenuItem(value: p, child: Text(p.wireName)),
-            ],
-            onChanged: (p) => setState(() => row.placement = p!),
-          ),
-          const SizedBox(width: 12),
-          DropdownButton<ReminderKind>(
-            value: row.kind,
-            items: [
-              for (final k in ReminderKind.values)
-                DropdownMenuItem(value: k, child: Text(k.wireName)),
-            ],
-            onChanged: (k) {
-              setState(() {
-                row.kind = k!;
-                row.variantNumber = row.variantNumber.clamp(
-                    1, maxVariantFor(k)).toInt();
-              });
-            },
-          ),
-          const SizedBox(width: 12),
-          DropdownButton<int>(
-            value: row.variantNumber,
-            items: [
-              for (var v = 1; v <= maxVariantFor(row.kind); v++)
-                DropdownMenuItem(value: v, child: Text('v$v')),
-            ],
-            onChanged: (v) => setState(() => row.variantNumber = v!),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            tooltip: 'Remove entry',
-            icon: const Icon(Icons.remove_circle_outline, size: 18),
-            onPressed: _rows.length <= 1
-                ? null
-                : () => setState(() {
-                      row.offsetController.dispose();
-                      _rows.removeAt(index);
-                    }),
-          ),
-        ],
-      ),
-    );
-  }
-
   int? _loadedDay;
   String? _loadedCode;
 
   void _loadRows(List<ScheduledReminder> reminders) {
     for (final r in _rows) {
-      r.offsetController.dispose();
+      r.dispose();
     }
     _rows
       ..clear()
       ..addAll([
-        for (final r in reminders)
-          _ScheduleRow(
-            offsetController:
-                TextEditingController(text: '${r.offset.inMinutes}'),
-            placement: r.placement,
-            kind: r.kind,
-            variantNumber: r.variantNumber,
-          ),
+        for (final r in reminders) ScheduleDraft.fromReminder(r),
       ]);
+    _ceilings.seed(reminders);
     _loadedDay = _scheduleDay;
     _loadedCode = widget.participantCode;
   }
@@ -708,9 +646,9 @@ class _ParticipantDetailPageState
   void _addRow() {
     final lastMinutes = _rows.isEmpty
         ? 0
-        : int.tryParse(_rows.last.offsetController.text.trim()) ?? 0;
+        : _rows.last.minutes ?? 0;
     setState(() {
-      _rows.add(_ScheduleRow(
+      _rows.add(ScheduleDraft(
         offsetController:
             TextEditingController(text: '${lastMinutes + 10}'),
         placement: Placement.cursorProximate,
@@ -752,23 +690,4 @@ class _ParticipantDetailPageState
           'Schedule saved for day $_scheduleDay (${updated.length} entries).';
     });
   }
-}
-
-/// Max content-variant counter per kind (hydration 1–5, micro break 1–3).
-int maxVariantFor(ReminderKind kind) =>
-    kind == ReminderKind.hydration ? 5 : 3;
-
-/// One editable schedule row in the admin editor.
-class _ScheduleRow {
-  _ScheduleRow({
-    required this.offsetController,
-    required this.placement,
-    required this.kind,
-    required this.variantNumber,
-  });
-
-  final TextEditingController offsetController;
-  Placement placement;
-  ReminderKind kind;
-  int variantNumber;
 }
