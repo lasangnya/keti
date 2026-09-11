@@ -168,4 +168,46 @@ void main() {
       expect(eventsSnap.docs, isEmpty, reason: 'events $day should be gone');
     }
   });
+
+  test('deleteParticipant removes the participant and all subcollections',
+      () async {
+    await seedParticipant();
+    await seedDay1Session();
+    await firestore
+        .collection('participants')
+        .doc('P001')
+        .collection('schedules')
+        .doc('day1')
+        .set({'dayId': 'day1', 'dayNumber': 1, 'reminders': []});
+    await firestore
+        .collection('participants')
+        .doc('P001')
+        .collection('studySessions')
+        .doc('day1')
+        .collection('reminderEvents')
+        .doc('reminder01')
+        .set({'eventId': 'reminder01'});
+
+    await repository.deleteParticipant('P001');
+
+    expect(
+        (await firestore.collection('participants').doc('P001').get()).exists,
+        isFalse);
+    expect(
+        (await firestore
+                .collection('participants')
+                .doc('P001')
+                .collection('schedules')
+                .get())
+            .docs,
+        isEmpty);
+    expect(
+        (await firestore
+                .collection('participants')
+                .doc('P001')
+                .collection('studySessions')
+                .get())
+            .docs,
+        isEmpty);
+  });
 }
