@@ -110,4 +110,72 @@ void main() {
       expect(restored.reminders, kDefaultScheduleTemplate);
     });
   });
+
+  group('variant selection helpers', () {
+    test('baseVariantCountFor returns 5 hydration / 3 micro break', () {
+      expect(baseVariantCountFor(ReminderKind.hydration), 5);
+      expect(baseVariantCountFor(ReminderKind.microBreak), 3);
+    });
+
+    test('variantCeilingFor returns base when highestUsed <= base', () {
+      expect(variantCeilingFor(ReminderKind.hydration), 5);
+      expect(variantCeilingFor(ReminderKind.microBreak), 3);
+      expect(variantCeilingFor(ReminderKind.hydration, highestUsed: 3), 5);
+      expect(variantCeilingFor(ReminderKind.microBreak, highestUsed: 2), 3);
+    });
+
+    test('variantCeilingFor returns highestUsed when it exceeds base', () {
+      expect(variantCeilingFor(ReminderKind.hydration, highestUsed: 8), 8);
+      expect(variantCeilingFor(ReminderKind.microBreak, highestUsed: 4), 4);
+      expect(variantCeilingFor(ReminderKind.hydration, highestUsed: 5), 5);
+      expect(variantCeilingFor(ReminderKind.microBreak, highestUsed: 3), 3);
+    });
+
+    test('availableVariantsFor lists 1..ceiling per kind', () {
+      expect(availableVariantsFor(ReminderKind.hydration), [1, 2, 3, 4, 5]);
+      expect(availableVariantsFor(ReminderKind.microBreak), [1, 2, 3]);
+      expect(
+        availableVariantsFor(ReminderKind.hydration, highestUsed: 7),
+        [1, 2, 3, 4, 5, 6, 7],
+      );
+      expect(
+        availableVariantsFor(ReminderKind.microBreak, highestUsed: 6),
+        [1, 2, 3, 4, 5, 6],
+      );
+    });
+
+    test('highestVariantByKind computes per-kind maxima', () {
+      final reminders = [
+        ScheduledReminder(
+          reminderNumber: 1,
+          offset: Duration.zero,
+          placement: Placement.cursorProximate,
+          kind: ReminderKind.hydration,
+          variantNumber: 2,
+        ),
+        ScheduledReminder(
+          reminderNumber: 2,
+          offset: Duration.zero,
+          placement: Placement.cursorProximate,
+          kind: ReminderKind.hydration,
+          variantNumber: 6,
+        ),
+        ScheduledReminder(
+          reminderNumber: 3,
+          offset: Duration.zero,
+          placement: Placement.cursorProximate,
+          kind: ReminderKind.microBreak,
+          variantNumber: 4,
+        ),
+      ];
+      expect(highestVariantByKind(reminders), {
+        ReminderKind.hydration: 6,
+        ReminderKind.microBreak: 4,
+      });
+    });
+
+    test('highestVariantByKind returns empty map for empty input', () {
+      expect(highestVariantByKind([]), {});
+    });
+  });
 }

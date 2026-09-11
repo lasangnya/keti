@@ -32,9 +32,9 @@ class ResolvedReminderContent {
 /// Pure resolver mapping (kind, style) → visual content.
 ///
 /// Single source of truth for reminder presentation, shared by the study
-/// orchestrator and the developer test mode. The variant number
-/// (Hydration 1–5 / Micro break 1–3) does not change visuals today; it only
-/// feeds `contentVariantId`.
+/// orchestrator and the developer test mode. The variant number (base set:
+/// Hydration 1–5 / Micro break 1–3; extendable by the admin editor) does
+/// not change visuals today; it only feeds `contentVariantId`.
 class ReminderContentResolver {
   const ReminderContentResolver();
 
