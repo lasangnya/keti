@@ -22,7 +22,9 @@ class ScheduledReminder {
   final Placement placement;
   final ReminderKind kind;
 
-  /// Content variant counter: Hydration 1–5, Micro break 1–3.
+  /// Content variant counter. Base set is Hydration 1–5 / Micro break 1–3;
+  /// the admin editor can add further versions, so values are not bounded
+  /// above.
   final int variantNumber;
 
   /// Stable variant identifier used in logs and exports,
@@ -129,3 +131,30 @@ const kDefaultScheduleTemplate = <ScheduledReminder>[
     variantNumber: 5,
   ),
 ];
+
+/// Base number of authored content variants per kind shipped with the
+/// protocol template. The admin editor starts here and can extend the list
+/// on demand ("+ Add version"); there is no upper cap.
+int baseVariantCountFor(ReminderKind kind) =>
+    kind == ReminderKind.hydration ? 5 : 3;
+
+/// The number of selectable versions the editor offers for [kind]: at least
+/// [baseVariantCountFor] and at least [highestUsed] (the highest version
+/// already present in a schedule), so versions added in an earlier edit are
+/// still offered after a reload.
+int variantCeilingFor(ReminderKind kind, {int highestUsed = 0}) {
+  final base = baseVariantCountFor(kind);
+  return highestUsed > base ? highestUsed : base;
+}
+
+/// Highest variant used per kind across [reminders]. Kinds with no reminders
+/// are absent from the map.
+Map<ReminderKind, int> highestVariantByKind(
+    Iterable<ScheduledReminder> reminders) {
+  final result = <ReminderKind, int>{};
+  for (final r in reminders) {
+    final current = result[r.kind] ?? 0;
+    if (r.variantNumber > current) result[r.kind] = r.variantNumber;
+  }
+  return result;
+}

@@ -16,6 +16,11 @@ abstract class AdminRepository {
 
   Future<StudyConfig> getConfig();
 
+  /// Replaces the default schedule template in `config/study` — the rows
+  /// copied into every newly created participant's per-day schedule docs.
+  /// The protocol version is preserved.
+  Future<void> saveDefaultSchedule(List<ScheduledReminder> reminders);
+
   /// Reads the global questionnaire link templates (`links/templates`).
   Future<StudyLinkTemplates> getLinkTemplates();
 
@@ -49,6 +54,13 @@ abstract class AdminRepository {
   /// fresh participant. Identity, condition assignment and schedules are
   /// kept.
   Future<void> resetParticipant(String participantCode);
+
+  /// PERMANENT delete (withdrawal / GDPR right to erasure, plan §8): removes
+  /// the participant document AND every subdocument beneath it — both
+  /// schedule documents and both days' sessions with their reminder events.
+  /// Unlike [resetParticipant], nothing is kept: the code no longer exists
+  /// in Firestore. Irreversible.
+  Future<void> deleteParticipant(String participantCode);
 
   /// Admin-only order change — the UI blocks it once Day 1 has started.
   Future<void> setStyleOrder(String participantCode, StyleOrder order,
@@ -107,6 +119,16 @@ class FirestoreAdminRepository implements AdminRepository {
       );
     }
     return StudyConfig.fromJson(snap.data()!);
+  }
+
+  @override
+  Future<void> saveDefaultSchedule(List<ScheduledReminder> reminders) async {
+    final config = await getConfig();
+    await _firestore.collection('config').doc('study').set({
+      'protocolVersion': config.protocolVersion,
+      'defaultSchedule': reminders.map((r) => r.toJson()).toList(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   @override
@@ -243,6 +265,40 @@ class FirestoreAdminRepository implements AdminRepository {
     });
 
     await batch.commit();
+  }
+
+  @override
+  Future<void> deleteParticipant(String participantCode) async {
+    final participantRef = _participant(participantCode);
+    final refs = <DocumentReference<Object?>>[];
+
+    // Schedules.
+    final schedulesSnap =
+        await participantRef.collection('schedules').get();
+    refs.addAll(schedulesSnap.docs.map((d) => d.reference));
+
+    // Sessions and their reminder events.
+    final sessionsSnap =
+        await participantRef.collection('studySessions').get();
+    for (final session in sessionsSnap.docs) {
+      final eventsSnap =
+          await session.reference.collection('reminderEvents').get();
+      refs.addAll(eventsSnap.docs.map((d) => d.reference));
+      refs.add(session.reference);
+    }
+
+    // The participant document itself, last.
+    refs.add(participantRef);
+
+    // Firestore caps a batch at 500 writes; chunk to stay well under.
+    const chunkSize = 450;
+    for (var i = 0; i < refs.length; i += chunkSize) {
+      final batch = _firestore.batch();
+      for (final ref in refs.skip(i).take(chunkSize)) {
+        batch.delete(ref);
+      }
+      await batch.commit();
+    }
   }
 
   @override

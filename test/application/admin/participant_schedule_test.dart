@@ -117,6 +117,14 @@ class _FakeAdminRepository implements AdminRepository {
       throw UnimplementedError();
 
   @override
+  Future<void> deleteParticipant(String participantCode) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> saveDefaultSchedule(List<ScheduledReminder> reminders) =>
+      throw UnimplementedError();
+
+  @override
   Future<void> setStyleOrder(
     String participantCode,
     StyleOrder order, {

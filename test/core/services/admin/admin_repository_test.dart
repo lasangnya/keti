@@ -1,6 +1,9 @@
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:keti/core/constants/app_config.dart';
 import 'package:keti/core/services/admin/admin_repository.dart';
+import 'package:keti/domain/study/scheduled_reminder.dart';
+import 'package:keti/domain/study/study_enums.dart';
 import 'package:keti/domain/study/study_session.dart';
 
 void main() {
@@ -167,5 +170,87 @@ void main() {
           .get();
       expect(eventsSnap.docs, isEmpty, reason: 'events $day should be gone');
     }
+  });
+
+  test('deleteParticipant removes the participant and all subcollections',
+      () async {
+    await seedParticipant();
+    await seedDay1Session();
+    await firestore
+        .collection('participants')
+        .doc('P001')
+        .collection('schedules')
+        .doc('day1')
+        .set({'dayId': 'day1', 'dayNumber': 1, 'reminders': []});
+    await firestore
+        .collection('participants')
+        .doc('P001')
+        .collection('studySessions')
+        .doc('day1')
+        .collection('reminderEvents')
+        .doc('reminder01')
+        .set({'eventId': 'reminder01'});
+
+    await repository.deleteParticipant('P001');
+
+    expect(
+        (await firestore.collection('participants').doc('P001').get()).exists,
+        isFalse);
+    expect(
+        (await firestore
+                .collection('participants')
+                .doc('P001')
+                .collection('schedules')
+                .get())
+            .docs,
+        isEmpty);
+    expect(
+        (await firestore
+                .collection('participants')
+                .doc('P001')
+                .collection('studySessions')
+                .get())
+            .docs,
+        isEmpty);
+  });
+
+  test('saveDefaultSchedule persists and preserves protocolVersion', () async {
+    final custom = [
+      const ScheduledReminder(
+        reminderNumber: 1,
+        offset: Duration(minutes: 5),
+        placement: Placement.cursorProximate,
+        kind: ReminderKind.hydration,
+        variantNumber: 1,
+      ),
+    ];
+    await repository.saveDefaultSchedule(custom);
+
+    final config = await repository.getConfig();
+    expect(config.defaultSchedule, custom);
+    expect(config.protocolVersion, AppConfig.protocolVersion);
+  });
+
+  test('createParticipant copies the saved default schedule into both days',
+      () async {
+    final custom = [
+      const ScheduledReminder(
+        reminderNumber: 1,
+        offset: Duration(minutes: 5),
+        placement: Placement.systemTray,
+        kind: ReminderKind.microBreak,
+        variantNumber: 2,
+      ),
+    ];
+    await repository.saveDefaultSchedule(custom);
+
+    await repository.createParticipant(
+      serial: 1,
+      styleOrder: StyleOrder.ambientFirst,
+      assignmentOverride: false,
+    );
+
+    expect(await repository.getSchedule('P001', 1), custom);
+    expect(await repository.getSchedule('P001', 2), custom);
   });
 }

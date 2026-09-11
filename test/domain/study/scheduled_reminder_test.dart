@@ -110,4 +110,65 @@ void main() {
       expect(restored.reminders, kDefaultScheduleTemplate);
     });
   });
+
+  group('variant selection helpers', () {
+    test('baseVariantCountFor returns 5 for hydration, 3 for microBreak',
+        () {
+      expect(baseVariantCountFor(ReminderKind.hydration), 5);
+      expect(baseVariantCountFor(ReminderKind.microBreak), 3);
+    });
+
+    test(
+        'variantCeilingFor returns base when highestUsed <= base (hydration '
+        'default 5, microBreak default 3, hydration highestUsed 3 -> 5)',
+        () {
+      expect(variantCeilingFor(ReminderKind.hydration), 5);
+      expect(variantCeilingFor(ReminderKind.microBreak), 3);
+      expect(
+          variantCeilingFor(ReminderKind.hydration, highestUsed: 3), 5);
+    });
+
+    test(
+        'variantCeilingFor returns highestUsed when greater (hydration 8 -> 8, '
+        'microBreak 4 -> 4)',
+        () {
+      expect(variantCeilingFor(ReminderKind.hydration, highestUsed: 8), 8);
+      expect(variantCeilingFor(ReminderKind.microBreak, highestUsed: 4), 4);
+    });
+
+    test(
+        'highestVariantByKind from hydration v2, hydration v6, microBreak v4 '
+        '-> {hydration: 6, microBreak: 4}',
+        () {
+      final reminders = [
+        const ScheduledReminder(
+          reminderNumber: 1,
+          offset: Duration(minutes: 20),
+          placement: Placement.cursorProximate,
+          kind: ReminderKind.hydration,
+          variantNumber: 2,
+        ),
+        const ScheduledReminder(
+          reminderNumber: 2,
+          offset: Duration(minutes: 30),
+          placement: Placement.notchCard,
+          kind: ReminderKind.hydration,
+          variantNumber: 6,
+        ),
+        const ScheduledReminder(
+          reminderNumber: 3,
+          offset: Duration(minutes: 40),
+          placement: Placement.systemTray,
+          kind: ReminderKind.microBreak,
+          variantNumber: 4,
+        ),
+      ];
+      expect(highestVariantByKind(reminders),
+          {ReminderKind.hydration: 6, ReminderKind.microBreak: 4});
+    });
+
+    test('highestVariantByKind empty input -> {}', () {
+      expect(highestVariantByKind([]), {});
+    });
+  });
 }

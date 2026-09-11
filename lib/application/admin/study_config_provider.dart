@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../domain/study/scheduled_reminder.dart';
 import '../../domain/study/study_config.dart';
 import '../../domain/study/study_links.dart';
 import 'admin_providers.dart';
@@ -11,6 +12,13 @@ class AdminStudyConfig extends _$AdminStudyConfig {
   @override
   Future<StudyConfig> build() =>
       ref.watch(adminRepositoryProvider).getConfig();
+
+  Future<void> saveDefaultSchedule(List<ScheduledReminder> reminders) async {
+    await ref
+        .read(adminRepositoryProvider)
+        .saveDefaultSchedule(reminders);
+    ref.invalidateSelf();
+  }
 }
 
 /// The global questionnaire link templates (`links/templates`).

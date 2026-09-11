@@ -48,6 +48,13 @@ class AdminParticipants extends _$AdminParticipants {
     ref.invalidateSelf();
   }
 
+  Future<void> deleteParticipant(String participantCode) async {
+    await ref
+        .read(adminRepositoryProvider)
+        .deleteParticipant(participantCode);
+    ref.invalidateSelf();
+  }
+
   Future<void> setStyleOrder(String participantCode, StyleOrder order,
       {required bool assignmentOverride}) async {
     await ref.read(adminRepositoryProvider).setStyleOrder(participantCode,

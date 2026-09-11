@@ -9,6 +9,12 @@ class AppStrings {
   static const String sessionActiveFor = 'Session active for';
   static const String sessionParticipantIdLabel = 'Participant ID : ';
   static const String exitSession = 'Exit';
+  static const String exitConfirmTitle = 'Exit keti?';
+  static const String exitConfirmBody =
+      'Are you sure you want to exit? Your session will stay active and you '
+      'can resume it by reopening keti.';
+  static const String exitConfirmConfirm = 'Yes, exit';
+  static const String exitConfirmCancel = 'Cancel';
   static const String changeParticipant = 'Use a different code';
   static const String day = 'Day';
   static const String resumeAvailable = 'Unfinished session found on this machine';
