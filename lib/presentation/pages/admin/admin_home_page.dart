@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../application/admin/admin_auth_provider.dart';
 import '../test_mode/test_mode_page.dart';
+import 'default_schedule_page.dart';
 import 'links_settings_page.dart';
 import 'participants_page.dart';
 
@@ -20,6 +21,7 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
 
   static const _pages = [
     ParticipantsPage(),
+    DefaultSchedulePage(),
     LinksSettingsPage(),
     TestModePage(),
   ];
@@ -40,6 +42,11 @@ class _AdminHomePageState extends ConsumerState<AdminHomePage> {
                   icon: Icon(Icons.group_outlined),
                   selectedIcon: Icon(Icons.group),
                   label: Text('Participants'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.calendar_month_outlined),
+                  selectedIcon: Icon(Icons.calendar_month),
+                  label: Text('Schedule'),
                 ),
                 NavigationRailDestination(
                   icon: Icon(Icons.link_outlined),
