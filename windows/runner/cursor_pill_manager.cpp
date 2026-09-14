@@ -2,6 +2,35 @@
 
 namespace keti {
 
+namespace {
+
+// Helper to scale logical points from Flutter into physical pixels based on monitor DPI.
+int ScalePx(int logical, int dpi) {
+  return MulDiv(logical, dpi, 96);
+}
+
+// Returns the DPI of the monitor currently containing the cursor.
+int GetActiveDPI() {
+  POINT pt = {0, 0};
+  GetCursorPos(&pt);
+  HMONITOR monitor = MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
+
+  UINT dpi_x, dpi_y;
+  HMODULE shcore = LoadLibraryW(L"Shcore.dll");
+  if (shcore) {
+    using GetDpiForMonitorFn = HRESULT(WINAPI*)(HMONITOR, int, UINT*, UINT*);
+    auto get_dpi = reinterpret_cast<GetDpiForMonitorFn>(GetProcAddress(shcore, "GetDpiForMonitor"));
+    if (get_dpi && SUCCEEDED(get_dpi(monitor, 0 /* MDT_EFFECTIVE_DPI */, &dpi_x, &dpi_y))) {
+      FreeLibrary(shcore);
+      return static_cast<int>(dpi_x);
+    }
+    FreeLibrary(shcore);
+  }
+  return 96;
+}
+
+}  // namespace
+
 CursorPillManager::CursorPillManager()
     : current_frame_(0),
       offset_x_(0),
@@ -19,10 +48,10 @@ CursorPillManager::~CursorPillManager() {
 void CursorPillManager::Show(HINSTANCE instance,
                              const std::wstring& assets_path,
                              const std::wstring& resource_name,
-                             int width,
-                             int height,
-                             int offset_x,
-                             int offset_y,
+                             int logical_width,
+                             int logical_height,
+                             int logical_offset_x,
+                             int logical_offset_y,
                              int frame_count,
                              Callback on_shown,
                              Callback on_hidden) {
@@ -38,12 +67,17 @@ void CursorPillManager::Show(HINSTANCE instance,
 
   on_shown_ = std::move(on_shown);
   on_hidden_ = std::move(on_hidden);
-  offset_x_ = offset_x;
-  offset_y_ = offset_y;
+
+  int dpi = GetActiveDPI();
+  offset_x_ = ScalePx(logical_offset_x, dpi);
+  offset_y_ = ScalePx(logical_offset_y, dpi);
+  int physical_width = ScalePx(logical_width, dpi);
+  int physical_height = ScalePx(logical_height, dpi);
+
   current_frame_ = 0;
   has_finished_ = false;
 
-  if (!window_.Create(instance, L"KetiCursorPill", width, height,
+  if (!window_.Create(instance, L"KetiCursorPill", physical_width, physical_height,
                       /*layered=*/true,
                       /*transparent_for_mouse=*/true,
                       /*topmost=*/true,

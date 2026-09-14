@@ -32,8 +32,8 @@ class IslandManager {
   void Show(HINSTANCE instance,
             const std::wstring& assets_path,
             const std::wstring& resource_name,
-            int width,
-            int height,
+            int logical_width,
+            int logical_height,
             int frame_count,
             Callback on_shown,
             Callback on_hidden);
