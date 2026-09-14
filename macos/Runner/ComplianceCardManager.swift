@@ -54,7 +54,9 @@ class ComplianceCardManager {
         // Top-right corner of the screen the app's window is on (falls back
         // to the main screen). Anchoring to the app's window screen keeps the
         // card on the display the participant is actually looking at.
-        let screen = NSApp.mainWindow?.screen ?? NSScreen.main
+        // Try to anchor to the main window's screen, otherwise pick the screen where the cursor is.
+        let mouseLocation = NSEvent.mouseLocation
+        let screen = NSApp.mainWindow?.screen ?? NSScreen.screens.first(where: { NSMouseInRect(mouseLocation, $0.frame, false) }) ?? NSScreen.main
         if let screen {
             // Anchor to the visible frame (excludes the menu bar / dock, and
             // tracks the auto-hidden bar in full screen) so the card never

@@ -2,6 +2,8 @@
 
 #include <windowsx.h>
 
+#include "dpi_utils.h"
+
 namespace keti {
 
 namespace {
@@ -26,10 +28,6 @@ constexpr COLORREF kBorderColor = RGB(70, 70, 70);
 constexpr COLORREF kQuestionTextColor = RGB(255, 255, 255);
 constexpr COLORREF kButtonFillColor = RGB(255, 255, 255);
 constexpr COLORREF kButtonTextColor = RGB(0, 0, 0);
-
-int ScalePx(int logical, int dpi) {
-  return MulDiv(logical, dpi, 96);
-}
 
 std::wstring Utf8ToWide(const std::string& utf8) {
   if (utf8.empty()) {
@@ -80,15 +78,9 @@ void ComplianceCardManager::Show(HINSTANCE instance,
   on_timeout_ = std::move(on_timeout);
   instance_ = instance;
 
-  int dpi = 96;
-  HDC dpi_dc = GetDC(owner);
-  if (dpi_dc != nullptr) {
-    int measured = GetDeviceCaps(dpi_dc, LOGPIXELSX);
-    if (measured > 0) {
-      dpi = measured;
-    }
-    ReleaseDC(owner, dpi_dc);
-  }
+  // The card is anchored to the owner window's monitor, so scale by that
+  // monitor's DPI (per-monitor aware, unlike GetDeviceCaps on a screen DC).
+  const int dpi = GetDpiForHwnd(owner);
 
   ComputeLayout(dpi);
 
@@ -109,7 +101,7 @@ void ComplianceCardManager::Show(HINSTANCE instance,
   // The card has no non-client area; its size equals the layout size. The
   // question rect spans the full content width and the button row is the
   // bottom-most element, so their edges define the card bounds.
-  const int pad = ScalePx(kLogicalPadding, dpi);
+  const int pad = ScaleForDpi(kLogicalPadding, dpi);
   int card_width = question_rect_.right + pad;
   int card_height = button1_rect_.bottom + pad;
 
@@ -135,12 +127,18 @@ void ComplianceCardManager::Show(HINSTANCE instance,
   // macOS edge margin of 28 points).
   MONITORINFO mi = {};
   mi.cbSize = sizeof(mi);
+
+  POINT pt = {0, 0};
+  if (!GetCursorPos(&pt)) {
+    pt = {0, 0};
+  }
+
   HMONITOR monitor =
       owner != nullptr ? MonitorFromWindow(owner, MONITOR_DEFAULTTONEAREST)
-                       : MonitorFromPoint(POINT{0, 0}, MONITOR_DEFAULTTOPRIMARY);
+                       : MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
   GetMonitorInfoW(monitor, &mi);
 
-  int margin = ScalePx(kLogicalEdgeMargin, dpi);
+  int margin = ScaleForDpi(kLogicalEdgeMargin, dpi);
   int x = mi.rcWork.right - card_width - margin;
   int y = mi.rcWork.top + margin;
   SetWindowPos(hwnd_, nullptr, x, y, 0, 0,
@@ -174,19 +172,19 @@ bool ComplianceCardManager::IsShowing() const {
 }
 
 void ComplianceCardManager::ComputeLayout(int dpi) {
-  const int pad = ScalePx(kLogicalPadding, dpi);
-  const int btn_w = ScalePx(kLogicalButtonWidth, dpi);
-  const int btn_h = ScalePx(kLogicalButtonHeight, dpi);
-  const int btn_spacing = ScalePx(kLogicalButtonSpacing, dpi);
-  const int gap = ScalePx(kLogicalQuestionGap, dpi);
-  corner_radius_ = ScalePx(kLogicalCornerRadius, dpi);
-  button_corner_radius_ = ScalePx(kLogicalButtonCornerRadius, dpi);
+  const int pad = ScaleForDpi(kLogicalPadding, dpi);
+  const int btn_w = ScaleForDpi(kLogicalButtonWidth, dpi);
+  const int btn_h = ScaleForDpi(kLogicalButtonHeight, dpi);
+  const int btn_spacing = ScaleForDpi(kLogicalButtonSpacing, dpi);
+  const int gap = ScaleForDpi(kLogicalQuestionGap, dpi);
+  corner_radius_ = ScaleForDpi(kLogicalCornerRadius, dpi);
+  button_corner_radius_ = ScaleForDpi(kLogicalButtonCornerRadius, dpi);
 
   question_font_ = CreatePointFont(17, FW_SEMIBOLD, dpi);
   button_font_ = CreatePointFont(15, FW_BOLD, dpi);
 
   const int max_question_width =
-      ScalePx(kLogicalMaxCardWidth, dpi) - 2 * pad;
+      ScaleForDpi(kLogicalMaxCardWidth, dpi) - 2 * pad;
 
   // Measure the question text (may wrap to a second line).
   RECT measure = {0, 0, max_question_width, 0};

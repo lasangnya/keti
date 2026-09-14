@@ -1,5 +1,7 @@
 #include "cursor_pill_manager.h"
 
+#include "dpi_utils.h"
+
 namespace keti {
 
 CursorPillManager::CursorPillManager()
@@ -19,10 +21,10 @@ CursorPillManager::~CursorPillManager() {
 void CursorPillManager::Show(HINSTANCE instance,
                              const std::wstring& assets_path,
                              const std::wstring& resource_name,
-                             int width,
-                             int height,
-                             int offset_x,
-                             int offset_y,
+                             int logical_width,
+                             int logical_height,
+                             int logical_offset_x,
+                             int logical_offset_y,
                              int frame_count,
                              Callback on_shown,
                              Callback on_hidden) {
@@ -38,12 +40,21 @@ void CursorPillManager::Show(HINSTANCE instance,
 
   on_shown_ = std::move(on_shown);
   on_hidden_ = std::move(on_hidden);
-  offset_x_ = offset_x;
-  offset_y_ = offset_y;
+
+  // The pill follows the cursor, so scale everything to the monitor under it.
+  POINT cursor = {0, 0};
+  GetCursorPos(&cursor);
+  const int dpi = GetDpiForPoint(cursor);
+  offset_x_ = ScaleForDpi(logical_offset_x, dpi);
+  offset_y_ = ScaleForDpi(logical_offset_y, dpi);
+  const int physical_width = ScaleForDpi(logical_width, dpi);
+  const int physical_height = ScaleForDpi(logical_height, dpi);
+
   current_frame_ = 0;
   has_finished_ = false;
 
-  if (!window_.Create(instance, L"KetiCursorPill", width, height,
+  if (!window_.Create(instance, L"KetiCursorPill", physical_width,
+                      physical_height,
                       /*layered=*/true,
                       /*transparent_for_mouse=*/true,
                       /*topmost=*/true,

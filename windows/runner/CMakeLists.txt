@@ -9,6 +9,7 @@ project(runner LANGUAGES CXX)
 add_executable(${BINARY_NAME} WIN32
   "compliance_card_manager.cpp"
   "cursor_pill_manager.cpp"
+  "dpi_utils.cpp"
   "flutter_window.cpp"
   "island_manager.cpp"
   "main.cpp"
