@@ -23,12 +23,16 @@ RECT GetActiveWorkArea() {
   if (!GetCursorPos(&pt)) {
     pt = {0, 0};
   }
+
+  // Use MONITOR_DEFAULTTONEAREST to reliably find the active monitor.
   HMONITOR monitor = MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
+
   MONITORINFO info = {};
   info.cbSize = sizeof(info);
   if (GetMonitorInfoW(monitor, &info)) {
     return info.rcWork;
   }
+
   RECT fallback;
   SystemParametersInfoW(SPI_GETWORKAREA, 0, &fallback, 0);
   return fallback;

@@ -73,6 +73,8 @@ class OverlayWindow {
   HINSTANCE instance_;
   int width_;
   int height_;
+  int x_ = 0;
+  int y_ = 0;
   bool transparent_;
   bool topmost_;
   bool has_background_ = false;

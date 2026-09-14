@@ -164,6 +164,8 @@ void OverlayWindow::SetPosition(int x, int y) {
   if (hwnd_ == nullptr) {
     return;
   }
+  x_ = x;
+  y_ = y;
   SetWindowPos(hwnd_, nullptr, x, y, 0, 0,
                SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOZORDER);
 }
@@ -263,10 +265,12 @@ void OverlayWindow::UpdateLayeredContent(HDC source_dc,
 
   SIZE dst_size = {width_, height_};
   POINT src_pos = {0, 0};
+  POINT dst_pos = {x_, y_};
   BLENDFUNCTION blend = {AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
 
-  // Passing nullptr for pptDst keeps the window at its current position.
-  UpdateLayeredWindow(hwnd_, screen_dc, nullptr, &dst_size, blit_dc, &src_pos, 0,
+  // Passing explicit dst_pos prevents Windows from snapping layered windows
+  // back to the primary monitor during cross-DPI boundary renders.
+  UpdateLayeredWindow(hwnd_, screen_dc, &dst_pos, &dst_size, blit_dc, &src_pos, 0,
                       &blend, ULW_ALPHA);
 
   if (composed_bitmap != nullptr) {
