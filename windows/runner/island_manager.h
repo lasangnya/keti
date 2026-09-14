@@ -29,11 +29,13 @@ class IslandManager {
   // Shows the island and plays the PNG sequence once. |on_shown| fires after
   // the window is on screen; |on_hidden| fires exactly once when it is
   // dismissed (animation finished, mouse-shake, or a clobbering Show).
+  // |logical_width|/|logical_height| are 96-DPI logical units; they are
+  // scaled to physical pixels for the cursor's monitor.
   void Show(HINSTANCE instance,
             const std::wstring& assets_path,
             const std::wstring& resource_name,
-            int width,
-            int height,
+            int logical_width,
+            int logical_height,
             int frame_count,
             Callback on_shown,
             Callback on_hidden);

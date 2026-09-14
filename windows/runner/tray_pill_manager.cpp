@@ -3,6 +3,7 @@
 #include <shellapi.h>
 #include <algorithm>
 
+#include "dpi_utils.h"
 #include "resource.h"
 
 #pragma comment(lib, "shell32.lib")
@@ -13,9 +14,15 @@ namespace {
 
 // The tray reminder is presented as a top-right pill (matching the macOS
 // menu-bar position) rather than dropping from the Windows taskbar tray.
-constexpr int kCardWidth = 140;
-constexpr int kCardHeight = 125;
-constexpr int kEdgeMargin = 28;
+// Logical units at 96 DPI, scaled to the monitor DPI at show time.
+//
+// Size matches the macOS TrayCardView (image 48pt, padding 8/12/8 → 68x64pt)
+// scaled by the same 1.5x Windows factor used for the cursor and notch
+// overlays, so the pill is proportional to the rest of the reminder family
+// instead of the old oversized 140x125.
+constexpr int kLogicalCardWidth = 102;
+constexpr int kLogicalCardHeight = 96;
+constexpr int kLogicalEdgeMargin = 28;
 
 // Returns the work area of the monitor that currently contains the cursor.
 RECT GetActiveWorkArea() {
@@ -140,7 +147,15 @@ void TrayPillManager::Show(const std::wstring& assets_path,
   current_frame_ = 0;
   has_finished_ = false;
 
-  if (!card_window_.Create(instance_, L"KetiTrayCard", kCardWidth, kCardHeight,
+  // Anchor to the monitor under the cursor and scale to its DPI so the pill has
+  // the same physical size on every display.
+  POINT cursor = {0, 0};
+  GetCursorPos(&cursor);
+  dpi_ = GetDpiForPoint(cursor);
+  card_width_ = ScaleForDpi(kLogicalCardWidth, dpi_);
+  card_height_ = ScaleForDpi(kLogicalCardHeight, dpi_);
+
+  if (!card_window_.Create(instance_, L"KetiTrayCard", card_width_, card_height_,
                            /*layered=*/true,
                            /*transparent_for_mouse=*/false,
                            /*topmost=*/true,
@@ -153,7 +168,7 @@ void TrayPillManager::Show(const std::wstring& assets_path,
 
   // Present the reminder as a rounded black pill (macOS TrayCardView parity).
   // corner_diameter == window height gives a full capsule shape; 217 ≈ 85%.
-  card_window_.SetRoundedBackground(kCardHeight, 217);
+  card_window_.SetRoundedBackground(card_height_, 217);
 
   card_window_.SetMessageHandler(
       [this](HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) -> bool {
@@ -243,8 +258,9 @@ void TrayPillManager::PositionCardTopRight() {
   // Anchor to the top-right corner of the active monitor's work area, matching
   // the macOS menu-bar position (where the status item sits).
   RECT work = GetActiveWorkArea();
-  int x = work.right - kCardWidth - kEdgeMargin;
-  int y = work.top + kEdgeMargin;
+  int margin = ScaleForDpi(kLogicalEdgeMargin, dpi_);
+  int x = work.right - card_width_ - margin;
+  int y = work.top + margin;
   card_window_.SetPosition(x, y);
 }
 

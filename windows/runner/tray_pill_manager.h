@@ -70,6 +70,12 @@ class TrayPillManager {
   int current_frame_;
   UINT_PTR timer_id_;
   bool has_finished_;
+
+  // Physical pixel size and monitor DPI of the current card, used to anchor it
+  // to the top-right corner at the correct scale.
+  int card_width_ = 0;
+  int card_height_ = 0;
+  int dpi_ = 96;
   Callback on_shown_;
   Callback on_hidden_;
 

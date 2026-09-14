@@ -1,5 +1,7 @@
 #include "island_manager.h"
 
+#include "dpi_utils.h"
+
 namespace keti {
 
 namespace {
@@ -39,8 +41,8 @@ IslandManager::~IslandManager() {
 void IslandManager::Show(HINSTANCE instance,
                          const std::wstring& assets_path,
                          const std::wstring& resource_name,
-                         int width,
-                         int height,
+                         int logical_width,
+                         int logical_height,
                          int frame_count,
                          Callback on_shown,
                          Callback on_hidden) {
@@ -59,7 +61,14 @@ void IslandManager::Show(HINSTANCE instance,
   current_frame_ = 0;
   has_finished_ = false;
 
-  if (!window_.Create(instance, L"KetiIsland", width, height,
+  // The island is placed on the monitor under the cursor, so scale to its DPI.
+  POINT cursor = {0, 0};
+  GetCursorPos(&cursor);
+  const int dpi = GetDpiForPoint(cursor);
+  const int physical_width = ScaleForDpi(logical_width, dpi);
+  const int physical_height = ScaleForDpi(logical_height, dpi);
+
+  if (!window_.Create(instance, L"KetiIsland", physical_width, physical_height,
                       /*layered=*/true,
                       /*transparent_for_mouse=*/false,
                       /*topmost=*/true,
@@ -71,7 +80,7 @@ void IslandManager::Show(HINSTANCE instance,
   }
 
   // Black rounded-rect background (macOS IslandView: black @ 0.9, radius 12).
-  window_.SetRoundedBackground(24, 230);
+  window_.SetRoundedBackground(ScaleForDpi(24, dpi), 230);
 
   window_.SetMessageHandler(
       [this](HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) -> bool {
@@ -84,8 +93,8 @@ void IslandManager::Show(HINSTANCE instance,
 
   // Position at the top center of the active monitor's work area.
   RECT work = GetActiveWorkArea();
-  int x = (work.left + work.right - width) / 2;
-  int y = work.top + 5;
+  int x = (work.left + work.right - physical_width) / 2;
+  int y = work.top + ScaleForDpi(5, dpi);
   window_.SetPosition(x, y);
 
   // Show the first frame.
