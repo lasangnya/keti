@@ -134,3 +134,4 @@ app.*.symbols
 !/dev/ci/**/Gemfile.lock
 # Node tooling
 tooling/node_modules/
+/installer/
