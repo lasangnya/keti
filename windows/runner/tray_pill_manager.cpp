@@ -17,10 +17,13 @@ constexpr int kCardWidth = 140;
 constexpr int kCardHeight = 125;
 constexpr int kEdgeMargin = 28;
 
-// Returns the work area of the primary monitor.
-RECT GetPrimaryWorkArea() {
+// Returns the work area of the monitor that currently contains the cursor.
+RECT GetActiveWorkArea() {
   POINT pt = {0, 0};
-  HMONITOR monitor = MonitorFromPoint(pt, MONITOR_DEFAULTTOPRIMARY);
+  if (!GetCursorPos(&pt)) {
+    pt = {0, 0};
+  }
+  HMONITOR monitor = MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
   MONITORINFO info = {};
   info.cbSize = sizeof(info);
   if (GetMonitorInfoW(monitor, &info)) {
@@ -233,9 +236,9 @@ void TrayPillManager::AdvanceFrame() {
 }
 
 void TrayPillManager::PositionCardTopRight() {
-  // Anchor to the top-right corner of the primary monitor's work area, matching
+  // Anchor to the top-right corner of the active monitor's work area, matching
   // the macOS menu-bar position (where the status item sits).
-  RECT work = GetPrimaryWorkArea();
+  RECT work = GetActiveWorkArea();
   int x = work.right - kCardWidth - kEdgeMargin;
   int y = work.top + kEdgeMargin;
   card_window_.SetPosition(x, y);

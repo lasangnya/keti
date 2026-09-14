@@ -48,15 +48,16 @@ class IslandManager {
         // When the menu bar was just revealed, visibleFrame needs a runloop
         // turn to settle; position then so the panel sits below the bar.
         let position = {
-            if let screen = NSScreen.main {
-                // Anchor to the VISIBLE frame: it excludes the menu bar (and,
-                // in full screen, tracks the auto-hidden bar), so the panel
-                // never lands in a strip that is off-screen or hidden.
-                let visible = screen.visibleFrame
-                let x = visible.midX - CGFloat(width) / 2
-                let y = visible.maxY - CGFloat(height) + 5
-                panel.setFrameOrigin(NSPoint(x: x, y: y))
-            }
+            let mouseLocation = NSEvent.mouseLocation
+            let screen = NSScreen.screens.first(where: { NSMouseInRect(mouseLocation, $0.frame, false) }) ?? NSScreen.main ?? NSScreen.screens[0]
+
+            // Anchor to the VISIBLE frame: it excludes the menu bar (and,
+            // in full screen, tracks the auto-hidden bar), so the panel
+            // never lands in a strip that is off-screen or hidden.
+            let visible = screen.visibleFrame
+            let x = visible.midX - CGFloat(width) / 2
+            let y = visible.maxY - CGFloat(height) + 5
+            panel.setFrameOrigin(NSPoint(x: x, y: y))
         }
         if FullScreenManager.isFullScreen {
             DispatchQueue.main.async { position() }

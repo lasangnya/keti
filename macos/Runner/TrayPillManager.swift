@@ -124,14 +124,17 @@ class TrayPillManager {
                 let y = self.clampToVisibleFrame(windowFrame.origin.y - idealSize.height - 4,
                                                  height: idealSize.height)
                 panel.setFrameOrigin(NSPoint(x: x, y: y))
-            } else if let screen = NSScreen.main {
-                // No status-item window (e.g. full screen with a hidden status
-                // bar): anchor below the visible top of the screen instead.
-                let visible = screen.visibleFrame
-                panel.setFrameOrigin(NSPoint(
-                    x: visible.midX - idealSize.width / 2,
-                    y: visible.maxY - idealSize.height - 4
-                ))
+            } else {
+                let mouseLocation = NSEvent.mouseLocation
+                if let screen = NSScreen.screens.first(where: { NSMouseInRect(mouseLocation, $0.frame, false) }) ?? NSScreen.main {
+                    // No status-item window (e.g. full screen with a hidden status
+                    // bar): anchor below the visible top of the screen instead.
+                    let visible = screen.visibleFrame
+                    panel.setFrameOrigin(NSPoint(
+                        x: visible.midX - idealSize.width / 2,
+                        y: visible.maxY - idealSize.height - 4
+                    ))
+                }
             }
         }
         if FullScreenManager.isFullScreen {
@@ -147,7 +150,9 @@ class TrayPillManager {
     /// Clamps a Y position so the card stays fully inside the visible frame
     /// (menu bar / full-screen top edge included).
     private static func clampToVisibleFrame(_ y: CGFloat, height: CGFloat) -> CGFloat {
-        guard let visible = NSScreen.main?.visibleFrame else { return y }
+        let mouseLocation = NSEvent.mouseLocation
+        let activeScreen = NSScreen.screens.first(where: { NSMouseInRect(mouseLocation, $0.frame, false) }) ?? NSScreen.main
+        guard let visible = activeScreen?.visibleFrame else { return y }
         let minY = visible.minY
         let maxY = max(minY, visible.maxY - height)
         return min(max(y, minY), maxY)

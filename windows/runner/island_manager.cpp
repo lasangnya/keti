@@ -4,11 +4,14 @@ namespace keti {
 
 namespace {
 
-// Returns the work area of the monitor that should host the island.
-// Falls back to the primary monitor work area.
-RECT GetPrimaryWorkArea() {
+// Returns the work area of the monitor that currently contains the cursor.
+// Falls back to the primary monitor work area if the cursor cannot be found.
+RECT GetActiveWorkArea() {
   POINT pt = {0, 0};
-  HMONITOR monitor = MonitorFromPoint(pt, MONITOR_DEFAULTTOPRIMARY);
+  if (!GetCursorPos(&pt)) {
+    pt = {0, 0};
+  }
+  HMONITOR monitor = MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
   MONITORINFO info = {};
   info.cbSize = sizeof(info);
   if (GetMonitorInfoW(monitor, &info)) {
@@ -79,8 +82,8 @@ void IslandManager::Show(HINSTANCE instance,
         return false;
       });
 
-  // Position at the top center of the primary monitor work area.
-  RECT work = GetPrimaryWorkArea();
+  // Position at the top center of the active monitor's work area.
+  RECT work = GetActiveWorkArea();
   int x = (work.left + work.right - width) / 2;
   int y = work.top + 5;
   window_.SetPosition(x, y);

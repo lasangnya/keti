@@ -135,9 +135,15 @@ void ComplianceCardManager::Show(HINSTANCE instance,
   // macOS edge margin of 28 points).
   MONITORINFO mi = {};
   mi.cbSize = sizeof(mi);
+
+  POINT pt = {0, 0};
+  if (!GetCursorPos(&pt)) {
+    pt = {0, 0};
+  }
+
   HMONITOR monitor =
       owner != nullptr ? MonitorFromWindow(owner, MONITOR_DEFAULTTONEAREST)
-                       : MonitorFromPoint(POINT{0, 0}, MONITOR_DEFAULTTOPRIMARY);
+                       : MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
   GetMonitorInfoW(monitor, &mi);
 
   int margin = ScalePx(kLogicalEdgeMargin, dpi);
