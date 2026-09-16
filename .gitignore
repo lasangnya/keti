@@ -135,3 +135,6 @@ app.*.symbols
 # Node tooling
 tooling/node_modules/
 /installer/
+
+# macOS dmg output (tooling/package_macos.sh)
+/dist/

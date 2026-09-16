@@ -124,12 +124,77 @@ This deletes the participant subtree from Firestore. The participant machine's `
 | Admin in-app export | `~/Documents/keti_exports/{code}_events.csv` | `%USERPROFILE%\Documents\keti_exports\{code}_events.csv` |
 | Fallback script export | `node tooling/export.js` → `*.csv` in any directory | same |
 
-## Signing / distribution
+## Packaging / distribution
 
-For the pilot, build and run from source on each study machine (`flutter build macos --debug` / `flutter build windows --debug`). For the full study with many machines:
+### macOS — DMG
 
-- **macOS**: code-sign with an Apple Developer ID so the `.app` bundle can be copied directly without requiring Flutter and Xcode on every machine.
-- **Windows**: sign `keti.exe` with a code-signing certificate (SmartScreen will otherwise warn on unverified publishers).
+Build a distributable disk image (`.app` + drag-to-Applications layout):
+
+```sh
+tooling/package_macos.sh
+# → dist/keti-<version>.dmg
+```
+
+Send the `.dmg` to participants. To install: open the DMG, drag **keti** onto
+**Applications**, then launch it from Launchpad.
+
+**No Apple Developer ID — ad-hoc signed (the default).** `package_macos.sh`
+re-signs the build ad-hoc: it strips the team's development provisioning profile
+and signs with `--sign -`. Skipping that step makes the DMG unusable. A plain
+`flutter build macos` embeds a *development* profile which only authorises the
+Macs registered to the team, and on a free personal team expires every 7 days.
+Once it expires macOS refuses to launch the app at all ("Launchd job spawn
+failed", POSIX error 163) — on every machine, including the one that built it.
+
+Ad-hoc signing removes the device list and the expiry, but it does **not**
+satisfy Gatekeeper, so participants clear the download quarantine flag once
+after installing:
+
+1. Open the DMG and drag **keti** to **Applications**.
+2. Open Terminal and run:
+
+   ```sh
+   xattr -dr com.apple.quarantine /Applications/keti.app
+   ```
+
+3. Launch **keti** normally.
+
+If the participant would rather not use Terminal: try to open the app, then go to
+**System Settings → Privacy & Security → Security** and click **Open Anyway**.
+The older right-click → **Open** shortcut was removed in macOS 15, and the
+button only appears for about an hour after a failed launch attempt.
+
+> Transferring the DMG on a **USB stick** and copying it with Finder skips the
+> quarantine flag entirely — no Terminal step needed.
+
+Unsigned is fine for a handful of trusted study machines; keep the DMG private.
+
+**Signed + notarized DMG (recommended when participants install themselves).**
+Requires an Apple Developer Program membership and a *Developer ID Application*
+certificate:
+
+```sh
+# one-time: store notarization credentials in the login keychain
+xcrun notarytool store-credentials "keti-notary" \
+  --apple-id "<you@example.com>" --team-id "HSGB29ANBA" \
+  --password "<app-specific-password>"
+
+MACOS_SIGN_IDENTITY="Developer ID Application: <Your Name> (HSGB29ANBA)" \
+MACOS_NOTARY_PROFILE="keti-notary" \
+tooling/package_macos.sh
+```
+
+A notarized DMG opens with a normal double-click, no warnings.
+
+> Note: the release build is sandboxed (`com.apple.security.app-sandbox`), so
+> the app's Documents directory resolves inside its container
+> (`~/Library/Containers/app.keti.keti/Data/Documents/…`) rather than the real
+> `~/Documents`. Verify where `keti_data/` lands on a packaged build.
+
+### Windows — Inno Setup
+
+Sign `keti.exe` with a code-signing certificate (SmartScreen will otherwise warn
+on unverified publishers). Packaged with Inno Setup into `/installer/`.
 
 ## Tooling
 
