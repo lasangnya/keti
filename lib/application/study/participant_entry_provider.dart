@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../core/constants/app_config.dart';
 import '../../core/services/firebase/auth_service.dart';
 import '../../core/services/local/csv_store.dart';
 import '../../core/services/local/local_store.dart';
@@ -104,10 +105,13 @@ class ParticipantEntry extends _$ParticipantEntry {
 
     // Safety: ensure we have an anonymous session before making Firestore calls.
     // Usually handled at startup, but this provides a retry/wait if needed.
-    try {
-      await AuthService().signInAnonymouslyIfNeeded();
-    } catch (e) {
-      debugPrint('ParticipantEntry: Pre-fetch auth attempt failed: $e');
+    // Skipped in the distributed build, which reaches Firestore unauthenticated.
+    if (AppConfig.participantAuthEnabled) {
+      try {
+        await AuthService().signInAnonymouslyIfNeeded();
+      } catch (e) {
+        debugPrint('ParticipantEntry: Pre-fetch auth attempt failed: $e');
+      }
     }
 
     final repository = ref.read(participantRepositoryProvider);

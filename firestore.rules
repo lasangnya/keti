@@ -5,10 +5,21 @@ rules_version = '2';
 // before any real participant session.
 //
 // Model:
-//  - Participant app: anonymous auth only; may read config/participant docs
+//  - Participant app: NO authentication. May read config/participant docs
 //    and write sessions/events, constrained by shape and transition rules.
 //  - Admin: email account with custom claim {admin: true}; owns config,
 //    participants, schedules and the activeDay gate.
+//
+// Why the participant app is unauthenticated: it ships as an ad-hoc signed
+// macOS build (see README "Packaging / distribution"), and Firebase Auth on
+// macOS needs the data-protection keychain, which requires a provisioning
+// profile. Anonymous sign-in therefore cannot succeed, so requiring a
+// principal would deny every participant read and write. `get()` below still
+// reads the admin-owned activeDay, so the day gate stays server-enforced.
+//
+// The project id is the only remaining boundary. This is a deliberate,
+// documented trade-off for a small closed study — treat the participant data
+// as readable by anyone who knows the project id.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -19,43 +30,40 @@ service cloud.firestore {
     function isAdmin()  { return signedIn() && request.auth.token.get('admin', false) == true; }
 
     match /config/study {
-      allow read: if signedIn();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
     match /links/{doc} {
-      allow read: if signedIn();
+      allow read: if true;
       allow write: if isAdmin();
     }
 
     match /participants/{pid} {
-      allow read: if signedIn();
+      allow read: if true;
       allow create, update, delete: if isAdmin();   // styleOrder, activeDay: admin-owned
 
       match /schedules/{dayId} {
-        allow read: if signedIn();
+        allow read: if true;
         allow write: if isAdmin();
       }
 
       match /studySessions/{dayId} {
-        allow read: if signedIn();
+        allow read: if true;
         // A participant app may start only the currently active day, once.
-        allow create: if signedIn()
-          && (dayId == 'day1' || dayId == 'day2')
+        allow create: if (dayId == 'day1' || dayId == 'day2')
           && request.resource.data.dayNumber ==
                get(/databases/$(database)/documents/participants/$(pid)).data.activeDay
           && request.resource.data.status != 'voided';
-        allow update: if isAdmin() || (signedIn()
-          && request.resource.data.diff(resource.data).affectedKeys()
+        allow update: if isAdmin() || (request.resource.data.diff(resource.data).affectedKeys()
                .hasOnly(['status','completedAt','resumedCount',
                          'participantExitRequestedAt']));
         allow delete: if isAdmin();
 
         match /reminderEvents/{eventId} {
-          allow read: if signedIn();
-          allow create: if signedIn();
-          allow update: if signedIn()
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+          allow read: if true;
+          allow create: if true;
+          allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(
                  ['reminderShownAt','reminderShownAtLocal','reminderHiddenAtLocal',
                   'deliveryLatenessMs','deliveryStatus','failureReason','suppressionReason',
                   'usedFallback','cardShownAtLocal','outcome','answeredAt',

@@ -18,6 +18,19 @@ class AppConfig {
   static const isAdminBuild =
       bool.fromEnvironment('KETI_ADMIN', defaultValue: false);
 
+  /// Participant anonymous sign-in.
+  ///
+  /// Off for the distributed macOS build: it is ad-hoc signed, so Firebase Auth
+  /// cannot reach the data-protection keychain (that needs a provisioning
+  /// profile) and sign-in always fails. With this off the participant app
+  /// reaches Firestore unauthenticated, and `firestore.rules` allows the
+  /// participant paths without a principal. Turn it back on only alongside a
+  /// rules set that requires `signedIn()`.
+  static const participantAuthEnabled = bool.fromEnvironment(
+    'KETI_PARTICIPANT_AUTH',
+    defaultValue: false,
+  );
+
   /// Stamped onto every document/CSV row for auditability.
   static const appVersion = '1.0.0+1';
 
