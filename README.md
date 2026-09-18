@@ -20,18 +20,19 @@ On Windows the reminder overlays (compliance card, cursor pill, dynamic island, 
 |---|---|---|
 | Flutter SDK | stable channel (`flutter doctor` clean) | stable channel (`flutter doctor` clean) |
 | Toolchain | Xcode (latest) + CocoaPods | Visual Studio 2022 with the **Desktop development with C++** workload |
-| Firebase | project `keti-fcfd6` (or your own) | same project — add a Windows app under Project settings → Your apps |
+| Firebase | your own Firebase project (see below) | same project — add a Windows app under Project settings → Your apps |
 
 ## Firebase setup (local, required before running)
 
-The repo is public, so Firebase client config (API keys) is **not** committed. Set it up locally once:
+The repo is public, so Firebase config (API keys and project binding) is **not** committed. Set it up locally once:
 
-1. Copy the templates and fill in the real values from the Firebase console (Project settings → Your apps):
+1. Bind the Firebase CLI to your project: `cp .firebaserc.example .firebaserc` and set `projects.default` to your project id (or run `firebase use --add`). The tooling scripts read the id from here.
+2. Copy the templates and fill in the real values from the Firebase console (Project settings → Your apps):
    - `lib/firebase_options.dart.example` → `lib/firebase_options.dart` — contains both the `macos` and `windows` option blocks; fill in both (Windows uses the web-style app config: API key, App ID, `authDomain`, `measurementId`).
    - `macos/Runner/GoogleService-Info.plist.example` → `macos/Runner/GoogleService-Info.plist` (macOS only).
-2. Optionally keep `.env.local` as your reference record of the same values (`cp .env.local.example .env.local`).
+3. Optionally keep `.env.local` as your reference record of the same values (`cp .env.local.example .env.local`).
 
-All three target files are gitignored. **Never commit them.**
+All four target files are gitignored. **Never commit them.**
 
 ### Firebase console (one-time, researcher)
 
