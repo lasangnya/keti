@@ -1,10 +1,8 @@
 # Installing keti
 
-Thank you for taking part in this study. Installing the app takes about two
-minutes, and you only have to do the second step once.
-
-keti ("short" in Sinhalese) shows you brief, calm health reminders while you go
-about your normal work.
+This guide covers installing keti and getting it running on your Mac. For
+anything about the study itself, please contact the researcher who sent you
+this file.
 
 ## What you need
 
@@ -58,28 +56,6 @@ Two things to know about this route:
 - If you're on macOS 14 or earlier, you can instead **right-click keti → Open**,
   then click **Open** in the dialog. (Apple removed this shortcut in macOS 15.)
 
-## What happens next
-
-1. keti opens on a box asking for your **participant code**. Type the code the
-   researcher gave you, for example `P054`, and confirm.
-2. The app shows which day you're on. Press the button to start the day.
-3. Leave keti running in the background while you work normally. Small reminders
-   will appear on screen from time to time.
-4. After a reminder disappears, a short card asks you one question. Answer with
-   **Done** or **Not now** — either is fine, and the card dismisses itself if you
-   don't respond.
-5. When the day's reminders are finished, keti shows that the day is complete and
-   gives you a link to a short end-of-day form.
-
-## What keti records
-
-- Which reminders appeared, when they appeared, and how you responded.
-- Your **participant code** only.
-
-keti never asks for your name, email address, or any other detail that
-identifies you, and nothing is published. You can ask the researcher to delete
-your data at any time — see the study information sheet for contact details.
-
 ## If something goes wrong
 
 | What you see | What to do |
@@ -88,7 +64,6 @@ your data at any time — see the study information sheet for contact details.
 | "keti is damaged and can't be opened" | Usually an incomplete download. Delete the `.dmg`, download it again, and reinstall. Don't keep retrying — it won't fix itself. |
 | Double-clicking does nothing at all | Make sure keti is in **Applications** and not still inside the disk image. |
 | It opened yesterday but not today | Open **Terminal** and re-run the command from **Step 2**. |
-| A reminder didn't appear | Keep keti running. If it closed, open it again — it picks up where it left off. |
 
 ## Removing keti afterwards
 
