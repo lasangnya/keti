@@ -12,10 +12,11 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const admin = require('firebase-admin');
+const { projectId } = require('./config');
 
 admin.initializeApp({
   credential: admin.credential.applicationDefault(),
-  projectId: 'keti-fcfd6',
+  projectId,
 });
 
 const db = admin.firestore();

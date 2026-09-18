@@ -5,8 +5,10 @@
  * wraps: firebase emulators:exec --only auth,firestore "npm test")
  *
  * Covers every branch of firestore.rules:
- *  - unauthenticated access denied
- *  - anonymous (participant app) reads allowed, admin-owned writes denied
+ *  - participant paths reachable WITHOUT a principal (the shipping app is an
+ *    ad-hoc signed macOS build whose Firebase Auth cannot reach the keychain)
+ *  - participant paths behave identically for a signed-in non-admin
+ *  - admin-owned writes denied to both participant contexts
  *  - activeDay gate on session creation
  *  - session update field whitelist
  *  - reminder event lifecycle field whitelist
@@ -51,10 +53,6 @@ beforeEach(async () => {
 });
 
 // ── helpers ──────────────────────────────────────────────────────────
-
-function anonDb(uid = 'anon-device-1') {
-  return testEnv.authenticatedContext(uid).firestore();
-}
 
 function adminDb() {
   return testEnv
@@ -122,214 +120,204 @@ function eventData() {
   };
 }
 
-// ── unauthenticated ──────────────────────────────────────────────────
+// ── participant app (both contexts) ──────────────────────────────────
 
-describe('unauthenticated access', () => {
-  it('denies reads without auth', async () => {
-    await seedParticipant();
-    const db = testEnv.unauthenticatedContext().firestore();
-    await assertFails(getDoc(doc(db, 'participants', 'P014')));
-    await assertFails(getDoc(doc(db, 'config', 'study')));
-  });
-});
-
-// ── anonymous participant app ────────────────────────────────────────
-
-describe('anonymous participant app', () => {
-  it('may read participant, config and schedule documents', async () => {
-    await seedParticipant();
-    await testEnv.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), 'config', 'study'), {
-        protocolVersion: '2026-08-v1',
+function registerParticipantRules(label, makeDb) {
+  describe(`participant app — ${label}`, () => {
+    it('may read participant, config, links and schedule documents', async () => {
+      await seedParticipant();
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'config', 'study'), {
+          protocolVersion: '2026-08-v1',
+        });
+        await setDoc(doc(context.firestore(), 'links', 'templates'), {
+          preStudy: 'https://forms.example/pre?pid={participantId}',
+          endOfDayType1: 'https://forms.example/ambient?pid={participantId}',
+          endOfDayType2: 'https://forms.example/character?pid={participantId}',
+          final: 'https://forms.example/final?pid={participantId}',
+        });
+        await setDoc(
+          doc(context.firestore(), 'participants', 'P014', 'schedules', 'day1'),
+          { dayId: 'day1', dayNumber: 1, reminders: [] }
+        );
       });
-      await setDoc(doc(context.firestore(), 'links', 'templates'), {
-        preStudy: 'https://forms.example/pre?pid={participantId}',
-        endOfDayType1: 'https://forms.example/ambient?pid={participantId}',
-        endOfDayType2: 'https://forms.example/character?pid={participantId}',
-        final: 'https://forms.example/final?pid={participantId}',
-      });
-      await setDoc(
-        doc(context.firestore(), 'participants', 'P014', 'schedules', 'day1'),
-        { dayId: 'day1', dayNumber: 1, reminders: [] }
+
+      const db = makeDb();
+      await assertSucceeds(getDoc(doc(db, 'participants', 'P014')));
+      await assertSucceeds(getDoc(doc(db, 'config', 'study')));
+      await assertSucceeds(getDoc(doc(db, 'links', 'templates')));
+      await assertSucceeds(
+        getDoc(doc(db, 'participants', 'P014', 'schedules', 'day1'))
       );
     });
 
-    const db = anonDb();
-    await assertSucceeds(getDoc(doc(db, 'participants', 'P014')));
-    await assertSucceeds(getDoc(doc(db, 'config', 'study')));
-    await assertSucceeds(getDoc(doc(db, 'links', 'templates')));
-    await assertSucceeds(
-      getDoc(doc(db, 'participants', 'P014', 'schedules', 'day1'))
-    );
+    it('may NOT write participant, config, links or schedule documents', async () => {
+      await seedParticipant();
+      const db = makeDb();
+      await assertFails(
+        setDoc(doc(db, 'participants', 'P015'), { participantCode: 'P015' })
+      );
+      await assertFails(
+        updateDoc(doc(db, 'participants', 'P014'), { styleOrder: 'AMBIENT_FIRST' })
+      );
+      await assertFails(
+        updateDoc(doc(db, 'participants', 'P014'), { activeDay: 2 })
+      );
+      await assertFails(
+        setDoc(doc(db, 'config', 'study'), { protocolVersion: 'hacked' })
+      );
+      await assertFails(
+        setDoc(doc(db, 'links', 'templates'), {
+          preStudy: 'https://evil.example',
+        })
+      );
+      await assertFails(
+        setDoc(
+          doc(db, 'participants', 'P014', 'schedules', 'day2'),
+          { dayId: 'day2', dayNumber: 2, reminders: [] }
+        )
+      );
+    });
+
+    it('allows creating only the active day', async () => {
+      await seedParticipant({ activeDay: 1 });
+      const db = makeDb();
+      await assertSucceeds(
+        setDoc(
+          doc(db, 'participants', 'P014', 'studySessions', 'day1'),
+          sessionData(1)
+        )
+      );
+      await assertFails(
+        setDoc(
+          doc(db, 'participants', 'P014', 'studySessions', 'day2'),
+          sessionData(2)
+        )
+      );
+    });
+
+    it('allows day2 once the admin activated it', async () => {
+      await seedParticipant({ activeDay: 2 });
+      const db = makeDb();
+      await assertSucceeds(
+        setDoc(
+          doc(db, 'participants', 'P014', 'studySessions', 'day2'),
+          sessionData(2)
+        )
+      );
+    });
+
+    it('rejects invalid day ids and voided status', async () => {
+      await seedParticipant({ activeDay: 1 });
+      const db = makeDb();
+      await assertFails(
+        setDoc(
+          doc(db, 'participants', 'P014', 'studySessions', 'day3'),
+          sessionData(1)
+        )
+      );
+      await assertFails(
+        setDoc(doc(db, 'participants', 'P014', 'studySessions', 'day1'), {
+          ...sessionData(1),
+          status: 'voided',
+        })
+      );
+    });
+
+    it('allows session updates of status, completedAt, resumedCount and participantExitRequestedAt only', async () => {
+      await seedParticipant();
+      await seedSession('day1');
+      const ref = doc(makeDb(), 'participants', 'P014', 'studySessions', 'day1');
+
+      await assertSucceeds(updateDoc(ref, { status: 'completed' }));
+      await assertSucceeds(updateDoc(ref, { resumedCount: 1 }));
+      await assertSucceeds(updateDoc(ref, { participantExitRequestedAt: '2026-08-03T10:00:00Z' }));
+
+      await seedSession('day1'); // reset
+      await assertFails(updateDoc(ref, { style: 'AMBIENT' }));
+      await assertFails(updateDoc(ref, { startedAtLocal: '1999-01-01' }));
+      await assertFails(updateDoc(ref, { participantCode: 'P999' }));
+    });
+
+    it('denies deleting sessions', async () => {
+      await seedParticipant();
+      await seedSession('day1');
+      await assertFails(
+        deleteDoc(doc(makeDb(), 'participants', 'P014', 'studySessions', 'day1'))
+      );
+    });
+
+    it('may create and update reminder event lifecycle fields', async () => {
+      await seedParticipant();
+      await seedSession('day1');
+      const ref = doc(
+        makeDb(),
+        'participants', 'P014', 'studySessions', 'day1', 'reminderEvents', 'reminder01'
+      );
+
+      await assertSucceeds(setDoc(ref, eventData()));
+      await assertSucceeds(
+        updateDoc(ref, { deliveryStatus: 'DELIVERED', deliveryLatenessMs: 900 })
+      );
+      await assertSucceeds(
+        updateDoc(ref, { outcome: 'COMPLETED', responseLatencyMs: 7120 })
+      );
+      await assertSucceeds(updateDoc(ref, { cardResponse: 'Done' }));
+      await assertSucceeds(updateDoc(ref, { usedFallback: true }));
+      await assertSucceeds(updateDoc(ref, { sessionResumed: true }));
+      // The FULL lifecycle payload the app sends in one answered update —
+      // including null deletes and server timestamps — must pass as a single
+      // write (unit-level tests only exercised keys one at a time).
+      await assertSucceeds(
+        updateDoc(ref, {
+          reminderShownAtLocal: '2026-08-12T15:56:51.086486',
+          reminderHiddenAtLocal: '2026-08-12T15:56:54.910001',
+          deliveryLatenessMs: 780,
+          deliveryStatus: 'DELIVERED',
+          failureReason: null,
+          suppressionReason: null,
+          usedFallback: false,
+          cardShownAtLocal: '2026-08-12T15:57:05.002782',
+          outcome: 'COMPLETED',
+          answeredAtLocal: '2026-08-12T15:57:06.486248',
+          responseLatencyMs: 1483,
+          cardResponse: 'Done',
+          sessionResumed: true,
+          updatedAt: serverTimestamp(),
+          reminderShownAt: serverTimestamp(),
+          answeredAt: serverTimestamp(),
+        })
+      );
+    });
+
+    it('may NOT alter condition or identity fields on reminder events', async () => {
+      await seedParticipant();
+      await seedSession('day1');
+      const ref = doc(
+        makeDb(),
+        'participants', 'P014', 'studySessions', 'day1', 'reminderEvents', 'reminder01'
+      );
+      await setDoc(ref, eventData());
+
+      await assertFails(updateDoc(ref, { placement: 'SYSTEM_TRAY' }));
+      await assertFails(updateDoc(ref, { style: 'AMBIENT' }));
+      await assertFails(updateDoc(ref, { reminderNumber: 2 }));
+      await assertFails(updateDoc(ref, { appVersion: '9.9.9' }));
+      await assertFails(deleteDoc(ref));
+    });
   });
+}
 
-  it('may NOT write participant, config or schedule documents', async () => {
-    await seedParticipant();
-    const db = anonDb();
-    await assertFails(
-      setDoc(doc(db, 'participants', 'P015'), { participantCode: 'P015' })
-    );
-    await assertFails(
-      updateDoc(doc(db, 'participants', 'P014'), { styleOrder: 'AMBIENT_FIRST' })
-    );
-    await assertFails(
-      updateDoc(doc(db, 'participants', 'P014'), { activeDay: 2 })
-    );
-    await assertFails(
-      setDoc(doc(db, 'config', 'study'), { protocolVersion: 'hacked' })
-    );
-    await assertFails(
-      setDoc(doc(db, 'links', 'templates'), {
-        preStudy: 'https://evil.example',
-      })
-    );
-    await assertFails(
-      setDoc(
-        doc(db, 'participants', 'P014', 'schedules', 'day2'),
-        { dayId: 'day2', dayNumber: 2, reminders: [] }
-      )
-    );
-  });
-});
-
-// ── session creation gate (activeDay) ────────────────────────────────
-
-describe('studySessions creation gate', () => {
-  it('allows creating only the active day', async () => {
-    await seedParticipant({ activeDay: 1 });
-    const db = anonDb();
-    await assertSucceeds(
-      setDoc(
-        doc(db, 'participants', 'P014', 'studySessions', 'day1'),
-        sessionData(1)
-      )
-    );
-    await assertFails(
-      setDoc(
-        doc(db, 'participants', 'P014', 'studySessions', 'day2'),
-        sessionData(2)
-      )
-    );
-  });
-
-  it('allows day2 once the admin activated it', async () => {
-    await seedParticipant({ activeDay: 2 });
-    const db = anonDb();
-    await assertSucceeds(
-      setDoc(
-        doc(db, 'participants', 'P014', 'studySessions', 'day2'),
-        sessionData(2)
-      )
-    );
-  });
-
-  it('rejects invalid day ids and voided status', async () => {
-    await seedParticipant({ activeDay: 1 });
-    const db = anonDb();
-    await assertFails(
-      setDoc(
-        doc(db, 'participants', 'P014', 'studySessions', 'day3'),
-        sessionData(1)
-      )
-    );
-    await assertFails(
-      setDoc(doc(db, 'participants', 'P014', 'studySessions', 'day1'), {
-        ...sessionData(1),
-        status: 'voided',
-      })
-    );
-  });
-});
-
-// ── session update whitelist ─────────────────────────────────────────
-
-describe('studySessions update whitelist', () => {
-  it('allows status, completedAt, resumedCount and participantExitRequestedAt only', async () => {
-    await seedParticipant();
-    await seedSession('day1');
-    const ref = doc(anonDb(), 'participants', 'P014', 'studySessions', 'day1');
-
-    await assertSucceeds(updateDoc(ref, { status: 'completed' }));
-    await assertSucceeds(updateDoc(ref, { resumedCount: 1 }));
-    await assertSucceeds(updateDoc(ref, { participantExitRequestedAt: '2026-08-03T10:00:00Z' }));
-
-    await seedSession('day1'); // reset
-    await assertFails(updateDoc(ref, { style: 'AMBIENT' }));
-    await assertFails(updateDoc(ref, { startedAtLocal: '1999-01-01' }));
-    await assertFails(updateDoc(ref, { participantCode: 'P999' }));
-  });
-
-  it('denies deleting sessions', async () => {
-    await seedParticipant();
-    await seedSession('day1');
-    await assertFails(
-      deleteDoc(doc(anonDb(), 'participants', 'P014', 'studySessions', 'day1'))
-    );
-  });
-});
-
-// ── reminder events ──────────────────────────────────────────────────
-
-describe('reminderEvents', () => {
-  it('anonymous may create and update lifecycle fields', async () => {
-    await seedParticipant();
-    await seedSession('day1');
-    const ref = doc(
-      anonDb(),
-      'participants', 'P014', 'studySessions', 'day1', 'reminderEvents', 'reminder01'
-    );
-
-    await assertSucceeds(setDoc(ref, eventData()));
-    await assertSucceeds(
-      updateDoc(ref, { deliveryStatus: 'DELIVERED', deliveryLatenessMs: 900 })
-    );
-    await assertSucceeds(
-      updateDoc(ref, { outcome: 'COMPLETED', responseLatencyMs: 7120 })
-    );
-    await assertSucceeds(updateDoc(ref, { cardResponse: 'Done' }));
-    await assertSucceeds(updateDoc(ref, { usedFallback: true }));
-    await assertSucceeds(updateDoc(ref, { sessionResumed: true }));
-    // The FULL lifecycle payload the app sends in one answered update —
-    // including null deletes and server timestamps — must pass as a single
-    // write (unit-level tests only exercised keys one at a time).
-    await assertSucceeds(
-      updateDoc(ref, {
-        reminderShownAtLocal: '2026-08-12T15:56:51.086486',
-        reminderHiddenAtLocal: '2026-08-12T15:56:54.910001',
-        deliveryLatenessMs: 780,
-        deliveryStatus: 'DELIVERED',
-        failureReason: null,
-        suppressionReason: null,
-        usedFallback: false,
-        cardShownAtLocal: '2026-08-12T15:57:05.002782',
-        outcome: 'COMPLETED',
-        answeredAtLocal: '2026-08-12T15:57:06.486248',
-        responseLatencyMs: 1483,
-        cardResponse: 'Done',
-        sessionResumed: true,
-        updatedAt: serverTimestamp(),
-        reminderShownAt: serverTimestamp(),
-        answeredAt: serverTimestamp(),
-      })
-    );
-  });
-
-  it('anonymous may NOT alter condition or identity fields', async () => {
-    await seedParticipant();
-    await seedSession('day1');
-    const ref = doc(
-      anonDb(),
-      'participants', 'P014', 'studySessions', 'day1', 'reminderEvents', 'reminder01'
-    );
-    await setDoc(ref, eventData());
-
-    await assertFails(updateDoc(ref, { placement: 'SYSTEM_TRAY' }));
-    await assertFails(updateDoc(ref, { style: 'AMBIENT' }));
-    await assertFails(updateDoc(ref, { reminderNumber: 2 }));
-    await assertFails(updateDoc(ref, { appVersion: '9.9.9' }));
-    await assertFails(deleteDoc(ref));
-  });
-});
+// The shipping participant build has no principal at all; a signed-in
+// non-admin must behave identically or the rules have an auth-dependent hole.
+registerParticipantRules(
+  'unauthenticated (shipping build)',
+  () => testEnv.unauthenticatedContext().firestore()
+);
+registerParticipantRules(
+  'anonymous auth',
+  () => testEnv.authenticatedContext('anon-device-1').firestore()
+);
 
 // ── admin claim ──────────────────────────────────────────────────────
 
@@ -371,13 +359,27 @@ describe('admin (researcher) access', () => {
       })
     );
   });
+
+  it('admin may delete sessions and events', async () => {
+    await seedParticipant();
+    await seedSession('day1');
+    const db = adminDb();
+    await assertSucceeds(
+      deleteDoc(doc(db, 'participants', 'P014', 'studySessions', 'day1'))
+    );
+  });
 });
 
 // ── catch-all ────────────────────────────────────────────────────────
 
 describe('catch-all', () => {
   it('denies access to unknown paths for everyone', async () => {
-    await assertFails(getDoc(doc(anonDb(), 'secrets', 'anything')));
+    await assertFails(
+      getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'secrets', 'anything'))
+    );
+    await assertFails(
+      setDoc(doc(testEnv.unauthenticatedContext().firestore(), 'secrets', 'anything'), { x: 1 })
+    );
     await assertFails(
       setDoc(doc(adminDb(), 'scratch', 'doc1'), { x: 1 })
     );

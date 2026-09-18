@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Entitlements for the ad-hoc signed distribution build.
+
+	  Deliberately *not* a copy of Release.entitlements: that file carries
+	  `keychain-access-groups` (and Xcode injects `com.apple.security.get-task-allow`),
+	  which are team-scoped entitlements that require an embedded provisioning
+	  profile. An ad-hoc signature cannot carry a profile, so those keys must be
+	  dropped. `tooling/package_macos.sh` signs with this file when no Developer
+	  ID is available.
+	-->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.network.client</key>
+	<true/>
+</dict>
+</plist>

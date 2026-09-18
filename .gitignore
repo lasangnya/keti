@@ -113,11 +113,12 @@ coverage/
 .omo/
 .idea/caches/
 
-# Firebase client config contains API keys — local-only, never commit.
-# Copy the committed .example templates and fill in values locally.
+# Firebase config is local-only — copy the committed .example templates and
+# fill in values locally. Never commit the real files.
 lib/firebase_options.dart
 **/GoogleService-Info.plist
 .env.local
+.firebaserc
 
 # Lockfiles are ignored above via *.lock, but an app must version its lockfile
 !pubspec.lock
@@ -135,3 +136,6 @@ app.*.symbols
 # Node tooling
 tooling/node_modules/
 /installer/
+
+# macOS dmg output (tooling/package_macos.sh)
+/dist/

@@ -12,6 +12,7 @@
 
 const { initializeApp, applicationDefault } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
+const { projectId } = require('./config');
 
 const email = process.argv[2];
 if (!email) {
@@ -28,7 +29,7 @@ if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
 
 initializeApp({
   credential: applicationDefault(),
-  projectId: 'keti-fcfd6',
+  projectId,
 });
 
 async function main() {

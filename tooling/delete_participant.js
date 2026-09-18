@@ -8,6 +8,7 @@
  */
 
 const admin = require('firebase-admin');
+const { projectId } = require('./config');
 
 const code = process.argv[2];
 if (!code) {
@@ -17,7 +18,7 @@ if (!code) {
 
 admin.initializeApp({
   credential: admin.credential.applicationDefault(),
-  projectId: 'keti-fcfd6',
+  projectId,
 });
 
 const db = admin.firestore();

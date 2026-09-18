@@ -43,16 +43,16 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'REPLACE_ME_MACOS_API_KEY',
-    appId: 'REPLACE_ME_MACOS_APP_ID', // e.g. 1:405786487800:ios:…
-    messagingSenderId: 'REPLACE_ME_SENDER_ID', // e.g. 405786487800
-    projectId: 'REPLACE_ME_PROJECT_ID', // e.g. keti-fcfd6
-    storageBucket: 'REPLACE_ME_STORAGE_BUCKET', // e.g. keti-fcfd6.firebasestorage.app
+    appId: 'REPLACE_ME_MACOS_APP_ID', // e.g. 1:123456789012:ios:abc123…
+    messagingSenderId: 'REPLACE_ME_SENDER_ID', // e.g. 123456789012
+    projectId: 'REPLACE_ME_PROJECT_ID', // e.g. your-firebase-project-id
+    storageBucket: 'REPLACE_ME_STORAGE_BUCKET', // e.g. your-firebase-project-id.firebasestorage.app
     iosBundleId: 'app.keti.keti',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
     apiKey: 'REPLACE_ME_WINDOWS_API_KEY',
-    appId: 'REPLACE_ME_WINDOWS_APP_ID', // e.g. 1:405786487800:web:…
+    appId: 'REPLACE_ME_WINDOWS_APP_ID', // e.g. 1:123456789012:web:abc123…
     messagingSenderId: 'REPLACE_ME_SENDER_ID',
     projectId: 'REPLACE_ME_PROJECT_ID',
     authDomain: 'REPLACE_ME_PROJECT_ID.firebaseapp.com',

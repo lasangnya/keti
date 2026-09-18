@@ -31,11 +31,15 @@ void main() async {
   FirebaseFirestore.instance.settings =
       const Settings(persistenceEnabled: false);
   // Silent anonymous sign-in — participants never see a login screen.
-  try {
-    await AuthService().signInAnonymouslyIfNeeded();
-  } catch (e) {
-    debugPrint('Firebase Auth Error: $e');
-    // We continue so the app still launches, but Firestore may fail if rules require auth.
+  // Skipped in the distributed build, which reaches Firestore unauthenticated
+  // (see AppConfig.participantAuthEnabled and firestore.rules).
+  if (AppConfig.participantAuthEnabled) {
+    try {
+      await AuthService().signInAnonymouslyIfNeeded();
+    } catch (e) {
+      debugPrint('Firebase Auth Error: $e');
+      // We continue so the app still launches, but Firestore may fail if rules require auth.
+    }
   }
   // Log what this process received, so the researcher-launch path is
   // diagnosable without guessing.
