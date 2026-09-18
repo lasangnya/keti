@@ -32,7 +32,7 @@ class AppConfig {
 
   /// Compliance card auto-dismisses after this long without a response;
   /// an auto-dismissed card is recorded as `Ignored`.
-  static const complianceCardTimeoutMs = 30000;
+  static const complianceCardTimeoutMs = 60000;
 
   static const lateDeliveryGraceMs = 120000;
 }
