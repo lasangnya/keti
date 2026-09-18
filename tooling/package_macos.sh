@@ -33,6 +33,7 @@ APP_NAME="keti"
 APP_PATH="build/macos/Build/Products/Release/${APP_NAME}.app"
 ENTITLEMENTS="macos/Runner/Release.entitlements"
 DIST_ENTITLEMENTS="macos/Runner/Distribution.entitlements"
+INSTALL_DOC="docs/participant-install.md"
 DIST_DIR="dist"
 
 VERSION="$(grep -m1 '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)"
@@ -43,6 +44,11 @@ flutter build macos --release
 
 if [ ! -d "$APP_PATH" ]; then
   echo "error: expected app bundle at $APP_PATH" >&2
+  exit 1
+fi
+
+if [ ! -f "$INSTALL_DOC" ]; then
+  echo "error: expected participant install guide at $INSTALL_DOC" >&2
   exit 1
 fi
 
@@ -87,12 +93,17 @@ STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 ditto "$APP_PATH" "$STAGE/${APP_NAME}.app"
 ln -s /Applications "$STAGE/Applications"
+cp "$INSTALL_DOC" "$STAGE/Install keti.md"
 
 hdiutil create \
   -volname "$APP_NAME" \
   -srcfolder "$STAGE" \
   -ov -format UDZO \
   "$DMG_PATH"
+
+# Ship a checksum next to the dmg so a truncated transfer is distinguishable
+# from a signing problem before anyone starts debugging codesign.
+( cd "$DIST_DIR" && shasum -a 256 "$(basename "$DMG_PATH")" > "$(basename "$DMG_PATH").sha256" )
 
 # ── Optional: sign the dmg, notarize it, and staple the ticket ─────────
 if [ -n "${MACOS_NOTARY_PROFILE:-}" ]; then
@@ -123,3 +134,5 @@ else
   echo "  Ad-hoc signed — participants must clear the quarantine flag once"
   echo "  (README 'Packaging / distribution')."
 fi
+echo "  Install guide in the dmg: 'Install keti.md'"
+echo "  Checksum beside the dmg: $(basename "$DMG_PATH").sha256"
