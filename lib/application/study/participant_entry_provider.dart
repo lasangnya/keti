@@ -197,12 +197,16 @@ class ParticipantEntry extends _$ParticipantEntry {
     } catch (e) {
       debugPrint('ParticipantEntry error: $e');
 
-      // If we are signed out, Firestore will throw a permission-denied error.
-      final auth = FirebaseAuth.instance;
-      if (auth.currentUser == null) {
+      // Only blame auth when auth was actually expected. In the distributed
+      // build AppConfig.participantAuthEnabled is off, so currentUser is null
+      // by design — without this guard every failure (network, malformed
+      // document, timeout) is reported as an auth problem, and the cache
+      // fallback below never runs.
+      if (AppConfig.participantAuthEnabled &&
+          FirebaseAuth.instance.currentUser == null) {
         state = ParticipantEntryState(
-            errorMessage: 'Authentication failed. Please check your internet '
-                'connection or Firebase Console settings.');
+            errorMessage: 'Could not sign in. Please check your internet '
+                'connection and try again.');
         return;
       }
 

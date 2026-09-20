@@ -12,6 +12,7 @@ import 'package:keti/domain/study/participant.dart';
 import 'package:keti/domain/study/scheduled_reminder.dart';
 import 'package:keti/domain/study/study_config.dart';
 import 'package:keti/domain/study/study_enums.dart';
+import 'package:keti/domain/study/study_links.dart';
 import 'package:keti/domain/study/study_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -26,6 +27,7 @@ void main() {
   setUp(() async {
     csvRoot = Directory.systemTemp.createTempSync('keti_entry_test');
     SharedPreferences.setMockInitialValues({});
+    fakeAuthSignedIn = true;
     final store = LocalStore(await SharedPreferences.getInstance());
     container = ProviderContainer(overrides: [
       participantRepositoryProvider
@@ -154,6 +156,85 @@ void main() {
     // Watermark recorded — a second entry must not wipe again.
     expect(store.readResetWatermark('P001'), isNotNull);
   });
+
+  // The distributed build runs with participantAuthEnabled off, so
+  // FirebaseAuth.currentUser is null by design. The catch-all used to treat
+  // that as "auth failed", which both mislabelled every other failure and
+  // skipped the cache fallback below it.
+  test('a network failure is not misreported as an auth failure', () async {
+    // The distributed build: participantAuthEnabled off, so nobody is signed
+    // in and FirebaseAuth.currentUser is null.
+    fakeAuthSignedIn = false;
+    addTearDown(() {
+      fakeAuthSignedIn = true;
+    });
+    container = ProviderContainer(overrides: [
+      participantRepositoryProvider.overrideWithValue(_OfflineRepository()),
+      localStoreProvider.overrideWith(
+          (ref) async => LocalStore(await SharedPreferences.getInstance())),
+      csvStoreProvider.overrideWithValue(CsvStore(rootDir: csvRoot)),
+    ]);
+    addTearDown(container.dispose);
+
+    await container.read(participantEntryProvider.notifier).enterCode('P001');
+
+    final state = container.read(participantEntryProvider);
+    expect(state.errorMessage, isNot(contains('Authentication failed')));
+    expect(state.errorMessage, contains('offline and no cached data'));
+  });
+
+  test('a network failure falls back to cached data when auth is off',
+      () async {
+    fakeAuthSignedIn = false;
+    addTearDown(() {
+      fakeAuthSignedIn = true;
+    });
+    final store = LocalStore(await SharedPreferences.getInstance());
+    await store.cacheParticipant(_p001);
+    await store.cacheStudyConfig(MockParticipantRepository.config);
+    await store.cacheScheduleFor('P001', _p001Schedule);
+    await store.cacheLinkTemplates(const StudyLinkTemplates());
+
+    final offline = ProviderContainer(overrides: [
+      participantRepositoryProvider.overrideWithValue(_OfflineRepository()),
+      localStoreProvider.overrideWith((ref) async => store),
+      csvStoreProvider.overrideWithValue(CsvStore(rootDir: csvRoot)),
+    ]);
+    addTearDown(offline.dispose);
+
+    await offline.read(participantEntryProvider.notifier).enterCode('P001');
+
+    // Before the fix this surfaced 'Authentication failed' and the cached
+    // participant/schedule were never reached.
+    final state = offline.read(participantEntryProvider);
+    expect(state.errorMessage, isNull);
+    expect(state.fromCache, isTrue);
+    expect(state.isReady, isTrue);
+  });
+}
+
+const _p001 = Participant(
+  participantCode: 'P001',
+  serial: 1,
+  styleOrder: StyleOrder.ambientFirst,
+  assignmentOverride: false,
+  activeDay: 1,
+  environment: 'dev',
+  protocolVersion: '2026-08-v1',
+);
+
+const _p001Schedule = DaySchedule(
+  dayNumber: 1,
+  style: PresentationStyle.ambient,
+  reminders: kDefaultScheduleTemplate,
+);
+
+/// A backend that is unreachable, as Firestore is on a Mac with no connection.
+class _OfflineRepository extends MockParticipantRepository {
+  @override
+  Future<Participant> fetchParticipant(String code) async {
+    throw const SocketException('offline');
+  }
 }
 
 /// Mock repo whose participant document carries a full-reset signal

@@ -21,6 +21,14 @@ Future<void> initFirebaseForTest() async {
   FirebaseAuthPlatform.instance = _FakeFirebaseAuthPlatform();
 }
 
+/// Whether the faked auth platform reports a signed-in user.
+///
+/// The distributed build runs with nobody signed in
+/// (`AppConfig.participantAuthEnabled` is off, so nothing ever signs in), so
+/// `FirebaseAuth.instance.currentUser` is null there. Tests that exercise that
+/// path set this to false.
+bool fakeAuthSignedIn = true;
+
 class _FakeFirebaseAuthPlatform extends FirebaseAuthPlatform {
   _FakeFirebaseAuthPlatform() : super(appInstance: null);
 
@@ -35,7 +43,7 @@ class _FakeFirebaseAuthPlatform extends FirebaseAuthPlatform {
       this;
 
   @override
-  UserPlatform? get currentUser => _fakeUser;
+  UserPlatform? get currentUser => fakeAuthSignedIn ? _fakeUser : null;
 
   @override
   set currentUser(UserPlatform? userPlatform) {}
